@@ -1,0 +1,23 @@
+bin/openfibs			OpenFIBS server
+hardcore.pl
+lib/OpenFIBS/Backgammon/Board.pm	Representation of a backgammon board
+lib/OpenFIBS/Backgammon/Game.pm	Representation of a backgammon game
+lib/OpenFIBS/Backgammon/Match.pm	Representation of a backgammon match
+lib/OpenFIBS/Backgammon/Move.pm	Representation of a backgammon move
+lib/OpenFIBS/Const.pm		Various constants for OpenFIBS
+lib/OpenFIBS/Database.pm	Database abstraction for OpenFIBS
+lib/OpenFIBS/Database/SQLite.pm	SQLite backend for OpenFIBS
+lib/OpenFIBS/Logger.pm		Logging facility for OpenFIBS
+lib/OpenFIBS/Server.pm		The OpenFIBS server
+lib/OpenFIBS/Server/Master.pm
+lib/OpenFIBS/Server/Session.pm
+lib/OpenFIBS/Util.pm		Utility functions for OpenFIBS
+Makefile.PL			Makefile generator
+MANIFEST			This list of files
+NEWS				News for each version
+ReleaseNotes			Same as NEWS
+t/board-constructors.t
+t/board-methods.t
+t/board-movegen.t
+t/const-colors.t
+t/match-basic.t

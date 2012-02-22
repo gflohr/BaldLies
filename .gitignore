@@ -1,0 +1,10 @@
+*~
+*.bak
+blib/
+Makefile
+ReleaseNotes
+pm_to_blib
+.*.swp
+.project
+.includepath
+Makefile.old

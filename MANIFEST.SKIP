@@ -1,0 +1,16 @@
+\.git*
+~$
+\.bak$
+x-.*$
+^ChangeLog\.bak$
+^MANIFEST\.
+^Makefile$
+^blib/
+^MakeMaker-\d
+\.old$
+^#.*#$
+^\.#
+\.tar.gz$
+^pm_to_blib$
+\.includepath
+\.project
