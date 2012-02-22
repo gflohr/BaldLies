@@ -56,6 +56,7 @@ sub new {
     
     $self->{_dbh} = $dbh;
     $self->{__schema_version} = 0;
+    $self->{__statements} = {};
     
     bless $self, $class;
     
@@ -67,7 +68,14 @@ sub new {
 sub DESTROY {
     my ($self) = @_;
     
-    $self->{_dbh}->disconnect if $self;
+    return if !$self;
+    return if !$self->{_dbh};
+    
+    while (my ($name, $sth) = %{$self->{__statements}}) {
+        $sth->finish;
+    }
+    
+    $self->{_dbh}->disconnect;
     
     return $self;
 }
@@ -123,12 +131,38 @@ sub upgrade {
     return $self;
 }
 
+sub prepareStatements {
+    my ($self) = @_;
+    
+    my $statements = {};
+    my $dbh = $self->{_dbh};
+    
+    $self->{__logger}->info ("Preparing database statements");
+    
+    $statements->{SELECT_EXISTS_USER} = $dbh->prepare (<<EOF);
+SELECT id FROM users WHERE name = ?
+EOF
+    
+    return $self;
+}
+
 # Upgrade steps.
 sub _upgradeStepInitial {
     my ($self) = @_;
     
+    my $auto_increment = $self->_getAutoIncrement;
+    
     $self->{_dbh}->do (<<EOF);
 CREATE TABLE version (schema_version INTEGER)
+EOF
+
+    $self->{_dbh}->do (<<EOF);
+CREATE TABLE users (
+    id $auto_increment,
+    name TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    permissions INTEGER NOT NULL
+)
 EOF
 
     $self->{_dbh}->do (<<EOF, {}, 0);
@@ -136,6 +170,28 @@ INSERT INTO version (schema_version) VALUES (?)
 EOF
 
     return $self;
+}
+
+sub __doStatement {
+    my ($self, $statement, @args) = @_;
+    
+    my $statements = $self->{__statements};
+
+    die "No such statement `$statement'.\n" 
+        if !exists $statements->{$statement}; 
+        
+    $statement->execute (@args);    
+    
+    return $statement->fetchall_arrayref;
+}
+
+sub existsUser {
+    my ($self, $name) = @_;
+    
+    my $records = $self->_doStatement (SELECT_EXISTS_USER => $name);
+    
+    use Data::Dumper;
+    die Dumper $records;
 }
 
 1;

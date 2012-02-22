@@ -1,4 +1,4 @@
-###! /bin/false
+#! /bin/false
 
 # This file is part of OpenFIBS.
 # Copyright (C) 2012 Guido Flohr, http://guido-flohr.net/.
@@ -30,6 +30,10 @@ sub _initBackend {
     $dbh->do ("PRAGMA foreign_keys = ON");
     
     return $self;
+}
+
+sub _getAutoIncrement {
+    return "INTEGER PRIMARY KEY";
 }
 
 1;
