@@ -227,6 +227,8 @@ sub __handleConnection {
         foreach my $l (@{$self->{__listeners}}) {
             $l->close;
         }
+        $self->{__master}->close;
+        undef $self->{__master};
         my $session = OpenFIBS::Server::Session->new ($self, $sockhost, $sock);
         $session->run;
         exit 0;
@@ -258,9 +260,10 @@ sub __sig_chld {
     my $logger = $self->{__logger};
     
     while (my $pid = waitpid -1, WNOHANG) {
+        last if $pid < 0;
         delete $self->{__children}->{$pid};
         
-        my $status = $self->__decodeStatus;
+        my $status = $self->__decodeStatus ($?);
         
         $logger->debug ("Reaped child $pid: $status");
     }
@@ -361,7 +364,7 @@ sub __setupSignals {
     $SIG{TERM} = \&__sig_fatal;
     $SIG{QUIT} = \&__sig_fatal;
     $SIG{INT} = \&__sig_fatal;
-    $SIG{CHLD} = \&__sig_child;
+    $SIG{CHLD} = \&__sig_chld;
 
     return $self;        
 }
@@ -660,7 +663,6 @@ OpenFIBS::Server - The OpenFIBS Server Module
 
   use OpenFIBS::Server;
   
-  OpenFIBS::Server->setPersonality ('Net::Server::PreFork');
   my $server = OpenFIBS::Server (OPTIONS);
   
   $server->run;

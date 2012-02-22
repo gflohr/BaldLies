@@ -76,6 +76,8 @@ sub close {
         $sockets->{$ref}->{socket}->close;
     }
     
+    $self->{__listener}->close;
+    
     return $self;
 }
 

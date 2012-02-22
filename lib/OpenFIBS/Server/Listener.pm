@@ -102,6 +102,7 @@ sub listen {
     
     $self->{__socket} = IO::Socket::INET->new (%args)
         or $logger->fatal ("Cannot listen on $ip port $self->{__port}: $!!");
+    $self->{__socket}->sockopt (SO_REUSEADDR, 1);
     $self->{__socket}->blocking (0);
     
     return $self;
