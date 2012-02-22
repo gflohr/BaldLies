@@ -1,5 +1,4 @@
 bin/openfibs			OpenFIBS server
-hardcore.pl
 lib/OpenFIBS/Backgammon/Board.pm	Representation of a backgammon board
 lib/OpenFIBS/Backgammon/Game.pm	Representation of a backgammon game
 lib/OpenFIBS/Backgammon/Match.pm	Representation of a backgammon match
