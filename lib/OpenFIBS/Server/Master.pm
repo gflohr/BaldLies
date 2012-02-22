@@ -27,6 +27,7 @@ use Fcntl qw (:flock);
 
 use OpenFIBS::Util qw (empty);
 use OpenFIBS::Const qw (:comm);
+use OpenFIBS::Database;
 
 my @handlers = (
     'welcome'
@@ -63,6 +64,9 @@ sub new {
     $listener->blocking (0);
     
     $self->{__listener} = $listener;
+    
+    $self->{__database} = $server->getDatabase;
+    $self->{__database}->prepareStatements;
     
     return $self;
 }

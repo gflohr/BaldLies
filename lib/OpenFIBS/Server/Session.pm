@@ -71,9 +71,10 @@ sub run {
     $self->__queueClientOutput ($self->{__banner} . "\nlogin: ", 1);
 
     my $peer = $self->{__peer};
+    my $master = $self->{__master_sock};
 
-    my $rsel = IO::Select->new ($peer);
-    my $esel = IO::Select->new ($peer);
+    my $rsel = IO::Select->new ($peer, $master);
+    my $esel = IO::Select->new ($peer, $master);
                 
     while (1) {
         my $wsel;
@@ -89,43 +90,81 @@ sub run {
             exit 1;
         }
 
-        if ($wout && !empty $self->{__client_out}) {
-            my $l = length $self->{__client_out};
-            my $bytes_written = syswrite ($peer, $self->{__client_out});
-            if (!defined $bytes_written) {
-                if (!$!{EAGAIN} && !$!{EWOULDBLOCK}) {
-                    $logger->info ("$self->{__ip} dropped connection");
-                    return $self;
+        foreach my $fh (@$wout) {
+            if ($fh == $peer && !empty $self->{__client_out}) {
+                my $l = length $self->{__client_out};
+                my $bytes_written = syswrite ($peer, $self->{__client_out});
+                if (!defined $bytes_written) {
+                    if (!$!{EAGAIN} && !$!{EWOULDBLOCK}) {
+                        $logger->info ("$self->{__ip} dropped connection.");
+                        return $self;
+                    }
+                } else {
+                    if (0 == $bytes_written) {
+                        $logger->info ("$self->{__ip} dropped connection.");
+                        return $self;
+                    }
+                    substr $self->{__client_out}, 0, $bytes_written, '';
                 }
-            } else {
-                if (0 == $bytes_written) {
-                    $logger->info ("$self->{__ip} dropped connection");
-                    return $self;
+            } elsif ($fh == $master && !empty $self->{__master_out}) {
+                my $l = length $self->{__master_out};
+                my $bytes_written = syswrite ($master, $self->{__master_out});
+                if (!defined $bytes_written) {
+                    if (!$!{EAGAIN} && !$!{EWOULDBLOCK}) {
+                        $logger->fatal ("Lost connection to master.");
+                    }
+                    next;
+                } else {
+                    if (0 == $bytes_written) {
+                        $logger->fatal ("Lost connection to master.");
+                        return $self;
+                    }
+                    substr $self->{__master_out}, 0, $bytes_written, '';
                 }
-                substr $self->{__client_out}, 0, $bytes_written, '';
             }
         }
-        
-        if ($rout) {
-            my $offset = length $self->{__client_in};
-            my $bytes_read = sysread ($peer, $self->{__client_in}, 4096, $offset);
-            if (!defined $bytes_read) {
-                if (!$!{EAGAIN} && !$!{EWOULDBLOCK}) {
-                    $logger->info ("$self->{__ip} dropped connection");
-                    return $self;
+
+        foreach my $fh (@$rout) {
+            if ($fh == $peer) {
+                my $offset = length $self->{__client_in};
+                my $bytes_read = sysread ($peer, $self->{__client_in}, 4096, 
+                                          $offset);
+                if (!defined $bytes_read) {
+                    if (!$!{EAGAIN} && !$!{EWOULDBLOCK}) {
+                        $logger->info ("$self->{__ip} dropped connection.");
+                        return $self;
+                    }
+                } else {
+                    if (0 == $bytes_read) {
+                        $logger->info ("$self->{__ip} dropped connection.");
+                        return $self;
+                    }
+                    if (length $self->{__client_in} 
+                        > $config->{max_chunk_size}) {
+                        $logger->warning ("Too much data from $self->{__ip}.");
+                        return $self;
+                    }
+                    $self->__checkClientInput;
                 }
-            } else {
-                if (0 == $bytes_read) {
-                    $logger->info ("$self->{__ip} dropped connection");
-                    return $self;
+            } elsif ($fh == $master) {
+                my $offset = length $self->{__master_in};
+                my $bytes_read = sysread ($peer, $self->{__master_in}, 4096, 
+                                          $offset);
+                if (!defined $bytes_read) {
+                    if (!$!{EAGAIN} && !$!{EWOULDBLOCK}) {
+                        $logger->fatal ("Lost connection to master.");
+                        return $self;
+                    }
+                    next;
+                } else {
+                    if (0 == $bytes_read) {
+                        $logger->info ("Lost connection to master.");
+                        return $self;
+                    }
+                    $self->__checkMasterInput;
                 }
-                if (length $self->{__client_in} > $config->{max_chunk_size}) {
-                    $logger->warning ("Too much data from $self->{__ip}.");
-                    return $self;
-                }
-                $self->__checkClientInput;
             }
-        }
+        }                
     }
     
     return $self;
@@ -162,6 +201,18 @@ sub __checkClientInput {
     return $self;
 }
 
+sub __checkMasterInput {
+    my ($self) = @_;
+
+    return if $self->{__master_in} !~ s/(.*?)\n//;
+    
+    my $input = $1;
+    
+    $self->{__logger}->error ("Cannot handle input from master: $input");
+    
+    return $self;
+}
+
 sub __queueClientOutput {
     my ($self, $text, $no_prompt) = @_;
     
@@ -172,6 +223,14 @@ sub __queueClientOutput {
         $self->{__client_out} .= "\012\015> ";
     }
 
+    return $self;
+}
+
+sub __queueMasterOutput {
+    my ($self, $text) = @_;
+    
+    $self->{__master_out} .= $text;
+    
     return $self;
 }
 

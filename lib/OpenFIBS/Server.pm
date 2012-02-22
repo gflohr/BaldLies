@@ -128,19 +128,24 @@ sub run {
     my $config = $self->{__config};
     $self->__lockDaemon ($$);
     $self->__reopenLogger;
+    my $logger = $self->{__logger};
     $self->__openPorts;
     $self->__changePersona;
     $self->__upgradeDatabaseSchema;
     $self->__daemonize if !$config->{debug};
-    $self->__setupSignals;
-    $self->__generateSecret;    
-    $self->__startMaster;
+    eval {
+        $self->__setupSignals;
+        $self->__generateSecret;    
+        $self->__startMaster;
     
-    my $logger = $self->{__logger};
     
-    $logger->notice ("OpenFIBS server $VERSION starting.");
-    $logger->notice ("Running as $self->{__user}:$self->{__group}.\n");
-
+        $logger->notice ("OpenFIBS server $VERSION starting.");
+        $logger->notice ("Running as $self->{__user}:$self->{__group}.\n");
+    };
+    if ($@) {
+        return $self->shutdownServer ($@);
+    };
+    
     my $listeners = $self->{__listeners};
 
     eval {
@@ -148,7 +153,8 @@ sub run {
             foreach my $listener (@$listeners) {
                 my $sock = $listener->accept;
                 next if !$sock;
-                $self->__handleConnection ($listener, $sock);
+                eval { $self->__handleConnection ($listener, $sock) };
+                $logger->error ($@) if $@;
             }
             $self->{__master}->checkInput;
         }
@@ -540,7 +546,7 @@ sub __upgradeDatabaseSchema {
         $config->{verbose} = LOG_INFO;
         $self->{__logger}->level (LOG_INFO);
     }
-    my $db = $self->__getDatabase ($config->{verbose} < LOG_INFO);
+    my $db = $self->getDatabase ($config->{verbose} < LOG_INFO);
     
     $db->upgrade if !$db->check;
     
@@ -549,7 +555,7 @@ sub __upgradeDatabaseSchema {
     delete $config->{upgrade};
 }
 
-sub __getDatabase {
+sub getDatabase {
     my ($self, $quiet) = @_;
     
     my $logger = $self->{__logger};
