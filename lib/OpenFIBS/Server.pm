@@ -151,7 +151,6 @@ sub run {
                 $self->__handleConnection ($listener, $sock);
             }
             $self->{__master}->checkInput;
-            $logger->debug ("Round finished.");
         }
     };
     while ($@) {

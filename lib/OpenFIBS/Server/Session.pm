@@ -22,6 +22,7 @@ use strict;
 
 use Fcntl qw (F_GETFL F_SETFL O_NONBLOCK);
 use IO::Select;
+use IO::Socket::UNIX;
 
 use OpenFIBS::Util qw (empty);
 
@@ -34,14 +35,16 @@ sub new {
         __ip => $ip,
         __client_in => '',
         __client_out => '',
+        __master_sock => undef,
         __master_in => '',
         __master_out => '',
         __state => 'login',
         __telnet => 1,
     };
 
-    $self->{__logger} = $server->getLogger;
-    $self->{__config} = $server->getConfig;
+    my $logger = $self->{__logger} = $server->getLogger;
+    $logger->ip ($ip . ':' . $$);
+    my $config = $self->{__config} = $server->getConfig;
     $self->{__banner} = <<EOF;
                            ************************
                            * Welcome to OpenFIBS! *
@@ -50,6 +53,12 @@ sub new {
 Please login as guest if you do not have an account on this server.
 EOF
 
+    my $socket_name = $config->{socket_name};
+    $logger->debug ("Connecting to master socket `$socket_name'.");
+    $self->{__master_sock} = IO::Socket::UNIX->new (Type => SOCK_STREAM,
+                                                    Peer => $socket_name)
+        or $logger->fatal ("Cannot connect to master socket `$socket_name'.");
+        
     bless $self, $class;
 }
 
@@ -59,7 +68,7 @@ sub run {
     my $logger = $self->{__logger};
     my $config = $self->{__config};
 
-    $self->__queueOutput ($self->{__banner} . "\nlogin: ");
+    $self->__queueClientOutput ($self->{__banner} . "\nlogin: ", 1);
 
     my $peer = $self->{__peer};
 
@@ -114,7 +123,7 @@ sub run {
                     $logger->warning ("Too much data from $self->{__ip}.");
                     return $self;
                 }
-                $self->__checkInput;
+                $self->__checkClientInput;
             }
         }
     }
@@ -122,7 +131,7 @@ sub run {
     return $self;
 }
 
-sub __checkInput {
+sub __checkClientInput {
     my ($self) = @_;
 
     return if $self->{__client_in} !~ s/(.*?)\012?\015//;
@@ -132,7 +141,7 @@ sub __checkInput {
         if ('guest' eq $input) {
             return $self->__guestLogin;
         } else {
-            $self->__queueOutput ("** Login not yet implemented.\n");
+            $self->__queueClientOutput ("** Login not yet implemented.\n");
             $self->{__state} = '';
             return $self;        
         }
@@ -148,18 +157,21 @@ sub __checkInput {
         return $self->__checkName ($tokens[1]);
     }
     
-    $self->__queueOutput ("** Unknown command: '$tokens[0]'\n");
+    $self->__queueClientOutput ("** Unknown command: '$tokens[0]'\n");
     
     return $self;
 }
 
-sub __queueOutput {
-    my ($self, $text) = @_;
+sub __queueClientOutput {
+    my ($self, $text, $no_prompt) = @_;
     
     $text =~ s/\n/\012\015/g;
     
     $self->{__client_out} .= $text;
-    
+    if ($self->{__telnet} && !$no_prompt) {
+        $self->{__client_out} .= "\012\015> ";
+    }
+
     return $self;
 }
 
@@ -168,7 +180,7 @@ sub __guestLogin {
     
     $self->{__state} = 'name';
     
-    $self->__queueOutput (<<EOF);
+    $self->__queueClientOutput (<<EOF);
 Welcome to OpenFIBS. You just logged in as guest.
 Please register before using this server:
 
@@ -182,7 +194,6 @@ your password there is no way to find out what it was.
 Please type 'bye' if you don't want to register now.
 
 ONE USERNAME PER PERSON ONLY!!!
-
 EOF
 
     return $self;
@@ -192,6 +203,22 @@ sub __checkName {
     my ($self, $name) = @_;
     
     $self->{__logger}->debug ("Check new username `$name'.");
+
+    return $self->__queueClientOutput ("** Your name may only contain letters"
+                                       . " and the underscore character _ .")
+        if empty $name;
+
+    return $self->__queueClientOutput ("** Your name may only contain letters"
+                                       . " and the underscore character _ .")
+        if $name =~ /[^A-Za-z_]/;
+    
+    return $self->__queueClientOutput ("** Please use another name. '$name'"
+                                       . " is already used by someone else.")
+        if $name eq 'guest';
+    
+    return $self->__queueClientOutput ("** TODO: Please use another name. '$name'"
+                                       . " is already used by someone else.")
+        if 1;
     
     return $self;
 }
