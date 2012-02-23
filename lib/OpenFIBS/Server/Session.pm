@@ -25,6 +25,11 @@ use IO::Select;
 use IO::Socket::UNIX;
 
 use OpenFIBS::Util qw (empty);
+use OpenFIBS::Const qw (:comm);
+
+use constant MASTER_HANDLERS => {
+    COMM_ACK, 'ack',
+};
 
 sub new {
     my ($class, $server, $ip, $peer) = @_;
@@ -40,6 +45,8 @@ sub new {
         __master_out => '',
         __state => 'login',
         __telnet => 1,
+        __seqno => 0,
+        __expect => {}
     };
 
     my $logger = $self->{__logger} = $server->getLogger;
@@ -67,7 +74,14 @@ sub run {
     
     my $logger = $self->{__logger};
     my $config = $self->{__config};
-
+    my $server = $self->{__server};
+    
+    my $seqno = $self->{__seqno}++;
+    my $secret = $server->getSecret;
+    my $code = COMM_WELCOME;
+    $self->__queueExpect ($seqno, 'welcome');
+    $self->__queueMasterOutput ("$code $seqno $secret $$\n");
+    
     $self->__queueClientOutput ($self->{__banner} . "\nlogin: ", 1);
 
     my $peer = $self->{__peer};
@@ -77,9 +91,12 @@ sub run {
     my $esel = IO::Select->new ($peer, $master);
                 
     while (1) {
-        my $wsel;
-        $wsel = IO::Select->new ($self->{__peer}) 
+        my $wsel = IO::Select->new;
+        
+        $wsel->add ($peer) 
             if !empty $self->{__client_out};
+        $wsel->add ($master) 
+            if !empty $self->{__master_out};
         
         my ($rout, $wout, $eout) = IO::Select->select ($rsel, $wsel, $esel,
                                                        0.1);
@@ -148,7 +165,7 @@ sub run {
                 }
             } elsif ($fh == $master) {
                 my $offset = length $self->{__master_in};
-                my $bytes_read = sysread ($peer, $self->{__master_in}, 4096, 
+                my $bytes_read = sysread ($master, $self->{__master_in}, 4096, 
                                           $offset);
                 if (!defined $bytes_read) {
                     if (!$!{EAGAIN} && !$!{EWOULDBLOCK}) {
@@ -201,14 +218,57 @@ sub __checkClientInput {
     return $self;
 }
 
+sub __queueExpect {
+    my ($self, $seqno, $handler) = @_;
+    
+    $self->{__logger}->debug ("Queing response handler `$handler' for"
+                              . " sequence number $seqno.");
+    $self->{__expect}->{$seqno} = $handler;
+    
+    return $self;
+}
+
 sub __checkMasterInput {
     my ($self) = @_;
+
+    my $logger = $self->{__logger};
 
     return if $self->{__master_in} !~ s/(.*?)\n//;
     
     my $input = $1;
+
+    $logger->debug ("Got master input $input.");
     
-    $self->{__logger}->error ("Cannot handle input from master: $input");
+    my ($code, $payload) = split / /, $input, 2;
+    if (!exists MASTER_HANDLERS->{$code}) {
+        $logger->fatal ("Unknown opcode $code from master.");
+    }
+    
+    my $method = '__handleMaster' . ucfirst MASTER_HANDLERS->{$code};
+    
+    return $self->$method ($payload);
+}
+
+sub __handleMasterAck {
+    my ($self, $payload) = @_;
+    
+    my ($seqno, $rest) = split / /, $payload;
+    
+    my $logger = $self->{__logger};
+    
+    $logger->fatal ("Unexpected ack from master with sequence number $seqno.")
+        if !exists $self->{__expect}->{$seqno};
+    
+    my $handler = $self->{__expect}->{$seqno};
+    my $method = '__handleMasterAck' . ucfirst $handler;
+    
+    return $self->$method ($rest);
+}
+
+sub __handleMasterAckWelcome {
+    my ($self) = @_;
+    
+    $self->{__logger}->debug ("Client received ack welcome.");
     
     return $self;
 }

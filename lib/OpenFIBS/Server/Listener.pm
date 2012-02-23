@@ -140,8 +140,18 @@ sub close {
     my ($self) = @_;
     
     my $socket = $self->{__socket} or return;
-    
+  
     $socket->close or return;
+    
+    return $self;
+}
+
+sub shutdown {
+    my ($self, $how) = @_;
+    
+    my $socket = $self->{__socket} or return;
+  
+    $socket->shutdown ($how) or return;
     
     return $self;
 }

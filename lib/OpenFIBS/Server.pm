@@ -185,10 +185,15 @@ sub shutdownServer {
 
     while (@{$self->{__listeners}}) {
         my $listener = shift @{$self->{__listeners}};
+        my $address = $listener->ip . ':' . $listener->port;
+        $logger->debug ("Shutting down listener on $address.");
+        $listener->shutdown (2);
+        $logger->debug ("Closing listener on $address.");
         $listener->close;
     }
     
     foreach my $pid (keys %{$self->{__children}}) {
+        $logger->debug ("Killing child $pid.");
         kill 15 => $pid;
     }
 
@@ -429,6 +434,10 @@ sub getLogger {
 
 sub getConfig {
     shift->{__config};
+}
+
+sub getSecret {
+    shift->{__secret};
 }
 
 sub __readConfiguration {

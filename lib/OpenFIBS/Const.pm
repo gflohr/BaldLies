@@ -27,7 +27,7 @@ our %EXPORT_TAGS = (colors => [qw (BLACK WHITE)],
                                        LOG_INFO LOG_DEBUG)],
                     comm => [qw (
                         COMM_WELCOME
-                        COMM_ACK_WELCOME
+                        COMM_ACK
                         )]
                     );
 our @EXPORT_OK = (
@@ -45,8 +45,8 @@ use constant LOG_NOTICE => 2;
 use constant LOG_INFO   => 3;
 use constant LOG_DEBUG  => 4;
 
+use constant COMM_ACK         => 1;
 use constant COMM_WELCOME     => 0;
-use constant COMM_ACK_WELCOME => 1;
 
 1;
 

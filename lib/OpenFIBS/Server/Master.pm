@@ -74,12 +74,8 @@ sub new {
 sub close {
     my ($self) = @_;
     
-    my $sockets = $self->{__sockets};
-    
-    foreach my $ref (keys %$sockets) {
-        $sockets->{$ref}->{socket}->close;
-    }
-    
+    $self->{__logger}->debug ("Closing master socket.");
+        
     $self->{__listener}->close;
     
     return $self;
@@ -124,7 +120,6 @@ sub checkInput {
     }
     
     foreach my $fd (@$rout) {
-        $logger->debug ("Client socket $fd ready for reading.");
         my $key = ref $fd;
         if (!exists $sockets->{$key}) {
             $logger->debug ("Client socket $fd already removed.");
@@ -141,6 +136,7 @@ sub checkInput {
             $logger->error ("Error reading from socket $fd: $!!");
         } elsif (0 == $bytes_read) {
             $logger->debug ("End-of-file while reading from socket $fd: $!!");
+            delete $sockets->{$key};
         }
         
         if (!$bytes_read) {
@@ -151,31 +147,47 @@ sub checkInput {
         }
         if ($rec->{in_queue} =~ s/(.*?)\n//) {
             my $line = $1;
-            $logger->debug ("Got message `$line'.\n");
             my ($opcode, $msg) = split / /, $line, 2;
             if ($opcode !~ /^0|[1-9][0-9]*$/) {
                 $logger->error ("Received garbage from $fd: $line");
+                $rsel->remove ($fd);
+                $esel->remove ($fd);
+                delete $sockets->{$key};
                 next;
             }
             if ($opcode > $#handlers) {
                 $logger->error ("Unknown opcode $opcode from $fd.");
+                $rsel->remove ($fd);
+                $esel->remove ($fd);
+                delete $sockets->{$key};
                 next;
             }
-            if (!$self->{__welcome_seen} && $opcode) {
+            if (!$sockets->{$key}->{welcome} && $opcode) {
                 $logger->error ("Got opcode $opcode from $fd before"
                                 . " welcome message from child.");
+                $rsel->remove ($fd);
+                $esel->remove ($fd);
+                delete $sockets->{$key};
                 next;
             }
             my $method = '__handle' . ucfirst $handlers[$opcode];
-            eval { $self->$method ($fd, $msg) };
+            my $result = eval { $self->$method ($fd, $msg) };
             if ($@) {
                 $logger->error ($@);
+                $rsel->remove ($fd);
+                $esel->remove ($fd);
+                delete $sockets->{$key};
+                next;
+            } elsif (!$result) {
+                $rsel->remove ($fd);
+                $esel->remove ($fd);
+                delete $sockets->{$key};
+                next;
             }
         }
     }
             
     foreach my $fd (@$wout) {
-        $logger->debug ("Client socket $fd ready for writing.");
         my $key = ref $fd;
         if (!exists $sockets->{$key}) {
             $logger->debug ("Client socket $fd already removed.");
@@ -198,6 +210,10 @@ sub checkInput {
         } elsif (0 == $bytes_written) {
             $logger->debug ("End-of-file while writing to socket"
                             . " $fd: $!!");
+            $rsel->remove ($fd);
+            $esel->remove ($fd);
+            delete $sockets->{$key};
+            next;
         }
         
         if (!$bytes_written) {
@@ -211,6 +227,14 @@ sub checkInput {
         # send the entire string at once.
         substr $rec->{out_queue}, 0, $bytes_written, '';
     }
+    
+    return $self;
+}
+
+sub __closeClient {
+    my ($self, $fd) = @_;
+    
+    delete $self->{__sockets}->{ref $fd};
     
     return $self;
 }
@@ -237,19 +261,21 @@ sub __queueResponse {
 }
 
 sub __handleWelcome {
-    my ($self, $fd, $pid) = @_;
+    my ($self, $fd, $msg) = @_;
     
-    $pid ||= 0;
-    my $ppid = getppid;
-
+    my ($seqno, $secret, $pid) = split / /, $msg, 4;
+    
     my $logger = $self->{__logger};
+    $logger->debug ("Got welcome from pid $pid.");
 
-    if ($pid != $ppid) {
-        $logger->warning ("Got welcome from unknown pid $pid");
-        return $self;
+    unless ($secret eq $self->{__server}->getSecret) {
+        $logger->error ("Child pid $pid sent wrong secret.");
+        return;
     }
     
-    $self->__queueResponse ($fd, COMM_ACK_WELCOME, $$);
+    $self->{__sockets}->{ref $fd}->{welcome} = 1;
+    
+    $self->__queueResponse ($fd, COMM_ACK, $seqno);
 
     return $self;
 }
