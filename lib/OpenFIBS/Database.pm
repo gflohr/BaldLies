@@ -1,4 +1,4 @@
-###! /bin/false
+#! /bin/false
 
 # This file is part of OpenFIBS.
 # Copyright (C) 2012 Guido Flohr, http://guido-flohr.net/.
@@ -18,7 +18,11 @@
 
 package OpenFIBS::Database;
 
+use strict;
+
 use DBI;
+
+use OpenFIBS::Const qw (:log_levels);
 
 use constant SCHEMA_VERSION => 0;
 
@@ -56,6 +60,7 @@ sub new {
     
     $self->{_dbh} = $dbh;
     $self->{__schema_version} = 0;
+    $self->{__sths} = {};
     $self->{__statements} = {};
     
     bless $self, $class;
@@ -70,8 +75,9 @@ sub DESTROY {
     
     return if !$self;
     return if !$self->{_dbh};
-    
-    while (my ($name, $sth) = %{$self->{__statements}}) {
+
+    foreach my $name (keys %{$self->{__sths}}) {
+        my $sth = $self->{__sths}->{$name};
         $sth->finish;
     }
     
@@ -134,14 +140,19 @@ sub upgrade {
 sub prepareStatements {
     my ($self) = @_;
     
-    my $statements = {};
+    my $statements = $self->{__statements} = {};
+    my $sths = $self->{__sths} = {};
+
     my $dbh = $self->{_dbh};
     
     $self->{__logger}->info ("Preparing database statements");
     
-    $statements->{SELECT_EXISTS_USER} = $dbh->prepare (<<EOF);
+    $statements->{SELECT_EXISTS_USER} = <<EOF;
 SELECT id FROM users WHERE name = ?
 EOF
+
+    $sths->{SELECT_EXISTS_USER} = 
+        $dbh->prepare ($statements->{SELECT_EXISTS_USER});
     
     return $self;
 }
@@ -172,17 +183,49 @@ EOF
     return $self;
 }
 
-sub __doStatement {
+sub __prettyPrint {
     my ($self, $statement, @args) = @_;
     
-    my $statements = $self->{__statements};
-
-    die "No such statement `$statement'.\n" 
-        if !exists $statements->{$statement}; 
-        
-    $statement->execute (@args);    
+    my $dbh = $self->{_dbh};
+    my $sql = $self->{__statements}->{$statement};
     
-    return $statement->fetchall_arrayref;
+    $sql =~ s/[ \t\r\n]+/ /g;
+    $sql =~ s/\?/$dbh->quote (shift @args)/eg;
+    
+    return $sql;
+}
+
+sub _doStatement {
+    my ($self, $statement, @args) = @_;
+    
+    my $logger = $self->{__logger};
+    
+    die "No such statement handle `$statement'.\n" 
+        if !exists $self->{__sths}->{$statement}; 
+    die "No such statement `$statement'.\n" 
+        if !exists $self->{__statements}->{$statement}; 
+    
+    my $pretty_statement;
+    if (LOG_DEBUG <= $logger->level) {
+        $pretty_statement = $self->__prettyPrint ($statement, @args);
+        $logger->debug ("[SQL] $pretty_statement");
+    }
+    my $sth = $self->{__sths}->{$statement};
+    eval {
+        $sth->execute (@args);
+    
+        if ($statement =~ /^SELECT_/) {
+            my $result = $sth->fetchall_arrayref;
+            $sth->finish;
+            return $result;
+        }
+    };
+    if ($@) {
+        $pretty_statement = $self->__prettyPrint ($statement, @args)
+            if !defined $pretty_statement;
+        $logger->error ("$@.  SQL: $pretty_statement");
+    }
+    return [];
 }
 
 sub existsUser {
@@ -190,8 +233,9 @@ sub existsUser {
     
     my $records = $self->_doStatement (SELECT_EXISTS_USER => $name);
     
-    use Data::Dumper;
-    die Dumper $records;
+    return unless $records && @$records;
+    
+    return $self;
 }
 
 1;

@@ -30,7 +30,9 @@ use OpenFIBS::Const qw (:comm);
 use OpenFIBS::Database;
 
 my @handlers = (
-    'welcome'
+    'welcome',
+    undef,
+    'name_check',
 );
 
 sub new {
@@ -44,6 +46,8 @@ sub new {
         __config => $config,
         __logger => $logger,
         __sockets => {},
+        __rsel   => IO::Select->new,
+        __esel   => IO::Select->new,
     };
 
     bless $self, $class;
@@ -77,6 +81,7 @@ sub close {
     $self->{__logger}->debug ("Closing master socket.");
         
     $self->{__listener}->close;
+    undef $self->{__database};
     
     return $self;
 }
@@ -87,8 +92,8 @@ sub checkInput {
     my $logger = $self->{__logger};
     my $config = $self->{__config};
 
-    my $rsel = IO::Select->new;
-    my $esel = IO::Select->new;
+    my $rsel = $self->{__rsel};
+    my $esel = $self->{__esel};
     my $sockets = $self->{__sockets};
     my $listener = $self->{__listener};
     
@@ -103,12 +108,12 @@ sub checkInput {
         };
         $socket->blocking (0);
     }
-        
+
     my $wsel = IO::Select->new;
     while (my ($key, $rec) = each %$sockets) {
         $wsel->add ($rec->{socket}) if !empty $rec->{out_queue};
     }
-        
+
     my ($rout, $wout, $eout) = IO::Select->select ($rsel, $wsel, $esel, 
                                                    1.0);
     foreach my $fd (@$eout) {
@@ -136,6 +141,8 @@ sub checkInput {
             $logger->error ("Error reading from socket $fd: $!!");
         } elsif (0 == $bytes_read) {
             $logger->debug ("End-of-file while reading from socket $fd: $!!");
+            $rsel->remove ($fd);
+            $esel->remove ($fd);
             delete $sockets->{$key};
         }
         
@@ -145,6 +152,7 @@ sub checkInput {
             delete $sockets->{$key};
             next;                                
         }
+
         if ($rec->{in_queue} =~ s/(.*?)\n//) {
             my $line = $1;
             my ($opcode, $msg) = split / /, $line, 2;
@@ -155,7 +163,7 @@ sub checkInput {
                 delete $sockets->{$key};
                 next;
             }
-            if ($opcode > $#handlers) {
+            if ($opcode > $#handlers || !defined $handlers[$opcode]) {
                 $logger->error ("Unknown opcode $opcode from $fd.");
                 $rsel->remove ($fd);
                 $esel->remove ($fd);
@@ -170,7 +178,9 @@ sub checkInput {
                 delete $sockets->{$key};
                 next;
             }
-            my $method = '__handle' . ucfirst $handlers[$opcode];
+            my $handler = $handlers[$opcode];
+            $handler =~ s/_(.)/uc $1/eg;            
+            my $method = '__handle' . ucfirst $handler;
             my $result = eval { $self->$method ($fd, $msg) };
             if ($@) {
                 $logger->error ($@);
@@ -279,6 +289,22 @@ sub __handleWelcome {
 
     return $self;
 }
+
+sub __handleNameCheck {
+    my ($self, $fd, $msg) = @_;
+        
+    my ($seqno, $name) = split / /, $msg, 3;
+    
+    my $logger = $self->{__logger};
+    $logger->debug ("Check availability of name `$name'.");
+
+    my $available = $self->{__database}->existsUser ($name) ? 0 : 1;
+
+    $self->__queueResponse ($fd, COMM_ACK, $seqno, $available);
+
+    return $self;
+}
+
 
 1;
 

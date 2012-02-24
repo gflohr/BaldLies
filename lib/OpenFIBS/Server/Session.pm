@@ -69,6 +69,12 @@ EOF
     bless $self, $class;
 }
 
+sub DESTROY {
+    my ($self) = @_;
+    
+    $self->{__peer}->shutdown (2) if $self->{__peer};
+}
+
 sub run {
     my ($self) = @_;
     
@@ -79,8 +85,8 @@ sub run {
     my $seqno = $self->{__seqno}++;
     my $secret = $server->getSecret;
     my $code = COMM_WELCOME;
-    $self->__queueExpect ($seqno, 'welcome');
-    $self->__queueMasterOutput ("$code $seqno $secret $$\n");
+    $self->__queueMasterExpect ($seqno, 'welcome');
+    $self->__queueMasterOutput ($code, $seqno, $secret, $$);
     
     $self->__queueClientOutput ($self->{__banner} . "\nlogin: ", 1);
 
@@ -218,7 +224,7 @@ sub __checkClientInput {
     return $self;
 }
 
-sub __queueExpect {
+sub __queueMasterExpect {
     my ($self, $seqno, $handler) = @_;
     
     $self->{__logger}->debug ("Queing response handler `$handler' for"
@@ -244,6 +250,8 @@ sub __checkMasterInput {
         $logger->fatal ("Unknown opcode $code from master.");
     }
     
+    my $handler = ucfirst MASTER_HANDLERS->{$code};
+    $handler =~ s/(_.)/uc $1/eg;
     my $method = '__handleMaster' . ucfirst MASTER_HANDLERS->{$code};
     
     return $self->$method ($payload);
@@ -252,15 +260,16 @@ sub __checkMasterInput {
 sub __handleMasterAck {
     my ($self, $payload) = @_;
     
-    my ($seqno, $rest) = split / /, $payload;
+    my ($seqno, $rest) = split / /, $payload, 2;
     
     my $logger = $self->{__logger};
     
     $logger->fatal ("Unexpected ack from master with sequence number $seqno.")
         if !exists $self->{__expect}->{$seqno};
     
-    my $handler = $self->{__expect}->{$seqno};
-    my $method = '__handleMasterAck' . ucfirst $handler;
+    my $handler = ucfirst $self->{__expect}->{$seqno};
+    $handler =~ s/_(.)/uc $1/eg;
+    my $method = '__handleMasterAck' . $handler;
     
     return $self->$method ($rest);
 }
@@ -279,17 +288,17 @@ sub __queueClientOutput {
     $text =~ s/\n/\012\015/g;
     
     $self->{__client_out} .= $text;
-    if ($self->{__telnet} && !$no_prompt) {
-        $self->{__client_out} .= "\012\015> ";
+    if ($self->{__telnet} && !$no_prompt && "\012\015" eq substr $text, -2, 2) {
+        $self->{__client_out} .= "> ";
     }
 
     return $self;
 }
 
 sub __queueMasterOutput {
-    my ($self, $text) = @_;
+    my ($self, $code, @args) = @_;
     
-    $self->{__master_out} .= $text;
+    $self->{__master_out} .= (join ' ', $code, @args) . "\n";
     
     return $self;
 }
@@ -324,21 +333,23 @@ sub __checkName {
     $self->{__logger}->debug ("Check new username `$name'.");
 
     return $self->__queueClientOutput ("** Your name may only contain letters"
-                                       . " and the underscore character _ .")
+                                       . " and the underscore character _ .\n")
         if empty $name;
 
     return $self->__queueClientOutput ("** Your name may only contain letters"
-                                       . " and the underscore character _ .")
+                                       . " and the underscore character _ .\n")
         if $name =~ /[^A-Za-z_]/;
     
     return $self->__queueClientOutput ("** Please use another name. '$name'"
-                                       . " is already used by someone else.")
+                                       . " is already used by someone else.\n")
         if $name eq 'guest';
+        
+    my $seqno = $self->{__seqno}++;
+    $self->__queueMasterExpect ($seqno, 'name_available');
+    $self->__queueMasterOutput (COMM_NAME_AVAILABLE, $seqno, $name);
     
-    return $self->__queueClientOutput ("** TODO: Please use another name. '$name'"
-                                       . " is already used by someone else.")
-        if 1;
-    
+    $self->{__state} = 'name_check';
+        
     return $self;
 }
 

@@ -225,6 +225,7 @@ sub __handleConnection {
     
     my $logger = $self->{__logger};
     
+    $sock->sockopt (SO_REUSEADDR, 1);
     my $sockhost = $sock->sockhost;
     
     $logger->info ("Incoming connection from $sockhost.\n");
