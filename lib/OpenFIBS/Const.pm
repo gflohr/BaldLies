@@ -29,6 +29,8 @@ our %EXPORT_TAGS = (colors => [qw (BLACK WHITE)],
                         COMM_WELCOME
                         COMM_ACK
                         COMM_NAME_AVAILABLE
+                        COMM_CREATE_USER
+                        COMM_AUTHENTICATE
                         )]
                     );
 our @EXPORT_OK = (
@@ -49,6 +51,8 @@ use constant LOG_DEBUG  => 4;
 use constant COMM_WELCOME        => 0;
 use constant COMM_ACK            => 1;
 use constant COMM_NAME_AVAILABLE => 2;
+use constant COMM_CREATE_USER    => 3;
+use constant COMM_AUTHENTICATE   => 4;
 
 1;
 

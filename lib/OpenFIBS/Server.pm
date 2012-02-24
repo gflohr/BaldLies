@@ -161,15 +161,7 @@ sub run {
     };
     while ($@) {
         my $exception = $@;
-        eval {
-            if ($self->{__signal}) {
-                my $signal = delete $self->{__signal};
-                $SIG{$signal} = \&__sig_fatal;
-                $self->shutdownServer ($exception);
-            } else {
-                $logger->fatal ($@);
-            }
-        };
+        eval { $self->shutdownServer ($exception) };
     }
 }
 
@@ -260,8 +252,6 @@ sub __startMaster {
 sub __sig_fatal {
     my ($signal) = @_;
 
-    $singleton->{__signal} = $signal;
-    
     die "Received fatal signal SIG$signal.\n";
 }
 

@@ -34,6 +34,7 @@ WriteMakefile (
         'File::HomeDir'   => 0.98,
         'File::Spec'      => 3.31,
         'DBI'             => 1.616,
+        'Digest::SHA'     => 5.47,
     },
 );
 

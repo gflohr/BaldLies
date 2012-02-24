@@ -21,7 +21,7 @@ package OpenFIBS::Database;
 use strict;
 
 use DBI;
-
+use Digest::SHA qw (sha512_base64);
 use OpenFIBS::Const qw (:log_levels);
 
 use constant SCHEMA_VERSION => 0;
@@ -150,10 +150,38 @@ sub prepareStatements {
     $statements->{SELECT_EXISTS_USER} = <<EOF;
 SELECT id FROM users WHERE name = ?
 EOF
-
     $sths->{SELECT_EXISTS_USER} = 
         $dbh->prepare ($statements->{SELECT_EXISTS_USER});
     
+    $statements->{CREATE_USER} = <<EOF;
+INSERT INTO users (name, password, last_login, last_host)
+    VALUES (?, ?, ?, ?)
+EOF
+    $sths->{CREATE_USER} = 
+        $dbh->prepare ($statements->{CREATE_USER});
+    
+    # We fill in the defaults for the game-specific settings so that the order
+    # is always the same.  We cannot know whether the user has telnet turned
+    # on or off but we can safely ignore that setting in the master process.
+    $statements->{SELECT_USER} = <<EOF;
+SELECT DISTINCT id, name, password, address, permissions, last_login, last_host,
+    experience, rating,
+    boardstyle, linelength, pagelength, redoubles, sortwho, timezone,
+    allowpip, autoboard, autodouble, automove, bell, crawford, 1, 0, 
+    moreboards, moves, notify, ratings, ready, report, silent, 1, wrap
+FROM users WHERE name = ?
+EOF
+    $sths->{SELECT_USER} = 
+        $dbh->prepare ($statements->{SELECT_USER});
+    
+    $statements->{TOUCH_USER} = <<EOF;
+UPDATE users 
+    SET last_login = ?, last_host = ? 
+    WHERE id = ?
+EOF
+    $sths->{TOUCH_USER} = 
+        $dbh->prepare ($statements->{TOUCH_USER});
+
     return $self;
 }
 
@@ -172,7 +200,42 @@ CREATE TABLE users (
     id $auto_increment,
     name TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
-    permissions INTEGER NOT NULL
+    address TEXT,
+    permissions INTEGER NOT NULL DEFAULT 0,
+    last_login BIGINT NOT NULL,
+    last_logout BIGINT,
+    last_host TEXT,
+    experience INTEGER NOT NULL DEFAULT 0,
+    rating DOUBLE NOT NULL DEFAULT 1500,
+    
+    -- Settings.
+    boardstyle INTEGER NOT NULL DEFAULT 2,
+    linelength INTEGER NOT NULL DEFAULT 0,
+    pagelength INTEGER NOT NULL DEFAULT 0,
+    redoubles TEXT NOT NULL DEFAULT 0,
+    sortwho TEXT NOT NULL DEFAULT 'login',
+    timezone TEXT NOT NULL DEFAULT 'UTC',
+    
+    -- Toggles.
+    allowpip BOOLEAN NOT NULL DEFAULT 1,
+    autoboard BOOLEAN NOT NULL DEFAULT 1,
+    autodouble BOOLEAN NOT NULL DEFAULT 1,
+    automove BOOLEAN NOT NULL DEFAULT 1,
+    bell BOOLEAN NOT NULL DEFAULT 1,
+    crawford BOOLEAN NOT NULL DEFAULT 1,
+    -- Per-game settings.
+    --double BOOLEAN NOT NULL DEFAULT 1,
+    --greedy BOOLEAN NOT NULL DEFAULT 1,
+    moreboards BOOLEAN NOT NULL DEFAULT 1,
+    moves BOOLEAN NOT NULL DEFAULT 1,
+    notify BOOLEAN NOT NULL DEFAULT 1,
+    ratings BOOLEAN NOT NULL DEFAULT 1,
+    ready BOOLEAN NOT NULL DEFAULT 1,
+    report BOOLEAN NOT NULL DEFAULT 1,
+    silent BOOLEAN NOT NULL DEFAULT 1,
+    -- No need to store that in the database, determined on login.
+    -- telnet BOOLEAN,
+    wrap BOOLEAN NOT NULL DEFAULT 1
 )
 EOF
 
@@ -181,6 +244,33 @@ INSERT INTO version (schema_version) VALUES (?)
 EOF
 
     return $self;
+}
+
+sub _encryptPassword {
+    my ($self, $password) = @_;
+
+    my @salt_chars = ('.', '/', '0' .. '9', 'a' .. 'z', 'A' .. 'Z');
+    my $salt = '!6!';
+
+    foreach (1 .. 16) {
+        $salt .= $salt_chars[int rand @salt_chars];
+    }
+    $salt .= '!';
+
+    return $salt . sha512_base64 $password . $salt;
+}
+
+sub _checkPassword {
+    my ($self, $password, $digest) = @_;
+
+    my $retval;
+
+    if ($digest =~ m{^(!6![./0-9a-zA-Z]{4,16}!)([a-zA-Z0-9+/]{22})}) {
+        my ($salt, $other) = ($1, $2);
+        return $salt . sha512_base64 $password . $salt;
+    } else {
+        return sha512_base64 $password;
+    }
 }
 
 sub __prettyPrint {
@@ -211,21 +301,45 @@ sub _doStatement {
         $logger->debug ("[SQL] $pretty_statement");
     }
     my $sth = $self->{__sths}->{$statement};
+    my $result = 1;
     eval {
         $sth->execute (@args);
     
         if ($statement =~ /^SELECT_/) {
-            my $result = $sth->fetchall_arrayref;
+            $result = $sth->fetchall_arrayref;
             $sth->finish;
-            return $result;
         }
     };
     if ($@) {
         $pretty_statement = $self->__prettyPrint ($statement, @args)
             if !defined $pretty_statement;
         $logger->error ("$@.  SQL: $pretty_statement");
+        return;
     }
-    return [];
+
+    return $result;
+}
+
+sub _commit {
+    my ($self) = @_;
+    
+    my $logger = $self->{__logger};
+    eval {
+        $logger->debug ("Commiting transaction.");
+        $self->{_dbh}->commit;
+    };
+    if ($@) {
+        my $exception = $@;
+        $logger->error ("Transaction failed: $@");
+        $logger->notice ("Issuing rollback.");
+        eval { $self->{_dbh}->rollback };
+        if ($@) {
+            $logger->error ("Rollback failed: $@");
+        }
+        return;
+    }
+    
+    return $self;
 }
 
 sub existsUser {
@@ -236,6 +350,51 @@ sub existsUser {
     return unless $records && @$records;
     
     return $self;
+}
+
+sub createUser {
+    my ($self, $name, $password, $host) = @_;
+
+    my $now = time;
+    
+    my $digest = $self->_encryptPassword ($password);
+    return if !$self->_doStatement (CREATE_USER => $name, $digest, 
+                                                   $now, $host);
+    return if !$self->_commit;
+    
+    return $self;
+}
+
+sub getUser {
+    my ($self, $name, $password, $host) = @_;
+    
+    my $logger = $self->{__logger};
+    
+    # id, name, password, address, permissions, last_login, last_host,
+    # experience, rating,
+    # boardstyle, linelength, pagelength, redoubles, sortwho, timezone,
+    # allowpip, autoboard, autodouble, automove, bell, crawford, 1, 0, 
+    # moreboards, moves, notify, ratings, ready, report, silent, 1, wrap
+
+    my $rows = $self->_doStatement (SELECT_USER => $name);
+    unless ($rows && @$rows) {
+        $logger->info ("User `$name': no such user.");
+        return;
+    }
+    
+    my $row = $rows->[0];
+    my $digest = $row->[2];
+    unless ($self->_checkPassword ($password, $digest)) {
+        $logger->info ("User `$name': password error.");
+        return;
+    }
+    
+    my $id = $row->[0];
+    my $now = time;
+    return if !$self->_doStatement (TOUCH_USER => $now, $host, $id);
+    return if !$self->_commit;
+
+    return $row;
 }
 
 1;

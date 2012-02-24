@@ -26,13 +26,19 @@ use File::Spec;
 use Fcntl qw (:flock);
 
 use OpenFIBS::Util qw (empty);
-use OpenFIBS::Const qw (:comm);
 use OpenFIBS::Database;
+use OpenFIBS::User;
+use OpenFIBS::Const qw (:comm);
 
+# The index into this array are the COMM constants from OpenFIBS::Const.
+# They are mapped into method names, for example name_check is mapped
+# to __handleNameCheck.
 my @handlers = (
     'welcome',
     undef,
     'name_check',
+    'create_user',
+    'authenticate',
 );
 
 sub new {
@@ -179,7 +185,7 @@ sub checkInput {
                 next;
             }
             my $handler = $handlers[$opcode];
-            $handler =~ s/_(.)/uc $1/eg;            
+            $handler =~ s/_(.)/uc $1/eg;
             my $method = '__handle' . ucfirst $handler;
             my $result = eval { $self->$method ($fd, $msg) };
             if ($@) {
@@ -189,6 +195,7 @@ sub checkInput {
                 delete $sockets->{$key};
                 next;
             } elsif (!$result) {
+                $logger->error ("$method ($msg) did not return.");
                 $rsel->remove ($fd);
                 $esel->remove ($fd);
                 delete $sockets->{$key};
@@ -306,6 +313,50 @@ sub __handleNameCheck {
     return $self;
 }
 
+sub __handleCreateUser {
+    my ($self, $fd, $msg) = @_;
+    
+    # Password may contain spaces.
+    my ($seqno, $name, $ip, $password) = split / /, $msg, 4;
+    
+    my $logger = $self->{__logger};
+    
+    my $status;
+    if ($self->{__database}->createUser ($name, $password, $ip)) {
+        $logger->notice ("Created user `$name', connected from $ip.");
+        $status = 1;
+    } else {
+        $logger->notice ("Creating user `$name', connected from $ip, failed.");
+        $status = 0;
+    }
+    
+    $self->__queueResponse ($fd, COMM_ACK, $seqno, $name, $status);
+        
+    return $self;
+}
+
+sub __handleAuthenticate {
+    my ($self, $fd, $msg) = @_;
+    
+    # Password may contain spaces.
+    my ($seqno, $name, $ip, $password) = split / /, $msg, 4;
+    
+    my $logger = $self->{__logger};
+    $logger->debug ("MSG: $msg");
+    
+    my $data = $self->{__database}->getUser ($name, $password, $ip);
+    if (!$data) {
+        $self->__queueResponse ($fd, COMM_ACK, $seqno, 0);
+        return $self;
+    }
+    
+    my $user = OpenFIBS::User->new (@$data);
+    $self->{__sockets}->{ref $fd}->{user} = $user; 
+    
+    $self->__queueResponse ($fd, COMM_ACK, $seqno, 1, @$data);
+    
+    return $self;
+}
 
 1;
 
