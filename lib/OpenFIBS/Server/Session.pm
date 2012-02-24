@@ -282,6 +282,33 @@ sub __handleMasterAckWelcome {
     return $self;
 }
 
+sub __handleMasterAckNameAvailable {
+    my ($self, $msg) = @_;
+
+    my $logger = $self->{__logger};
+        
+    my ($name, $available) = split / /, $msg;
+    if (!$available) {
+        $logger->debug ("Name `$name' is not available.");
+        $self->{__state} = 'name';
+        return $self->__queueClientOutput ("** Please use another name. '$name'"
+                                           . " is already used by someone"
+                                           . " else.\n");
+    }
+    
+    $logger->debug ("Name `$name' is available.");
+    $self->__queueClientOutput (<<EOF, 1);
+Your name will be $name
+Type in no password and hit Enter/Return if you want to change it now.
+EOF
+
+    $self->__queueClientOutput ("Please give your password: ", 1);
+
+    $self->{__state} = 'password1';
+    
+    return $self;
+}
+
 sub __queueClientOutput {
     my ($self, $text, $no_prompt) = @_;
     

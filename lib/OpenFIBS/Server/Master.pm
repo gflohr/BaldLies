@@ -250,7 +250,7 @@ sub __closeClient {
 }
 
 sub __queueResponse {
-    my ($self, $fd, $opcode, $msg) = @_;
+    my ($self, $fd, $opcode, @msg) = @_;
     
     my $key = ref $fd;
     my $sockets = $self->{__sockets};
@@ -264,6 +264,7 @@ sub __queueResponse {
     
     my $rec = $sockets->{$key};
     
+    my $msg = join ' ', @msg;
     $logger->debug ("Queue message `$opcode $msg'."); 
     $rec->{out_queue} .= "$opcode $msg\n";
     
@@ -300,7 +301,7 @@ sub __handleNameCheck {
 
     my $available = $self->{__database}->existsUser ($name) ? 0 : 1;
 
-    $self->__queueResponse ($fd, COMM_ACK, $seqno, $available);
+    $self->__queueResponse ($fd, COMM_ACK, $seqno, $name, $available);
 
     return $self;
 }
