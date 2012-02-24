@@ -31,6 +31,9 @@ use constant MASTER_HANDLERS => {
     COMM_ACK, 'ack',
 };
 
+use constant TELNET_ECHO_OFF => "\xff\xfb\x01";
+use constant TELNET_ECHO_ON => "\xff\xfd\x01";
+
 sub new {
     my ($class, $server, $ip, $peer) = @_;
 
@@ -199,6 +202,14 @@ sub __checkClientInput {
     return if $self->{__client_in} !~ s/(.*?)\012?\015//;
     
     my $input = $1;
+    
+    # Strip-off possible echo on request.
+    # FIXME: Handle other telnet options as well?
+    $input =~ s/^@{[TELNET_ECHO_ON]}//;
+    
+    # FIBS is seven-bit only.
+    $input =~ s/[\x80-\xff]/?/g;
+    
     if ('login' eq $self->{__state}) {
         if ('guest' eq $input) {
             return $self->__guestLogin;
@@ -207,6 +218,8 @@ sub __checkClientInput {
             $self->{__state} = '';
             return $self;        
         }
+    } elsif ('password1' eq $self->{__state}) {
+        return $self->__checkPassword1 ($input);
     }
     
     $input =~ s/^[ \t\r]+//;
@@ -303,7 +316,8 @@ Type in no password and hit Enter/Return if you want to change it now.
 EOF
 
     $self->__queueClientOutput ("Please give your password: ", 1);
-
+    $self->__queueClientOutput (TELNET_ECHO_OFF, 1);
+    
     $self->{__state} = 'password1';
     
     return $self;
@@ -377,6 +391,40 @@ sub __checkName {
     
     $self->{__state} = 'name_check';
         
+    return $self;
+}
+
+sub __checkPassword1 {
+    my ($self, $password) = @_;
+    
+    my $logger = $self->{__logger};
+    
+    my $encoded = join ', ', map { sprintf '%02x', ord $_ } split //, $password;
+ 
+    $self->__queueClientOutput ("\n", 1);
+    
+    if (empty $password) {
+        $logger->debug ("Password was empty.");
+        $self->__queueClientOutput ("** No password given. Please choose a"
+                                    . " new name\n");
+        $self->{__state} = 'name';
+    } elsif (4 > length $password) {
+        $logger->debug ("Password too short.");
+        $self->__queueClientOutput ("Minimal password length is 4 characters.\n",
+                                    1);
+    } elsif (-1 != index $password, ':') {
+        $logger->debug ("Password contains a colon.");
+        $self->__queueClientOutput ("Your password may not contain ':'\n",
+                                    1);
+    } else {
+        $logger->debug ("Password is acceptable.");
+        $self->__queueClientOutput ("Please retype your password: ", 1);
+        $self->__queueClientOutput (TELNET_ECHO_OFF, 1);
+        $self->{__state} = 'password2';
+        $self->{__password1} = $password;
+        # "** The two passwords were not identical. Please give them again. Password: "
+    }
+    
     return $self;
 }
 
