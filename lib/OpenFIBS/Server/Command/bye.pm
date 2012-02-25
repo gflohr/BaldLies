@@ -31,7 +31,6 @@ sub execute {
     
     my $session = $self->{_session};
     $session->quit;
-    $session->broadcast ("8 8 ?TODO? drops connection.");
     
     return $self;
 }

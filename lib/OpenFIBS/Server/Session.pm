@@ -29,7 +29,10 @@ use OpenFIBS::Const qw (:comm);
 use OpenFIBS::User;
 
 use constant MASTER_HANDLERS => {
-    COMM_ACK, 'ack',
+    MSG_ACK, 'ack',
+    MSG_LOGIN, 'login',
+    MSG_LOGOUT, 'logout',
+    MSG_KICK_OUT, 'kick_out',
 };
 
 use constant TELNET_ECHO_WILL => "\xff\xfb\x01";
@@ -54,6 +57,7 @@ sub new {
         __seqno => 0,
         __expect => {},
         __dispatcher => $server->getDispatcher,
+        __users => {},
     };
 
     my $logger = $self->{__logger} = $server->getLogger;
@@ -130,18 +134,20 @@ sub run {
         my ($rout, $wout, undef) = IO::Select->select ($rsel, $wsel, undef,
                                                        0.1);
         
+        my $user = $self->{__user};
+        my $ident = $user ? "`$user->{name}'" : "unauthenticated user";
         foreach my $fh (@$wout) {
             if ($fh == $peer && !empty $self->{__client_out}) {
                 my $l = length $self->{__client_out};
                 my $bytes_written = syswrite ($peer, $self->{__client_out});
                 if (!defined $bytes_written) {
                     if (!$!{EAGAIN} && !$!{EWOULDBLOCK}) {
-                        $logger->info ("$self->{__ip} dropped connection.");
+                        $logger->info ("$ident dropped connection.");
                         return $self;
                     }
                 } else {
                     if (0 == $bytes_written) {
-                        $logger->info ("$self->{__ip} dropped connection.");
+                        $logger->info ("$ident dropped connection.");
                         return $self;
                     }
                     substr $self->{__client_out}, 0, $bytes_written, '';
@@ -165,7 +171,7 @@ sub run {
         }
 
         if ($self->{__quit}) {
-            $logger->info ("User ??? logging out.");
+            $logger->info ("$ident logging out.");
             return $self;
         }
         
@@ -176,12 +182,12 @@ sub run {
                                           $offset);
                 if (!defined $bytes_read) {
                     if (!$!{EAGAIN} && !$!{EWOULDBLOCK}) {
-                        $logger->info ("$self->{__ip} dropped connection.");
+                        $logger->info ("$ident dropped connection.");
                         return $self;
                     }
                 } else {
                     if (0 == $bytes_read) {
-                        $logger->info ("$self->{__ip} dropped connection.");
+                        $logger->info ("$ident dropped connection.");
                         return $self;
                     }
                     if (length $self->{__client_in} 
@@ -279,6 +285,10 @@ sub __checkClientInput {
         } else {
             $self->{__state} = 'pwprompt';
             $self->{__name} = $input;
+            if (exists $self->{__users}->{$input}) {
+                $self->__queueClientOutput ("** Warning: You are already"
+                                            . " logged in.\n");
+            }
             $self->__queueClientOutput ("password: ", 1);
             $self->__queueClientOutput (TELNET_ECHO_WILL, 1);
             return $self;
@@ -345,6 +355,8 @@ sub __checkMasterInput {
 
 sub __login {
     my ($self, $name, $password) = @_;
+    
+    $self->__queueClientOutput ("\n", 1) if $self->{__telnet};
     
     my $logger = $self->{__logger};
     
@@ -458,7 +470,9 @@ sub __handleMasterAckLogin {
     }
     
     $self->{__state} = 'logged_in';
-    $logger->debug ("Somebody ??? logged in.");
+    
+    my $user = $self->{__user} = OpenFIBS::User->new (@props);
+    $logger->debug ("User $user->{name} logged in from $self->{__ip}.");
     
     if (!$self->{__quiet_login}) {
         $self->__queueClientOutput (<<EOF);
@@ -469,6 +483,28 @@ EOF
     } else {
         $self->__queueClientOutput ("@{[TELNET_ECHO_WONT]}\n");
     }
+    
+    return $self;
+}
+
+sub __handleMasterLogout {
+    my ($self, $name) = @_;
+    
+    delete $self->{__users}->{$name};
+    
+    $self->__queueClientOutput ("8 $name ") if !$self->{__telnet};
+    $self->__queueClientOutput ("$name drops connection.\n");
+    
+    return $self;
+}
+
+sub __handleMasterKickOut {
+    my ($self, $msg) = @_;
+    
+    $self->{__quit} = 1;
+    $self->__queueClientOutput ("** $msg\n", 1);
+    
+    $self->{__logger}->info ("Kicked out: $msg");
     
     return $self;
 }

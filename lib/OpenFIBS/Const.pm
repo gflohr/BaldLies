@@ -31,6 +31,10 @@ our %EXPORT_TAGS = (colors => [qw (BLACK WHITE)],
                         COMM_NAME_AVAILABLE
                         COMM_CREATE_USER
                         COMM_AUTHENTICATE
+                        MSG_ACK
+                        MSG_LOGIN
+                        MSG_LOGOUT
+                        MSG_KICK_OUT
                         )]
                     );
 our @EXPORT_OK = (
@@ -49,10 +53,14 @@ use constant LOG_INFO   => 3;
 use constant LOG_DEBUG  => 4;
 
 use constant COMM_WELCOME        => 0;
-use constant COMM_ACK            => 1;
-use constant COMM_NAME_AVAILABLE => 2;
-use constant COMM_CREATE_USER    => 3;
-use constant COMM_AUTHENTICATE   => 4;
+use constant COMM_NAME_AVAILABLE => 1;
+use constant COMM_CREATE_USER    => 2;
+use constant COMM_AUTHENTICATE   => 3;
+
+use constant MSG_ACK             => 0;
+use constant MSG_LOGIN           => 1;
+use constant MSG_LOGOUT          => 2;
+use constant MSG_KICK_OUT        => 3;
 
 1;
 

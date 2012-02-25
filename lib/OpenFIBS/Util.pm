@@ -22,7 +22,9 @@ use strict;
 
 use base qw (Exporter);
 
-our @EXPORT_OK = qw (empty untaint);
+our @EXPORT_OK = qw (empty untaint format_time);
+
+use POSIX qw (strftime);
 
 sub empty ($);
 sub untaint ($);
@@ -41,6 +43,14 @@ sub untaint ($) {
     }
     
     return $_[0];
+}
+
+sub format_time {
+    my ($when) = @_;
+    
+    $when ||= time;
+    
+    return strftime '%a %b %d %H:%M:%S %Y', gmtime $when;
 }
 
 1;
