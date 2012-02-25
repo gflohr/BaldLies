@@ -93,6 +93,7 @@ sub listen {
         LocalPort => $self->{__port},
         Listen => 5,
         Proto => 'tcp',
+        ReuseAddr => 1,
     );
     $args{LocalHost} = $self->{__ip} unless '*' eq $self->{__ip};
     
