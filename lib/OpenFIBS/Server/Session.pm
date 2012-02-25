@@ -347,8 +347,8 @@ sub __checkMasterInput {
     }
     
     my $handler = ucfirst MASTER_HANDLERS->{$code};
-    $handler =~ s/(_.)/uc $1/eg;
-    my $method = '__handleMaster' . ucfirst MASTER_HANDLERS->{$code};
+    $handler =~ s/_(.)/uc $1/eg;
+    my $method = '__handleMaster' . $handler;
     
     return $self->$method ($payload);
 }
@@ -502,7 +502,7 @@ sub __handleMasterKickOut {
     my ($self, $msg) = @_;
     
     $self->{__quit} = 1;
-    $self->__queueClientOutput ("** $msg\n", 1);
+    $self->__queueClientOutput ("\n** $msg\n", 1);
     
     $self->{__logger}->info ("Kicked out: $msg");
     

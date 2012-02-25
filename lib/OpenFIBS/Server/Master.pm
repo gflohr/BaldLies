@@ -347,8 +347,7 @@ sub __handleAuthenticate {
         # that.
         my $other_fd = $self->{__users}->{$name};
         my $other_rec = $self->{__sockets}->{$other_fd};
-        my $other_user = $other_rec->{user};
-        my $other_host = $other_rec->{last_host};
+        my $other_host = $other_rec->{user}->{last_host};
 
         $self->__queueResponse ($other_fd, MSG_KICK_OUT,
                                 "You just logged in a second time from"
