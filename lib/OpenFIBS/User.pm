@@ -25,9 +25,17 @@ use OpenFIBS::Util qw (empty);
 sub new {
     my ($class, @args) = @_;
 
-    my $self = {};
+    my %self;
+    @self{qw (id name password address admin last_login last_logout 
+              last_host experience rating boardstyle linelength pagelength
+              redoubles sortwho timezone allowpip autoboard autodouble 
+              automove bell crawford double greedy moreboards moves notify
+              ratings ready report silent telnet wrap)}
+        = @args;
     
-    bless $self, $class;
+    # The first user is automatically superuser.
+
+    bless \%self, $class;
 }
 
 1;

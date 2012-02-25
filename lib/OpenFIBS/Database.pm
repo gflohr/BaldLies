@@ -164,8 +164,8 @@ EOF
     # is always the same.  We cannot know whether the user has telnet turned
     # on or off but we can safely ignore that setting in the master process.
     $statements->{SELECT_USER} = <<EOF;
-SELECT DISTINCT id, name, password, address, permissions, last_login, last_host,
-    experience, rating,
+SELECT DISTINCT id, name, password, address, admin, last_login, 
+    last_logout, last_host, experience, rating,
     boardstyle, linelength, pagelength, redoubles, sortwho, timezone,
     allowpip, autoboard, autodouble, automove, bell, crawford, 1, 0, 
     moreboards, moves, notify, ratings, ready, report, silent, 1, wrap
@@ -201,7 +201,7 @@ CREATE TABLE users (
     name TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
     address TEXT NOT NULL DEFAULT '-',
-    permissions INTEGER NOT NULL DEFAULT 0,
+    admin INTEGER NOT NULL DEFAULT 0,
     last_login BIGINT NOT NULL,
     last_logout BIGINT NOT NULL DEFAULT 0,
     last_host TEXT NOT NULL DEFAULT '-',
@@ -371,12 +371,6 @@ sub getUser {
     
     my $logger = $self->{__logger};
     
-    # id, name, password, address, permissions, last_login, last_host,
-    # experience, rating,
-    # boardstyle, linelength, pagelength, redoubles, sortwho, timezone,
-    # allowpip, autoboard, autodouble, automove, bell, crawford, 1, 0, 
-    # moreboards, moves, notify, ratings, ready, report, silent, 1, wrap
-
     my $rows = $self->_doStatement (SELECT_USER => $name);
     unless ($rows && @$rows) {
         $logger->info ("User `$name': no such user.");
