@@ -21,7 +21,7 @@ package OpenFIBS::Server::Command;
 use strict;
 
 sub new {
-    my ($class, $call, $session) = @_;
+    my ($class, $session, $call) = @_;
 
     my $name = $class;
     $name =~ s/.*:://;
@@ -72,6 +72,15 @@ DESCRIPTION
 $description
 .
 EOF
+}
+
+sub execute {
+    my ($self, $payload) = @_;
+    
+    $self->{_session}->reply ("The command `$self->{_name}' is not yet"
+                              . " implemented.");
+    
+    return $self;
 }
 
 1;
