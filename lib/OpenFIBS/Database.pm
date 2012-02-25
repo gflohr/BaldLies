@@ -200,11 +200,11 @@ CREATE TABLE users (
     id $auto_increment,
     name TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
-    address TEXT,
+    address TEXT NOT NULL DEFAULT '-',
     permissions INTEGER NOT NULL DEFAULT 0,
     last_login BIGINT NOT NULL,
-    last_logout BIGINT,
-    last_host TEXT,
+    last_logout BIGINT NOT NULL DEFAULT 0,
+    last_host TEXT NOT NULL DEFAULT '-',
     experience INTEGER NOT NULL DEFAULT 0,
     rating DOUBLE NOT NULL DEFAULT 1500,
     
@@ -261,16 +261,17 @@ sub _encryptPassword {
 }
 
 sub _checkPassword {
-    my ($self, $password, $digest) = @_;
+    my ($self, $password, $wanted) = @_;
 
     my $retval;
 
-    if ($digest =~ m{^(!6![./0-9a-zA-Z]{4,16}!)([a-zA-Z0-9+/]{22})}) {
-        my ($salt, $other) = ($1, $2);
-        return $salt . sha512_base64 $password . $salt;
-    } else {
-        return sha512_base64 $password;
-    }
+    return if $wanted !~ m{^(!6![./0-9a-zA-Z]{4,16}!)([a-zA-Z0-9+/]{22})};
+    my ($salt, $other) = ($1, $2);
+    my $got = $salt . sha512_base64 $password . $salt;
+    
+    return if $got ne $wanted;
+    
+    return $self;
 }
 
 sub __prettyPrint {

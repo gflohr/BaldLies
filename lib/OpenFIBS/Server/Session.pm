@@ -32,8 +32,10 @@ use constant MASTER_HANDLERS => {
     COMM_ACK, 'ack',
 };
 
-use constant TELNET_ECHO_OFF => "\xff\xfb\x01";
-use constant TELNET_ECHO_ON => "\xff\xfd\x01";
+use constant TELNET_ECHO_WILL => "\xff\xfb\x01";
+use constant TELNET_ECHO_WONT => "\xff\xfc\x01";
+use constant TELNET_ECHO_DO => "\xff\xfd\x01";
+use constant TELNET_ECHO_DONT => "\xff\xfe\x01";
 
 sub new {
     my ($class, $server, $ip, $peer) = @_;
@@ -62,6 +64,19 @@ sub new {
                            ************************
 
 Please login as guest if you do not have an account on this server.
+EOF
+
+    $self->{__motd} = <<EOF;
++--------------------------------------------------------------------+
+|                                                                    |
+|  Welcome to OpenFIBS!                                              |
+|                                                                    |
+|  If you have 8 or more unfinished games, you will be unable to     |
+|  start new games.                                                  |
+|                                                                    |
+|  Remember: you are only allowed to have one account.               |
+|                                                                    |
++--------------------------------------------------------------------+
 EOF
 
     my $socket_name = $config->{socket_name};
@@ -98,7 +113,6 @@ sub run {
     my $master = $self->{__master_sock};
 
     my $rsel = IO::Select->new ($peer, $master);
-    my $esel = IO::Select->new ($peer, $master);
                 
     while (1) {
         my $wsel = IO::Select->new;
@@ -108,14 +122,8 @@ sub run {
         $wsel->add ($master) 
             if !empty $self->{__master_out};
         
-        my ($rout, $wout, $eout) = IO::Select->select ($rsel, $wsel, $esel,
+        my ($rout, $wout, undef) = IO::Select->select ($rsel, $wsel, undef,
                                                        0.1);
-
-        foreach my $fh (@$eout) {
-            my $fileno = fileno $fh;
-            $logger->error ("Exception on socket!\n");
-            exit 1;
-        }
 
         foreach my $fh (@$wout) {
             if ($fh == $peer && !empty $self->{__client_out}) {
@@ -200,13 +208,13 @@ sub run {
 sub __checkClientInput {
     my ($self) = @_;
 
-    return if $self->{__client_in} !~ s/(.*?)\012?\015//;
+    return if $self->{__client_in} !~ s/(.*?)\015?\012//;
     
     my $input = $1;
     
     # Strip-off possible echo on request.
     # FIXME: Handle other telnet options as well?
-    $input =~ s/^@{[TELNET_ECHO_ON]}//;
+    $input =~ s/\xff.\x01//;
     
     # FIBS is seven-bit only.
     $input =~ s/[\x80-\xff]/?/g;
@@ -222,7 +230,7 @@ sub __checkClientInput {
             $self->{__state} = 'pwprompt';
             $self->{__name} = $input;
             $self->__queueClientOutput ("password: ", 1);
-            $self->__queueClientOutput (TELNET_ECHO_OFF, 1);
+            $self->__queueClientOutput (TELNET_ECHO_WILL, 1);
             return $self;
         }
     } elsif ('pwprompt' eq $state) {
@@ -342,7 +350,7 @@ Type in no password and hit Enter/Return if you want to change it now.
 EOF
 
     $self->__queueClientOutput ("Please give your password: ", 1);
-    $self->__queueClientOutput (TELNET_ECHO_OFF, 1);
+    $self->__queueClientOutput (TELNET_ECHO_WILL, 1);
     
     $self->{__state} = 'password1';
     
@@ -382,12 +390,22 @@ sub __handleMasterAckLogin {
     my ($status, @props) = split / /, $msg;
     
     if (!$status) {
-        $self->{__status} = 'login';
+        $self->{__state} = 'login';
         $logger->debug ("Authentication failed");
+        $self->__queueClientOutput (TELNET_ECHO_WONT, 1);
+        $self->__queueClientOutput ("\nlogin: ", 1);
+        
         return $self;
     }
     
+    $self->{__state} = 'logged_in';
     $logger->debug ("Somebody ??? logged in.");
+    
+    $self->__queueClientOutput (<<EOF);
+** User gflohr authenticated.
+** Last login: Sat Feb 25 04:59:02 2012  from 95-87-204-192.net1.bg
+@{[TELNET_ECHO_WONT]}$self->{__motd}
+EOF
     
     return $self;
 }
@@ -395,10 +413,10 @@ sub __handleMasterAckLogin {
 sub __queueClientOutput {
     my ($self, $text, $no_prompt) = @_;
     
-    $text =~ s/\n/\012\015/g;
+    $text =~ s/\n/\015\012/g;
     
     $self->{__client_out} .= $text;
-    if ($self->{__telnet} && !$no_prompt && "\012\015" eq substr $text, -2, 2) {
+    if ($self->{__telnet} && !$no_prompt && "\015\012" eq substr $text, -2, 2) {
         $self->{__client_out} .= "> ";
     }
 
@@ -475,19 +493,22 @@ sub __checkPassword1 {
         $logger->debug ("Password was empty.");
         $self->__queueClientOutput ("** No password given. Please choose a"
                                     . " new name\n");
+        $self->__queueClientOutput (TELNET_ECHO_WONT, 1);
         $self->{__state} = 'name';
     } elsif (4 > length $password) {
         $logger->debug ("Password too short.");
         $self->__queueClientOutput ("Minimal password length is 4 characters.\n",
                                     1);
+        $self->__queueClientOutput ("Please give your password: ", 1);
     } elsif (-1 != index $password, ':') {
         $logger->debug ("Password contains a colon.");
         $self->__queueClientOutput ("Your password may not contain ':'\n",
                                     1);
+        $self->__queueClientOutput ("Please give your password: ", 1);
     } else {
         $logger->debug ("Password is acceptable.");
         $self->__queueClientOutput ("Please retype your password: ", 1);
-        $self->__queueClientOutput (TELNET_ECHO_OFF, 1);
+        $self->__queueClientOutput (TELNET_ECHO_WILL, 1);
         $self->{__state} = 'password2';
         $self->{__password} = $password;
     }
@@ -506,7 +527,7 @@ sub __checkPassword2 {
         $logger->debug ("Password mismatch.");
         $self->__queueClientOutput ("** The two passwords were not identical."
                                     . " Please give them again. Password: ", 1);
-        $self->__queueClientOutput (TELNET_ECHO_OFF, 1);
+        $self->__queueClientOutput (TELNET_ECHO_WILL, 1);
         $self->{__state} = 'password1';
     } else {
         my $seqno = $self->{__seqno}++;

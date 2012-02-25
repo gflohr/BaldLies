@@ -53,7 +53,6 @@ sub new {
         __logger => $logger,
         __sockets => {},
         __rsel   => IO::Select->new,
-        __esel   => IO::Select->new,
     };
 
     bless $self, $class;
@@ -99,14 +98,12 @@ sub checkInput {
     my $config = $self->{__config};
 
     my $rsel = $self->{__rsel};
-    my $esel = $self->{__esel};
     my $sockets = $self->{__sockets};
     my $listener = $self->{__listener};
     
     while (my $socket = $listener->accept) {
         $logger->debug ("Master accepted connection.");
         $rsel->add ($socket);
-        $esel->add ($socket);
         $sockets->{ref $socket} = {
             socket => $socket,
             out_queue => '',
@@ -120,16 +117,7 @@ sub checkInput {
         $wsel->add ($rec->{socket}) if !empty $rec->{out_queue};
     }
 
-    my ($rout, $wout, $eout) = IO::Select->select ($rsel, $wsel, $esel, 
-                                                   1.0);
-    foreach my $fd (@$eout) {
-        $logger->error ("Exception on client socket $fd.");
-        my $key = ref $fd;
-        $rsel->remove ($fd);
-        $esel->remove ($fd);
-        delete $sockets->{$key};
-    }
-    
+    my ($rout, $wout, undef) = IO::Select->select ($rsel, $wsel, undef, 1.0);
     foreach my $fd (@$rout) {
         my $key = ref $fd;
         if (!exists $sockets->{$key}) {
@@ -148,13 +136,11 @@ sub checkInput {
         } elsif (0 == $bytes_read) {
             $logger->debug ("End-of-file while reading from socket $fd: $!!");
             $rsel->remove ($fd);
-            $esel->remove ($fd);
             delete $sockets->{$key};
         }
         
         if (!$bytes_read) {
             $rsel->remove ($fd);
-            $esel->remove ($fd);
             delete $sockets->{$key};
             next;                                
         }
@@ -165,14 +151,12 @@ sub checkInput {
             if ($opcode !~ /^0|[1-9][0-9]*$/) {
                 $logger->error ("Received garbage from $fd: $line");
                 $rsel->remove ($fd);
-                $esel->remove ($fd);
                 delete $sockets->{$key};
                 next;
             }
             if ($opcode > $#handlers || !defined $handlers[$opcode]) {
                 $logger->error ("Unknown opcode $opcode from $fd.");
                 $rsel->remove ($fd);
-                $esel->remove ($fd);
                 delete $sockets->{$key};
                 next;
             }
@@ -180,7 +164,6 @@ sub checkInput {
                 $logger->error ("Got opcode $opcode from $fd before"
                                 . " welcome message from child.");
                 $rsel->remove ($fd);
-                $esel->remove ($fd);
                 delete $sockets->{$key};
                 next;
             }
@@ -191,13 +174,11 @@ sub checkInput {
             if ($@) {
                 $logger->error ($@);
                 $rsel->remove ($fd);
-                $esel->remove ($fd);
                 delete $sockets->{$key};
                 next;
             } elsif (!$result) {
                 $logger->error ("$method ($msg) did not return.");
                 $rsel->remove ($fd);
-                $esel->remove ($fd);
                 delete $sockets->{$key};
                 next;
             }
@@ -228,14 +209,12 @@ sub checkInput {
             $logger->debug ("End-of-file while writing to socket"
                             . " $fd: $!!");
             $rsel->remove ($fd);
-            $esel->remove ($fd);
             delete $sockets->{$key};
             next;
         }
         
         if (!$bytes_written) {
             $rsel->remove ($fd);
-            $esel->remove ($fd);
             delete $sockets->{$key};
             next;                                
         }
@@ -272,7 +251,7 @@ sub __queueResponse {
     my $rec = $sockets->{$key};
     
     my $msg = join ' ', @msg;
-    $logger->debug ("Queue message `$opcode $msg'."); 
+    $logger->debug ("Queue message `$opcode $msg'.");
     $rec->{out_queue} .= "$opcode $msg\n";
     
     return $self;
