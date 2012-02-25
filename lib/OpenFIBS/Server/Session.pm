@@ -52,7 +52,8 @@ sub new {
         __state => 'login',
         __telnet => 1,
         __seqno => 0,
-        __expect => {}
+        __expect => {},
+        __dispatcher => $server->getDispatcher,
     };
 
     my $logger = $self->{__logger} = $server->getLogger;
@@ -205,10 +206,23 @@ sub run {
     return $self;
 }
 
+sub reply {
+    my ($self, $what, $no_prompt) = @_;
+    
+    chomp $what;
+    $what .= "\n";
+    
+    $self->__queueClientOutput ($what, $no_prompt);
+    
+    return $self;
+}
+
 sub __checkClientInput {
     my ($self) = @_;
 
     return if $self->{__client_in} !~ s/(.*?)\015?\012//;
+
+    my $logger = $self->{__logger};
     
     my $input = $1;
     
@@ -245,12 +259,13 @@ sub __checkClientInput {
     
     my @tokens = split /[ \t\r]+/, $input, 2;
 
-    if ('name' eq $self->{__state} && 'name' eq $tokens[0]) {
+    if ('name' eq $self->{__state} && 'name' eq lc $tokens[0]) {
         return $self->__checkName ($tokens[1]);
     }
-    
-    $self->__queueClientOutput ("** Unknown command: '$tokens[0]'\n");
-    
+
+    eval { $self->{__dispatcher}->execute ($self, @tokens) };
+    $logger->fatal ($@) if $@;
+
     return $self;
 }
 
@@ -404,7 +419,7 @@ sub __handleMasterAckLogin {
     $self->{__state} = 'logged_in';
     $logger->debug ("Somebody ??? logged in.");
     
-    if ($self->{__quiet_login}) {
+    if (!$self->{__quiet_login}) {
         $self->__queueClientOutput (<<EOF);
 ** User gflohr authenticated.
 ** Last login: Sat Feb 25 04:59:02 2012  from 95-87-204-192.net1.bg

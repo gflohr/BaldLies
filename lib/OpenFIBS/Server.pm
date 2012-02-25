@@ -35,6 +35,7 @@ use OpenFIBS::Logger;
 use OpenFIBS::Server::Master;
 use OpenFIBS::Server::Session;
 use OpenFIBS::Server::Listener;
+use OpenFIBS::Server::Dispatcher;
 
 use version 0.77;
 our $VERSION = version->declare("0.1.0");
@@ -132,10 +133,11 @@ sub run {
     $self->__openPorts;
     $self->__changePersona;
     $self->__upgradeDatabaseSchema;
+    $self->__loadDispatcher;
     $self->__daemonize if !$config->{debug};
     eval {
-        $self->__setupSignals;
         $self->__generateSecret;    
+        $self->__setupSignals;
         $self->__startMaster;
     
     
@@ -194,6 +196,18 @@ sub shutdownServer {
     $logger->notice ("Shutdown complete, server exiting with code $exit_code.");
     
     exit $exit_code;
+}
+
+sub __loadDispatcher {
+    my ($self) = @_;
+    
+    my $logger = $self->{__logger};
+    
+    $logger->debug ("Loading command plug-ins in \@INC.");
+    
+    $self->{__dispatcher} = OpenFIBS::Server::Dispatcher->new ($logger, @INC);
+    
+    return $self;
 }
 
 sub __generateSecret {
@@ -435,6 +449,10 @@ sub getConfig {
 
 sub getSecret {
     shift->{__secret};
+}
+
+sub getDispatcher {
+    shift->{__dispatcher};
 }
 
 sub __readConfiguration {
