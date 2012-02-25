@@ -20,6 +20,8 @@ package OpenFIBS::Server::Command;
 
 use strict;
 
+use OpenFIBS::Util qw (empty);
+
 sub new {
     my ($class, $session, $call) = @_;
 
@@ -39,39 +41,57 @@ sub _helpName {
 sub _helpSynopsis {
     my ($self) = @_;
     
-    return '  ' . join "\n  ", $self->{_name}, $self->aliases;
+    return join "\n", $self->{_name}, $self->aliases;
 }
 
 sub _helpDescription {
-    return "No description available for this command.\n";
+    return "No description available for this command.";
+}
+
+sub _helpSeeAlso {
+    return '';
 }
 
 sub help {
     my ($self) = @_;
 
     my $name_help = $self->_helpName;
-    $name_help =~ s/^[ \t\r\n]+//;
-    $name_help =~ s/[ \t\r\n]+$//;
+    $name_help =~ s/^[ \t\r]+//;
+    $name_help =~ s/[ \t\r]+$//;
     
     my $synopsis = $self->_helpSynopsis;
+    $synopsis =~ s/^/  /gs;
+    $synopsis =~ s/[ \t\r\n]+$//g;
     
     my $description = $self->_helpDescription;
-    $description =~ s/^[ \t\r\n]+//;
-    $description =~ s/[ \t\r\n]+$//;
+    $description =~ s/^/  /gs;
+    $description =~ s/[ \t\r\n]+$//g;
     
     $description =~ s/^/  /gm;
     
-    return <<EOF;
+    my $retval = <<EOF;
 NAME
-$self->{_name} - $name_help
+  $self->{_name} - $name_help
 _
 SYNOPSIS
 $synopsis
 
 DESCRIPTION
 $description
-.
 EOF
+
+    my $see_also = $self->_helpSeeAlso;
+    if (!empty $see_also) {
+        $see_also =~ s/^/  /gs;
+        $see_also =~ s/[ \t\r]+$//gs;
+        $retval .= <<EOF;
+
+SEE ALSO
+$see_also
+EOF
+    }
+    
+    return $retval;
 }
 
 sub execute {

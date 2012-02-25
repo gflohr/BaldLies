@@ -219,9 +219,14 @@ sub getLogger {
     shift->{__logger};
 }
 
+sub getDispatcher {
+    shift->{__dispatcher};
+}
+
 sub reply {
     my ($self, $what, $no_prompt) = @_;
     
+    $what = '' if empty $what;
     chomp $what;
     $what .= "\n";
     

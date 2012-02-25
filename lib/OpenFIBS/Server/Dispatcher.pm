@@ -90,6 +90,24 @@ sub execute {
     return $self;
 }
 
+sub all {
+    my ($self) = @_;
+    
+    return keys %{$self->{__names}};
+}
+
+sub module {
+    my ($self, $cmd) = @_;
+    
+    # This is compatible to FIBS but not very clever.  Actually, aliases
+    # should also be possible for the cmd attribute.  But FIBS does not
+    # display help, when the topic is an alias.  Maybe this should be made
+    # configurable.
+    return $self->{__names}->{$cmd} if exists $self->{__names}->{$cmd};
+
+    return;
+}
+
 sub __registerCommands {
     my ($self, $cmd, @aliases) = @_;
 
