@@ -60,19 +60,17 @@ sub help {
     $name_help =~ s/[ \t\r]+$//;
     
     my $synopsis = $self->_helpSynopsis;
-    $synopsis =~ s/^/  /gs;
+    $synopsis =~ s/^/  /gm;
     $synopsis =~ s/[ \t\r\n]+$//g;
     
     my $description = $self->_helpDescription;
-    $description =~ s/^/  /gs;
-    $description =~ s/[ \t\r\n]+$//g;
-    
     $description =~ s/^/  /gm;
+    $description =~ s/[ \t\r\n]+$//g;
     
     my $retval = <<EOF;
 NAME
   $self->{_name} - $name_help
-_
+
 SYNOPSIS
 $synopsis
 
@@ -82,8 +80,8 @@ EOF
 
     my $see_also = $self->_helpSeeAlso;
     if (!empty $see_also) {
-        $see_also =~ s/^/  /gs;
-        $see_also =~ s/[ \t\r]+$//gs;
+        $see_also =~ s/^/  /gm;
+        $see_also =~ s/[ \t\r\n]+$//gs;
         $retval .= <<EOF;
 
 SEE ALSO

@@ -39,16 +39,17 @@ sub execute {
         if (!empty $class) {
             my $obj = $class->new ($self->{_session}, $topic);
             $help = $obj->help;
+        } else {
+            return $session->reply ("** No help available on $payload");
         }
     }
     
-    if (empty $payload) {
+    if (empty $help) {
         $help = $self->help;
     }
     
     chomp $help;
-    $session->reply ("$help\n.");
-    return $self;
+    return $session->reply ("$help\n.");
 }
 
 sub _helpName {
@@ -88,7 +89,8 @@ sub _helpDescription {
     return <<EOF
 Without an argument, this page is displayed.
 
-With an argument TOPIC, help for that TOPIC is displayed.  Valid topics are:
+With an argument TOPIC, help for that TOPIC is displayed.  Valid topics
+are:
 
 $topics
 EOF
