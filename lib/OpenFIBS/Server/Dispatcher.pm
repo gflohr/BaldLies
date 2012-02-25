@@ -79,7 +79,13 @@ sub execute {
     
     my $cmd = lc $call;
     
-    $session->reply ("** Unknown command: '$call'\n");
+    if (!exists $self->{__aliases}->{$cmd}) {
+        $session->reply ("** Unknown command: '$call'\n");
+    } else {
+        my $module = $self->{__aliases}->{$cmd};
+        my $plug_in = $module->new ($session, $call);
+        $plug_in->execute ($payload);
+    }
     
     return $self;
 }
@@ -118,6 +124,7 @@ EOF
                 $self->{__aliases}->{$alias} = $plug_in;
             }
         }
+        $self->{__aliases}->{$name} = $plug_in;
     }
     
     return $self;

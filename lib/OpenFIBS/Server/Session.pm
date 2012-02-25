@@ -80,6 +80,10 @@ EOF
 +--------------------------------------------------------------------+
 EOF
 
+    $self->{__bye_msg} = <<EOF;
+Thanks for using this server!
+EOF
+
     my $socket_name = $config->{socket_name};
     $logger->debug ("Connecting to master socket `$socket_name'.");
     $self->{__master_sock} = IO::Socket::UNIX->new (Type => SOCK_STREAM,
@@ -125,7 +129,7 @@ sub run {
         
         my ($rout, $wout, undef) = IO::Select->select ($rsel, $wsel, undef,
                                                        0.1);
-
+        
         foreach my $fh (@$wout) {
             if ($fh == $peer && !empty $self->{__client_out}) {
                 my $l = length $self->{__client_out};
@@ -160,6 +164,11 @@ sub run {
             }
         }
 
+        if ($self->{__quit}) {
+            $logger->info ("User ??? logging out.");
+            return $self;
+        }
+        
         foreach my $fh (@$rout) {
             if ($fh == $peer) {
                 my $offset = length $self->{__client_in};
@@ -200,10 +209,14 @@ sub run {
                     $self->__checkMasterInput;
                 }
             }
-        }                
+        }      
     }
     
     return $self;
+}
+
+sub getLogger {
+    shift->{__logger};
 }
 
 sub reply {
@@ -213,6 +226,24 @@ sub reply {
     $what .= "\n";
     
     $self->__queueClientOutput ($what, $no_prompt);
+    
+    return $self;
+}
+
+sub broadcast {
+    my ($self, $msg) = @_;
+    
+    my $logger = $self->{__logger};
+    $logger->error ("Broadcast not yet implemented: $msg");
+    
+    return $self;
+}
+
+sub quit {
+    my ($self) = @_;
+    
+    $self->__queueClientOutput ($self->{__bye_msg}, 1);
+    $self->{__quit} = 1;
     
     return $self;
 }

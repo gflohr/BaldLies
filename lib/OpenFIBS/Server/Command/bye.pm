@@ -26,6 +26,16 @@ sub aliases {
     return qw (bye adios ciao end exit logout quit tschoe);
 }
 
+sub execute {
+    my ($self, $payload) = @_;
+    
+    my $session = $self->{_session};
+    $session->quit;
+    $session->broadcast ("8 8 ?TODO? drops connection.");
+    
+    return $self;
+}
+
 1;
 
 =head1 NAME
