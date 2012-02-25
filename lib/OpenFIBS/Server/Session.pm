@@ -487,13 +487,41 @@ EOF
     return $self;
 }
 
+sub __handleMasterLogin {
+    my ($self, $name) = @_;
+ 
+    # FIXME! Initialize user.   
+#    $self->{__users}->{$name} = ...;
+
+    if ($self->{__user}->{notify}) {
+        my $prefix;
+        
+        if ($self->{__telnet}) {
+            $prefix = "\n";
+        } else {
+            $prefix = "7 $name ";
+        }
+        $self->__queueClientOutput ("$prefix$name logs in.\n");
+    }
+    
+    return $self;
+}
+
 sub __handleMasterLogout {
     my ($self, $name) = @_;
     
     delete $self->{__users}->{$name};
     
-    $self->__queueClientOutput ("8 $name ") if !$self->{__telnet};
-    $self->__queueClientOutput ("$name drops connection.\n");
+    if ($self->{__user}->{notify}) {
+        my $prefix;
+        
+        if ($self->{__telnet}) {
+            $prefix = "\n";
+        } else {
+            $prefix = "8 $name ";
+        }
+        $self->__queueClientOutput ("$prefix$name drops connection.\n");
+    }
     
     return $self;
 }
