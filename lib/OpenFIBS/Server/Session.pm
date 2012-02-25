@@ -372,12 +372,15 @@ sub __handleMasterAckUserCreated {
     }
     
     $logger->notice ("User `$name' account created.");
-    $self->__queueClientOutput (<<EOF);
+    my $welcome = <<EOF;
 You are registered.
 Type 'help beginner' to get started.
 EOF
+    chomp $welcome;
+    $self->__queueClientOutput ($welcome, 1);
 
-    $self->__login ($name, $self->{__password});
+    $self->{__first_login} = 1;
+    $self->__login ($name, delete $self->{__password});
     
     return $self;
 }
@@ -401,11 +404,15 @@ sub __handleMasterAckLogin {
     $self->{__state} = 'logged_in';
     $logger->debug ("Somebody ??? logged in.");
     
-    $self->__queueClientOutput (<<EOF);
+    if ($self->{__quiet_login}) {
+        $self->__queueClientOutput (<<EOF);
 ** User gflohr authenticated.
 ** Last login: Sat Feb 25 04:59:02 2012  from 95-87-204-192.net1.bg
 @{[TELNET_ECHO_WONT]}$self->{__motd}
 EOF
+    } else {
+        $self->__queueClientOutput ("@{[TELNET_ECHO_WONT]}\n");
+    }
     
     return $self;
 }
@@ -538,8 +545,6 @@ sub __checkPassword2 {
                                     $password);
     }
 
-    delete $self->{__password};
-    
     return $self;
 }
 
