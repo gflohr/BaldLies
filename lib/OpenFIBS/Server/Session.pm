@@ -291,7 +291,12 @@ sub __checkClientInput {
         return $self->__checkPassword2 ($input);
     }
     
-    return if empty $input;
+    if (empty $input) {
+        if ($self->{__telnet}) {
+            $self->__queueClientOutput ('> ', 1);
+        }
+        return $self;
+    }
     
     my @tokens = split /[ \t\r]+/, $input, 2;
 
