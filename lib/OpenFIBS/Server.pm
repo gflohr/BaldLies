@@ -225,6 +225,13 @@ sub __handleConnection {
     my $pid = fork;
     $logger->error ("Cannot fork: $!!") if !defined $pid;
     if (!$pid) {
+        # Restore signal handlers.
+        $SIG{INT} = 'DEFAULT';
+        $SIG{TERM} = 'DEFAULT';
+        $SIG{HUP} = 'DEFAULT';
+        $SIG{QUIT} = 'DEFAULT';
+        $SIG{CHLD} = 'DEFAULT';
+        
         $self->__unlockDaemon;
         foreach my $l (@{$self->{__listeners}}) {
             $l->close;
