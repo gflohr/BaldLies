@@ -22,12 +22,6 @@ use strict;
 
 use base qw (OpenFIBS::Server::Command);
 
-sub new {
-    my ($class, $cmd) = @_;
-
-    bless { _name => $cmd }, $class;
-}
-
 sub aliases {
     return qw (bye adios ciao end exit logout quit tschoe);
 }
