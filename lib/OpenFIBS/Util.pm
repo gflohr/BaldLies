@@ -22,9 +22,11 @@ use strict;
 
 use base qw (Exporter);
 
-our @EXPORT_OK = qw (empty untaint format_time);
+our @EXPORT_OK = qw (empty untaint format_time serialize deserialize);
 
 use POSIX qw (strftime);
+use MIME::Base64 qw (decode_base64);
+use Storable qw (nfreeze thaw);
 
 sub empty ($);
 sub untaint ($);
@@ -51,6 +53,20 @@ sub format_time {
     $when ||= time;
     
     return strftime '%a %b %d %H:%M:%S %Y', gmtime $when;
+}
+
+sub serialize {
+    my ($object) = @_;
+    
+    my $retval = encode_base64 $object;
+    
+    $retval =~ s/[^A-Za-z0-9\/+=]//;
+    
+    return $retval;
+}
+
+sub deserialize {
+    &MIME::Base64::decode_base64 ();
 }
 
 1;
@@ -80,6 +96,23 @@ Returns true if the B<SCALAR> is undefined or the empty string.
 =item B<untaint SCALAR>
 
 Unconditionally launders B<SCALAR> so that it passes Perl's taint checks.
+
+=item B<format_time TIMESTAMP>
+
+Formats B<TIMESTAMP>, expressed as seconds since the epoch, in a way
+defined by OpenFIBS.  Example:
+
+    Sat Feb 25 04:59:02 2012
+
+=item B<serialize OBJECT>
+
+Serializes B<OBJECT> into a base-64 encoded string with all whitespace
+stripped.
+
+=item B<deserialize SCALAR>
+
+Deserializes B<SCALAR> into a Perl object.  It undoes serialize() and is
+currently just a wrapper around MIME::Base64::decode_base64().
 
 =back
 
