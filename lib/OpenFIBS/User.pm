@@ -33,7 +33,7 @@ sub new {
     my ($class, @args) = @_;
 
     my %self;
-    @self{qw (@properties)} = @args;
+    @self{@properties} = @args;
     
     # The first user is automatically superuser.
     $self{admin} = 1 if !$self{id};
