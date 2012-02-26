@@ -128,23 +128,6 @@ sub accept {
     return $peer;
 }
 
-sub checkAccess {
-    my ($self, $sock) = @_;
-    
-    my $remote = $sock->sockhost;
-
-    my $logger = $self->{__logger};    
-    $logger->debug ("Checking access from $remote.");
-    
-    my $local = $self->{__socket}->sockhost;
-    $logger->debug ("My address is $local.");
-    
-    return $self if '127.0.0.1' eq $remote;
-    return $self if $local eq $remote;
-    
-    return;
-}
-
 sub close {
     my ($self) = @_;
     

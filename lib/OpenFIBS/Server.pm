@@ -234,7 +234,8 @@ sub __handleConnection {
     my $sockhost = $sock->sockhost;
     
     $logger->info ("Incoming connection from $sockhost.\n");
-    $listener->checkAccess ($sock) or return;
+    
+    $self->__checkAccess ($sock) or return;
     
     my $pid = fork;
     $logger->error ("Cannot fork: $!!") if !defined $pid;
@@ -259,6 +260,31 @@ sub __handleConnection {
     $self->{__children}->{$pid} = 1;
     
     return $self;    
+}
+
+sub __checkAccess {
+    my ($self, $sock) = @_;
+    
+    my $remote = $sock->sockhost;
+
+    my $logger = $self->{__logger};    
+    $logger->debug ("Checking access from $remote.");
+
+    if ($self->{__ACLs}) {
+        my $sockaddr = $sock->sockaddr;
+        foreach my $mask (@{$self->{__ACLs}}) {
+            return $self if $mask eq ($mask & $sockaddr);
+        }
+        $logger->warning ("Connection attempt from $remote refused.");
+        return;
+    } else {
+        my $local = $self->{__socket}->sockhost;
+    
+        return $self if '127.0.0.1' eq $remote;
+        return $self if $local eq $remote;
+    }
+    
+    return;
 }
 
 sub __startMaster {
@@ -710,7 +736,7 @@ EOF
             my $bits = unpack '%b32', $mask;
             my $dotted = join '.', unpack 'C4', $addr & $mask;
             $logger->notice ("Allowing connections from $dotted/$bits.");
-            push @{$self->{__acls}}, $mask & $addr;
+            push @{$self->{__ACLs}}, $mask & $addr;
         }
     }
     
