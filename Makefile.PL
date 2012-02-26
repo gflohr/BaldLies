@@ -40,6 +40,17 @@ WriteMakefile (
     },
 );
 
+eval "require Net::Interface";
+if ($@) {
+    warn <<EOF;
+Prerequisite Net::Interface not found.  Your server will therefore
+reject connections from your local network except from your local
+machine!
+$@
+EOF
+    sleep 2;
+}
+
 sub MY::postamble {
 	return <<EOF;
 all :: ReleaseNotes 

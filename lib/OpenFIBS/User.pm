@@ -22,18 +22,21 @@ use strict;
 
 use OpenFIBS::Util qw (empty);
 
+my @properties = qw (id name password address admin last_login last_logout 
+                     last_host experience rating boardstyle linelength 
+                     pagelength redoubles sortwho timezone allowpip autoboard 
+                     autodouble automove bell crawford double greedy 
+                     moreboards moves notify ratings ready report silent 
+                     telnet wrap);
+                      
 sub new {
     my ($class, @args) = @_;
 
     my %self;
-    @self{qw (id name password address admin last_login last_logout 
-              last_host experience rating boardstyle linelength pagelength
-              redoubles sortwho timezone allowpip autoboard autodouble 
-              automove bell crawford double greedy moreboards moves notify
-              ratings ready report silent telnet wrap)}
-        = @args;
+    @self{qw (@properties)} = @args;
     
     # The first user is automatically superuser.
+    $self{admin} = 1 if !$self{id};
 
     bless \%self, $class;
 }

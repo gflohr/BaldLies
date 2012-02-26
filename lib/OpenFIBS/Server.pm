@@ -25,7 +25,7 @@ use File::Path;
 use IO::Handle;
 use IO::File;
 use Fcntl qw (:DEFAULT :flock F_GETFL F_SETFL O_NONBLOCK :mode);
-use Socket;
+use Socket qw (AF_INET);
 use Time::HiRes qw (usleep tv_interval gettimeofday);
 use POSIX qw (:sys_wait_h setsid);
 
@@ -60,7 +60,7 @@ sub new {
     $self->{__logger} = $logger;
     $self->{__config} = { %options };
     $self->{__children} = {};
-        
+           
     bless $self, $class;
 }
 
@@ -139,7 +139,7 @@ sub run {
         $self->__generateSecret;    
         $self->__setupSignals;
         $self->__startMaster;
-    
+        $self->__createACLs;    
     
         $logger->notice ("OpenFIBS server $VERSION starting.");
         $logger->notice ("Running as $self->{__user}:$self->{__group}.\n");
@@ -234,7 +234,7 @@ sub __handleConnection {
     my $sockhost = $sock->sockhost;
     
     $logger->info ("Incoming connection from $sockhost.\n");
-    $listener->checkAccess ($sockhost) or return;
+    $listener->checkAccess ($sock) or return;
     
     my $pid = fork;
     $logger->error ("Cannot fork: $!!") if !defined $pid;
@@ -678,6 +678,41 @@ EOF
         $self->{__pid_fd}->truncate (length $version_string);
     }
     $self->{__pid_fd}->flush;
+    
+    return $self;
+}
+
+sub __createACLs {
+    my ($self) = @_;
+    
+    my $logger = $self->{__logger};
+    
+    eval { require Net::Interface };
+    if ($@) {
+        $logger->warning (<<EOF);
+Perl module Net::Interface not found.
+Server will only accept connections from 
+127.0.0.1/8 or addresses explicitely 
+specified with --listen (i. e. not `*').
+EOF
+    }
+
+    my @interfaces = Net::Interface->interfaces;
+    foreach my $if (@interfaces) {
+        $self->{__ACLs} ||= [];
+        my $name = $if->name;
+        $logger->debug ("Creating ACLs from network interface `$name';");
+        my @addresses = $if->address (AF_INET);
+        my @netmasks = $if->netmask (AF_INET);
+        for (my $i = 0; $i < @addresses; ++$i) {
+            my $mask = $netmasks[$i];
+            my $addr = $addresses[$i];
+            my $bits = unpack '%b32', $mask;
+            my $dotted = join '.', unpack 'C4', $addr & $mask;
+            $logger->notice ("Allowing connections from $dotted/$bits.");
+            push @{$self->{__acls}}, $mask & $addr;
+        }
+    }
     
     return $self;
 }
