@@ -360,7 +360,7 @@ sub __handleAuthenticate {
     
     $self->__queueResponse ($fd, MSG_ACK, $seqno, 1, @$data);
     
-    $self->broadcast (MSG_LOGIN, $name, $name);
+    $self->broadcast (MSG_LOGIN, $name, @$data);
     
     return $self;
 }

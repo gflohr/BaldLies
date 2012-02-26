@@ -488,10 +488,13 @@ EOF
 }
 
 sub __handleMasterLogin {
-    my ($self, $name) = @_;
+    my ($self, $data) = @_;
  
-    # FIXME! Initialize user.   
-#    $self->{__users}->{$name} = ...;
+    my (@props) = split / /, $data;
+    
+    my $user = OpenFIBS::User->new (@props);
+    my $name = $user->{name};
+    $self->{__users}->{$name} = $user;
 
     if ($self->{__user}->{notify}) {
         my $prefix;
