@@ -178,7 +178,7 @@ sub run {
         }
         
         foreach my $fh (@$rout) {
-            if ($fh == $peer) {
+            if ($self->{__ready} && $fh == $peer) {
                 my $offset = length $self->{__client_in};
                 my $bytes_read = sysread ($peer, $self->{__client_in}, 4096, 
                                           $offset);
@@ -396,6 +396,7 @@ sub __handleMasterAckWelcome {
     my ($self) = @_;
     
     $self->{__logger}->debug ("Client received ack welcome.");
+    $self->{__ready} = 1;
     
     return $self;
 }
