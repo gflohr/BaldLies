@@ -23,6 +23,8 @@ use strict;
 use Fcntl qw (F_GETFL F_SETFL O_NONBLOCK);
 use IO::Select;
 use IO::Socket::UNIX;
+use MIME::Base64 qw (decode_base64);
+use Storable qw (thaw);
 
 use OpenFIBS::Util qw (empty);
 use OpenFIBS::Const qw (:comm);
@@ -285,10 +287,6 @@ sub __checkClientInput {
         } else {
             $self->{__state} = 'pwprompt';
             $self->{__name} = $input;
-            if (exists $self->{__users}->{$input}) {
-                $self->__queueClientOutput ("** Warning: You are already"
-                                            . " logged in.\n");
-            }
             $self->__queueClientOutput ("password: ", 1);
             $self->__queueClientOutput (TELNET_ECHO_WILL, 1);
             return $self;
@@ -339,7 +337,7 @@ sub __checkMasterInput {
     
     my $input = $1;
 
-    $logger->debug ("Got master input $input.");
+    # $logger->debug ("Got master input $input.");
     
     my ($code, $payload) = split / /, $input, 2;
     if (!exists MASTER_HANDLERS->{$code}) {
@@ -458,7 +456,7 @@ sub __handleMasterAckLogin {
 
     my $logger = $self->{__logger};
 
-    my ($status, @props) = split / /, $msg;
+    my ($status, $payload) = split / /, $msg;
     
     if (!$status) {
         $self->{__state} = 'login';
@@ -471,12 +469,16 @@ sub __handleMasterAckLogin {
     
     $self->{__state} = 'logged_in';
     
-    my $user = $self->{__user} = OpenFIBS::User->new (@props);
+    # No error checking here.  This will fail if the data is not transmitted
+    # correctly.
+    $self->{__users} = thaw decode_base64 $payload;
+    my $user = $self->{__users}->{$self->{__name}}->copy;
+
     $logger->debug ("User $user->{name} logged in from $self->{__ip}.");
     
     if (!$self->{__quiet_login}) {
         $self->__queueClientOutput (<<EOF);
-** User gflohr authenticated.
+** User $user->{name} authenticated.
 ** Last login: Sat Feb 25 04:59:02 2012  from 95-87-204-192.net1.bg
 @{[TELNET_ECHO_WONT]}$self->{__motd}
 EOF

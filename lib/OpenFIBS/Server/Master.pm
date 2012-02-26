@@ -24,6 +24,8 @@ use IO::Socket::UNIX qw (SOCK_STREAM SOMAXCONN);
 use Time::HiRes qw (usleep);
 use File::Spec;
 use Fcntl qw (:flock);
+use Storable qw (nfreeze);
+use MIME::Base64 qw (encode_base64);
 
 use OpenFIBS::Util qw (empty format_time);
 use OpenFIBS::Database;
@@ -261,7 +263,7 @@ sub __queueResponse {
     my $rec = $sockets->{$fd};
     
     my $msg = join ' ', @msg;
-    $logger->debug ("Queue message `$opcode $msg'.");
+    # $logger->debug ("Queue message `$opcode $msg'.");
     $rec->{out_queue} .= "$opcode $msg\n";
     
     return $self;
@@ -358,7 +360,16 @@ sub __handleAuthenticate {
     $self->{__sockets}->{$fd}->{user} = $user;
     $self->{__users}->{$name} = $fd; 
     
-    $self->__queueResponse ($fd, MSG_ACK, $seqno, 1, @$data);
+    my %users;
+    foreach my $login (keys %{$self->{__users}}) {
+        my $rec = $self->{__sockets}->{$self->{__users}->{$login}};
+        my $user = $rec->{user};
+        $users{$user->{name}} = $user;
+    }
+    my $payload = encode_base64 nfreeze \%users;
+    $payload =~ s/[^A-Za-z0-9\/+=]//g;
+    
+    $self->__queueResponse ($fd, MSG_ACK, $seqno, 1, $payload);
     
     $self->broadcast (MSG_LOGIN, $name, @$data);
     

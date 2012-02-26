@@ -41,6 +41,12 @@ sub new {
     bless \%self, $class;
 }
 
+sub copy {
+    my ($self) = @_;
+    
+    bless {%$self}, ref $self;
+}
+
 1;
 
 =head1 NAME
