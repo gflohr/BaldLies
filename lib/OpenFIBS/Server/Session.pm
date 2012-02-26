@@ -308,8 +308,13 @@ sub __checkClientInput {
     
     my @tokens = split /[ \t\r]+/, $input, 2;
 
-    if ('name' eq $self->{__state} && 'name' eq lc $tokens[0]) {
-        return $self->__checkName ($tokens[1]);
+    if ('name' eq $self->{__state}) {
+        # FIBS is NOT case-insensitive in this state.  It also does not
+        # support auto-completion.
+        return $self->__checkName ($tokens[1])
+            if 'name' eq $tokens[0];
+        return $self->quit if 'bye' eq $tokens[0];
+        return $self->__guestLogin;
     }
 
     eval { $self->{__dispatcher}->execute ($self, @tokens) };
