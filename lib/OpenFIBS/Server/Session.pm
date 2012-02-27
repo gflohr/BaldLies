@@ -26,7 +26,7 @@ use IO::Socket::UNIX;
 use MIME::Base64 qw (decode_base64);
 use Storable qw (thaw);
 
-use OpenFIBS::Util qw (empty);
+use OpenFIBS::Util qw (empty format_time);
 use OpenFIBS::Const qw (:comm);
 use OpenFIBS::User;
 
@@ -287,8 +287,8 @@ sub __checkClientInput {
         } else {
             $self->{__state} = 'pwprompt';
             $self->{__name} = $input;
-            $self->__queueClientOutput ("password: ", 1);
             $self->__queueClientOutput (TELNET_ECHO_WILL, 1);
+            $self->__queueClientOutput ("password: ", 1);
             return $self;
         }
     } elsif ('pwprompt' eq $state) {
@@ -421,8 +421,8 @@ Your name will be $name
 Type in no password and hit Enter/Return if you want to change it now.
 EOF
 
-    $self->__queueClientOutput ("Please give your password: ", 1);
     $self->__queueClientOutput (TELNET_ECHO_WILL, 1);
+    $self->__queueClientOutput ("Please give your password: ", 1);
     
     $self->{__state} = 'password1';
     
@@ -482,10 +482,15 @@ sub __handleMasterAckLogin {
 
     $logger->debug ("User $user->{name} logged in from $self->{__ip}.");
     
+    my $last_login = format_time ($user->{last_login} ?
+                                  $user->{last_login} : time);
+    my $last_host = $user->{last_host} 
+        ? "  from $user->{last_host}" : '';
+    
     if (!$self->{__quiet_login}) {
         $self->__queueClientOutput (<<EOF);
 ** User $user->{name} authenticated.
-** Last login: Sat Feb 25 04:59:02 2012  from 95-87-204-192.net1.bg
+** Last login: $last_login$last_host
 @{[TELNET_ECHO_WONT]}$self->{__motd}
 EOF
     } else {
