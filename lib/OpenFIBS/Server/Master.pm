@@ -361,6 +361,8 @@ sub __handleAuthenticate {
     
     my $user = OpenFIBS::User->new (@$data);
     $user->{client} = $client;
+    $user->{login} = time;
+    $user->{ip} = $ip;
     $self->{__sockets}->{$fd}->{user} = $user;
     $self->{__users}->{$name} = $fd; 
     

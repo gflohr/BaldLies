@@ -22,6 +22,63 @@ use strict;
 
 use base qw (OpenFIBS::Server::Command);
 
+use POSIX qw (strftime);
+
+sub execute {
+    my ($self, $payload) = @_;
+    
+    my $session = $self->{_session};
+    my $clip = $session->getClip;
+    
+    if ($clip) {
+        $self->__showClipWho ($payload);
+    } else {
+        $self->__showTelnetWho ($payload);
+    }
+    
+    return $self;
+}
+
+sub __showClipWho {
+    my ($self) = @_;
+    
+    my $session = $self->{_session};
+    my $users = $session->getUsers;
+    
+    my $output = '';
+    while (my ($name, $user) = each %$users) {
+        $output .= $user->rawwho;
+    }
+
+    $session->reply ($output);
+    
+    return $self;
+}
+
+sub __showTelnetWho {
+    my ($self) = @_;
+
+    my $session = $self->{_session};
+    my $users = $session->getUsers;
+    
+    my $output = <<EOF;
+No  S  username        rating   exp login  idle from
+EOF
+
+    my $count = 0;
+    while (my ($name, $user) = each %$users) {
+        my $status = '-';
+        my $login = strftime '%H:%M', gmtime $user->{login};
+        my $ip = $user->{ip};
+        $output .= sprintf "\%2d $status  \%-15s \%6.2f %5d $login  00:00 $ip\n",
+                           ++$count, $name, $user->{rating}, $user->{experience};
+    }
+
+    $session->reply ($output);
+    
+    return $self;
+}
+
 1;
 
 =head1 NAME

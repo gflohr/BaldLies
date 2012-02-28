@@ -270,6 +270,10 @@ sub getMottoOfTheDay {
     shift->{__motd}
 }
 
+sub getUsers {
+    shift->{__users}
+}
+
 sub __checkClientInput {
     my ($self) = @_;
 

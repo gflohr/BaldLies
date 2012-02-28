@@ -20,7 +20,58 @@ package OpenFIBS::Server::Command::rawwho;
 
 use strict;
 
-use base qw (OpenFIBS::Server::Command);
+use base qw (OpenFIBS::Server::Command::who);
+
+use POSIX qw (strftime);
+
+sub execute {
+    my ($self, $payload) = @_;
+    
+    my $session = $self->{_session};
+    my $clip = $session->getClip;
+    
+    if ($clip) {
+        $self->__showClipRawWho ($payload);
+    } else {
+        $self->__showTelnetRawWho ($payload);
+    }
+    
+    return $self;
+}
+
+sub __showClipRawWho {
+    my ($self, $payload) = @_;
+    
+    $self->SUPER::execute ($payload);
+    
+    my $session = $self->{_session};
+    
+    $self->{_session}->reply ("6\n");
+    
+    return $self;
+}
+
+sub __showTelnetRawWho {
+    my ($self) = @_;
+
+    my $session = $self->{_session};
+    my $users = $session->getUsers;
+    
+    my $output = "\n";
+
+    my $count = 0;
+    while (my ($name, $user) = each %$users) {
+        my $status = '-';
+        my $login = strftime '%H:%M', gmtime $user->{login};
+        my $ip = $user->{ip};
+        $output .= sprintf "who: \%2d ${status}-- \%s \%6.2f %5d $login  0:00 $ip\n",
+                           ++$count, $name, $user->{rating}, $user->{experience};
+    }
+
+    $session->reply ($output);
+    
+    return $self;
+}
 
 1;
 
