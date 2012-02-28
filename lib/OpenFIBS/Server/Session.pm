@@ -55,7 +55,7 @@ sub new {
         __master_in => '',
         __master_out => '',
         __state => 'login',
-        __telnet => 1,
+        __clip => 0,
         __seqno => 0,
         __expect => {},
         __dispatcher => $server->getDispatcher,
@@ -282,15 +282,7 @@ sub __checkClientInput {
     
     my $state = $self->{__state};
     if ('login' eq $state) {
-        if ('guest' eq $input) {
-            return $self->__guestLogin;
-        } else {
-            $self->{__state} = 'pwprompt';
-            $self->{__name} = $input;
-            $self->__queueClientOutput (TELNET_ECHO_WILL, 1);
-            $self->__queueClientOutput ("password: ", 1);
-            return $self;
-        }
+        return $self->__parseLogin ($input);
     } elsif ('pwprompt' eq $state) {
         return $self->__login ($self->{__name}, $input);
     } elsif ('password1' eq $state) {
@@ -300,7 +292,7 @@ sub __checkClientInput {
     }
     
     if (empty $input) {
-        if ($self->{__telnet}) {
+        if (!$self->{__clip}) {
             $self->__queueClientOutput ('> ', 1);
         }
         return $self;
@@ -320,6 +312,27 @@ sub __checkClientInput {
     eval { $self->{__dispatcher}->execute ($self, @tokens) };
     $logger->fatal ($@) if $@;
 
+    return $self;
+}
+
+sub __parseLogin {
+    my ($self, $input) = @_;
+    
+    return $self->__guestLogin if 'guest' eq $input;
+
+    # CLIP login?
+    my ($magic, $client, $clip, $name, $password) = split /[ \t]+/, $input;
+    if ('login' eq $magic && !empty $password) {
+        $self->{__clip} = $clip;
+        $self->{__name} = $name;
+        $self->{__password} = $password;
+        return $self->__login ($name, $password);
+    }
+
+    $self->{__state} = 'pwprompt';
+    $self->{__name} = $input;
+    $self->__queueClientOutput (TELNET_ECHO_WILL, 1);
+    $self->__queueClientOutput ("password: ", 1);
     return $self;
 }
 
@@ -359,7 +372,7 @@ sub __checkMasterInput {
 sub __login {
     my ($self, $name, $password) = @_;
     
-    $self->__queueClientOutput ("\n", 1) if $self->{__telnet};
+    $self->__queueClientOutput ("\n", 1) if !$self->{__clip};
     
     my $logger = $self->{__logger};
     
@@ -466,6 +479,9 @@ sub __handleMasterAckLogin {
     
     if (!$status) {
         $self->{__state} = 'login';
+        delete $self->{__name};
+        delete $self->{__password};
+        $self->{__clip} = 0;
         $logger->debug ("Authentication failed");
         $self->__queueClientOutput (TELNET_ECHO_WONT, 1);
         $self->__queueClientOutput ("\nlogin: ", 1);
@@ -512,10 +528,10 @@ sub __handleMasterLogin {
     if ($self->{__user}->{notify}) {
         my $prefix;
         
-        if ($self->{__telnet}) {
-            $prefix = "\n";
-        } else {
+        if ($self->{__clip}) {
             $prefix = "7 $name ";
+        } else {
+            $prefix = "\n";
         }
         $self->__queueClientOutput ("$prefix$name logs in.\n");
     }
@@ -531,10 +547,10 @@ sub __handleMasterLogout {
     if ($self->{__user}->{notify}) {
         my $prefix;
         
-        if ($self->{__telnet}) {
-            $prefix = "\n";
-        } else {
+        if ($self->{__clip}) {
             $prefix = "8 $name ";
+        } else {
+            $prefix = "\n";
         }
         $self->__queueClientOutput ("$prefix$name drops connection.\n");
     }
@@ -559,7 +575,7 @@ sub __queueClientOutput {
     $text =~ s/\n/\015\012/g;
     
     $self->{__client_out} .= $text;
-    if ($self->{__telnet} && !$no_prompt && "\015\012" eq substr $text, -2, 2) {
+    if (!$self->{__clip} && !$no_prompt && "\015\012" eq substr $text, -2, 2) {
         $self->{__client_out} .= "> ";
     }
 
