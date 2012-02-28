@@ -224,6 +224,10 @@ sub checkInput {
     return $self;
 }
 
+sub getMottoOfTheDay {
+    shift->{__motd};
+}
+
 sub __dropConnection {
     my ($self, $fd, $msg) = @_;
 

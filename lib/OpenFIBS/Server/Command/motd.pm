@@ -22,6 +22,21 @@ use strict;
 
 use base qw (OpenFIBS::Server::Command);
 
+sub execute {
+    my ($self) = @_;
+    
+    my $session = $self->{_session};
+    
+    my $motd = $session->getMottoOfTheDay;
+    my $clip = $session->getClip;
+    
+    $session->reply ("3\n") if $clip;
+    $session->reply ($motd);
+    $session->reply ("4\n") if $clip;
+    
+    return $self;
+}
+
 1;
 
 =head1 NAME

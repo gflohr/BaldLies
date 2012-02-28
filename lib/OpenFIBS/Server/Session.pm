@@ -262,6 +262,14 @@ sub quit {
     return $self;
 }
 
+sub getClip {
+    shift->{__clip};
+}
+
+sub getMottoOfTheDay {
+    shift->{__motd}
+}
+
 sub __checkClientInput {
     my ($self) = @_;
 
@@ -517,12 +525,12 @@ sub __handleMasterAckLogin {
         my $last_login = format_time ($user->{last_login} ?
                                       $user->{last_login} : time);
         if (!$self->{__quiet_login}) {
-            $self->__queueClientOutput (<<EOF);
+            $self->__queueClientOutput (<<EOF, 1);
 ** User $user->{name} authenticated.
 ** Last login: $last_login$last_host
 EOF
             $self->__queueClientOutput ("@{[TELNET_ECHO_WONT]}");
-            $self->{__motd};
+            $self->__motd;
         } else {
             $self->__queueClientOutput ("@{[TELNET_ECHO_WONT]}\n");
         }
@@ -534,9 +542,8 @@ EOF
 sub __motd {
     my ($self) = @_;
 
-    $self->__queueClientOutput ("3\n") if $self->{__clip};
-    $self->__queueClientOutput ($self->{__motd});
-    $self->__queueClientOutput ("4\n") if $self->{__clip};
+    eval { $self->{__dispatcher}->execute ($self, 'motd') };
+    $self->{_logger}->fatal ($@) if $@;
     
     return $self;
 }
