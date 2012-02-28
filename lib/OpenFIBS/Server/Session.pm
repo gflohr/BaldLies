@@ -60,6 +60,7 @@ sub new {
         __expect => {},
         __dispatcher => $server->getDispatcher,
         __users => {},
+        __client => '-',
     };
 
     my $logger = $self->{__logger} = $server->getLogger;
@@ -326,6 +327,7 @@ sub __parseLogin {
         $self->{__clip} = $clip;
         $self->{__name} = $name;
         $self->{__password} = $password;
+        $self->{__client} = $client;
         return $self->__login ($name, $password);
     }
 
@@ -383,7 +385,7 @@ sub __login {
     my $seqno = $self->{__seqno}++;
     $self->__queueMasterExpect ($seqno, 'login');
     $self->__queueMasterOutput (COMM_AUTHENTICATE, $seqno, $name, $self->{__ip},
-                                $password);
+                                $self->{__client}, $password);
     
     return $self;
 }
@@ -482,6 +484,7 @@ sub __handleMasterAckLogin {
         delete $self->{__name};
         delete $self->{__password};
         $self->{__clip} = 0;
+        $self->{__client} = '-';
         $logger->debug ("Authentication failed");
         $self->__queueClientOutput (TELNET_ECHO_WONT, 1);
         $self->__queueClientOutput ("\nlogin: ", 1);

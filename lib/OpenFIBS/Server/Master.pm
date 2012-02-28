@@ -330,10 +330,9 @@ sub __handleAuthenticate {
     my ($self, $fd, $msg) = @_;
     
     # Password may contain spaces.
-    my ($seqno, $name, $ip, $password) = split / /, $msg, 4;
+    my ($seqno, $name, $ip, $client, $password) = split / /, $msg, 5;
     
     my $logger = $self->{__logger};
-    $logger->debug ("MSG: $msg");
     
     my $data = $self->{__database}->getUser ($name, $password, $ip);
     if (!$data) {
@@ -357,6 +356,7 @@ sub __handleAuthenticate {
     }
     
     my $user = OpenFIBS::User->new (@$data);
+    $user->{client} = $client;
     $self->{__sockets}->{$fd}->{user} = $user;
     $self->{__users}->{$name} = $fd; 
     
