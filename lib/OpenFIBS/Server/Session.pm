@@ -498,20 +498,42 @@ sub __handleMasterAckLogin {
 
     $logger->debug ("User $user->{name} logged in from $self->{__ip}.");
     
-    my $last_login = format_time ($user->{last_login} ?
-                                  $user->{last_login} : time);
     my $last_host = $user->{last_host} 
         ? "  from $user->{last_host}" : '';
     
-    if (!$self->{__quiet_login}) {
-        $self->__queueClientOutput (<<EOF);
+    if ($self->{__clip}) {
+        $self->__queueClientOutput ("1 $user->{name} $user->{last_host}\n");
+        my $own_info = join ' ', @{$user}{
+            qw (allowpip autoboard autodouble automove away bell crawford 
+                double experience greedy moreboards moves notify rating ratings 
+                ready redoubles report silent timezone)
+        };
+        $self->__queueClientOutput ("2 $own_info\n");
+        $self->__motd;
+    } else {
+        my $last_login = format_time ($user->{last_login} ?
+                                      $user->{last_login} : time);
+        if (!$self->{__quiet_login}) {
+            $self->__queueClientOutput (<<EOF);
 ** User $user->{name} authenticated.
 ** Last login: $last_login$last_host
-@{[TELNET_ECHO_WONT]}$self->{__motd}
 EOF
-    } else {
-        $self->__queueClientOutput ("@{[TELNET_ECHO_WONT]}\n");
+            $self->__queueClientOutput ("@{[TELNET_ECHO_WONT]}");
+            $self->{__motd};
+        } else {
+            $self->__queueClientOutput ("@{[TELNET_ECHO_WONT]}\n");
+        }
     }
+    
+    return $self;
+}
+
+sub __motd {
+    my ($self) = @_;
+
+    $self->__queueClientOutput ("3\n") if $self->{__clip};
+    $self->__queueClientOutput ($self->{__motd});
+    $self->__queueClientOutput ("4\n") if $self->{__clip};
     
     return $self;
 }
