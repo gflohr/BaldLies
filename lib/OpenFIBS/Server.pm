@@ -35,7 +35,7 @@ use OpenFIBS::Logger;
 use OpenFIBS::Server::Master;
 use OpenFIBS::Server::Session;
 use OpenFIBS::Server::Listener;
-use OpenFIBS::Session::Dispatcher;
+use OpenFIBS::Session::CommandDispatcher;
 
 use version 0.77;
 our $VERSION = version->declare("0.1.0");
@@ -205,7 +205,8 @@ sub __loadDispatcher {
     
     $logger->debug ("Loading command plug-ins in \@INC.");
     
-    $self->{__dispatcher} = OpenFIBS::Session::Dispatcher->new ($logger, @INC);
+    $self->{__dispatcher} = OpenFIBS::Session::CommandDispatcher->new ($logger, 
+                                                                       @INC);
     
     return $self;
 }

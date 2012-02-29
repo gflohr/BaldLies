@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenFIBS.  If not, see <http://www.gnu.org/licenses/>.
 
-package OpenFIBS::Session::Dispatcher;
+package OpenFIBS::Session::CommandDispatcher;
 
 use strict;
 
@@ -156,14 +156,14 @@ OpenFIBS::Session::Command - OpenFIBS Command Dispatcher
 
 =head1 SYNOPSIS
 
-  use OpenFIBS::Session::Dispatcher;
+  use OpenFIBS::Session::CommandDispatcher;
   
-  my $cmd = OpenFIBS::Session::Dispatcher->new ($logger, @INC);
+  my $cmd = OpenFIBS::Session::CommandDispatcher->new ($logger, @INC);
   
 =head1 DESCRIPTION
 
-B<OpenFIBS::Session::Dispatcher> loads all commands plug-ins, and dispatches
-them.
+B<OpenFIBS::Session::CommandDispatcher> loads all commands plug-ins, and 
+dispatches them.
 
 =head1 SEE ALSO
 
