@@ -32,7 +32,7 @@ use POSIX qw (:sys_wait_h setsid);
 use OpenFIBS::Util qw (empty untaint);
 use OpenFIBS::Const qw (:log_levels :comm);
 use OpenFIBS::Logger;
-use OpenFIBS::Server::Master;
+use OpenFIBS::Master;
 use OpenFIBS::Server::Session;
 use OpenFIBS::Server::Listener;
 use OpenFIBS::Session::CommandDispatcher;
@@ -291,7 +291,7 @@ sub __checkAccess {
 sub __startMaster {
     my ($self) = @_;
     
-    $self->{__master} = OpenFIBS::Server::Master->new ($self);
+    $self->{__master} = OpenFIBS::Master->new ($self);
     
     return $self;    
 }

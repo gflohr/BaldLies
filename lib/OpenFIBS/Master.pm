@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenFIBS.  If not, see <http://www.gnu.org/licenses/>.
 
-package OpenFIBS::Server::Master;
+package OpenFIBS::Master;
 
 use strict;
 
@@ -386,18 +386,18 @@ sub __handleAuthenticate {
 
 =head1 NAME
 
-OpenFIBS::Server::Master - OpenFIBS Master Process/Thread
+OpenFIBS::Master - OpenFIBS Master Process/Thread
 
 =head1 SYNOPSIS
 
-  use OpenFIBS::Server::Master;
+  use OpenFIBS::Master;
   
-  my $master = OpenFIBS::Server::Session->new ($server);
+  my $master = OpenFIBS::Session->new ($server);
   $master->run;
 
 =head1 DESCRIPTION
 
-B<OpenFIBS::Server::Master> is the glue thread for all running clients.  It
+B<OpenFIBS::Master> is the glue thread for all running clients.  It
 receives messages from all running sessions, forwards them over the network,
 and delivers messages to individual clients.
 
@@ -405,4 +405,4 @@ The class is internal to OpenFIBS.
 
 =head1 SEE ALSO
 
-OpenFIBS::Server(3pm), OpenFIBS::Server::Session(3pm), openfibs(1), perl(1)
+OpenFIBS::Server(3pm), OpenFIBS::Session(3pm), openfibs(1), perl(1)
