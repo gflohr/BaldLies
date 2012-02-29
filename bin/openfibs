@@ -264,6 +264,16 @@ in numerical form, as a well-known service name.
 
 =head1 DETAILS
 
+=head2 Installation
+
+There is no need to install OpenFIBS.  If you just untar the sources, you can
+start it like this from inside the directory OpenFIBS-I<VERSION>:
+
+    perl -Tw -I lib bin/openfibs -d
+    
+The Perl option '-I lib' is necessary.  Otherwise the program cannot find its
+libraries.
+
 =head2 Defaults
 
 When you just start openfibs, the program will create a directory "openfibs"
