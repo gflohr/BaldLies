@@ -509,8 +509,8 @@ sub __handleMasterAckLogin {
     # No error checking here.  This will fail if the data is not transmitted
     # correctly.
     $self->{__users} = thaw decode_base64 $payload;
-    my $user = $self->{__users}->{$self->{__name}}->copy;
-
+    my $user = $self->{__user} = $self->{__users}->{$self->{__name}}->copy;
+    
     $logger->debug ("User $user->{name} logged in from $self->{__ip}.");
     
     my $last_host = $user->{last_host} 
