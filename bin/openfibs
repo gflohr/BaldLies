@@ -138,7 +138,13 @@ sub display_usage {
     $sections{OPTIONS} =~ s/\n {4}/\n/g;
     $sections{OPTIONS} =~ s/\n\n+ +-/\n  -/g;
     print "\n$sections{OPTIONS}\n";
-            
+    
+    print <<EOF;
+
+More in-depth information can be found with `man openfibs' or
+`perldoc $0'.
+EOF
+         
     exit 0;
 }
 
@@ -227,14 +233,16 @@ Mode of operation:
                               localhost:4321
   -u, --user=USER             run as user USER (name or id)
   -g, --group=GROUP           change to group GROUP (name or id)
-  -v, --verbose               be verbose (you can give this option multiple
-                              times to increase the verbosity level)
+  -v, --verbose               be verbose (you can give this option
+                              multiple times to increase the verbosity 
+                              level)
   -q, --quiet                 be quiet
   
 Administrative options:
 
   --upgrade                   upgrade the database schema (happens
-                              automatically with the default SQLite backend)
+                              automatically with the default SQLite 
+                              backend)
   --dump-configuration        dump all configuration values and exit
   
 Informative output:
@@ -253,6 +261,114 @@ listen on multiple ports and/or interfaces.  An address can be given
 in the form HOSTNAME, HOSTNAME:PORT, IP, IP:PORT, *, or *:PORT.  The
 special address `*' means all network interfaces.  Ports can be specified
 in numerical form, as a well-known service name.
+
+=head1 DETAILS
+
+=head2 Defaults
+
+When you just start openfibs, the program will create a directory "openfibs"
+in your home directory.  In that directory, you will find the following
+files:
+
+=over 4
+
+=item F<openfibs.sqlite>
+
+An SQLite database containing all information the server has to remember
+across sessions.
+
+=item F<openfibs.pid>
+
+Contains the pid of openfibs.
+
+=item F<openfibs.log>
+
+The log file.  You should remove that from time to time.  It can grow quite
+big, especially when you give the option `-v' multiple times.
+
+=item F<master.sock>
+
+A unix domain socket.  All instances of the server communicate via this
+socket.
+
+=back
+
+=head2 Basic Mode of Operation
+
+The server is a forking server.  For every client connected, a new process
+is spawned that handles the communication with the client.  Each client
+communicates with the other clients and the database via the master
+socket (see above).
+
+It is sufficient to kill the master process.  Child processes should
+automatically vanish.
+
+=head2 Current State
+
+You can currently register accounts and log into existing accounts, both in
+classical telnet mode and CLIP mode.
+
+When logged in, the command `help' shows a list of I<existing> commands.  Most
+of them are just stubs, and they will just trigger a `not implementedf'
+warning.
+
+=head2 Incompatibilities to FIBS
+
+Only things that could possibly break clients, are listed here.
+
+=over 4
+
+=item B<Multiple logins>
+
+When logging into fibs.com multiple times, with the same credentials, you
+get a warning right after you gave your username or after the complete CLIP
+login.  Apart from that, parallel logins are tolerated.
+
+OpenFIBS cannot allow multiple logins with the same username.  When logging
+in again, the old connection is automatically closed with an error message.
+
+=item B<Telnet Sequences>
+
+Like fibs.com, an OpenFIBS server sends the telnet sequences `echo will' and
+`echo wont' for hiding password entries.  It is tried to send them at the same
+positions, where fibs.com does but that is not guaranteed.  In practice, this
+is only important during registrations of new accounts.  In CLIP mode, no
+telnet sequence is ever sent.
+
+=item B<Chunk Size>
+
+OpenFIBS seemingly tends to read and write data in larger chunks than fibs.com 
+does.  Especially, there is no line-buffering.
+
+=back
+
+The biggest incompatibility is, of course, missing support for the vast
+majority of commands available on fibs.com.
+
+=head1 SECURITY
+
+By default, the server only allows connections from your local machine, even
+if you have told it to listen on external network interfaces.
+
+If Net::Interface(3pm) is installed on your machine, it also allows connections
+from your local networks.  But remember that it still only listens on the 
+loopback interface, unless specified otherwise with the option `--listen'.
+
+The server runs without problems in Perl's taint mode (perl option `-T').
+
+=head1 BUGS
+
+=over 4
+
+=item B<In taint mode, you cannot debug the server.>
+
+This seems to be an issue in Fcntl(3pm), not in OpenFIBS.
+
+=item B<A debugged server will not terminate.>
+
+When you debug the server, you have to kill it with signal 9.
+
+=back
 
 =head1 SEE ALSO
 
