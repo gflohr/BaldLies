@@ -24,23 +24,14 @@ use IO::Socket::UNIX qw (SOCK_STREAM SOMAXCONN);
 use Time::HiRes qw (usleep);
 use File::Spec;
 use Fcntl qw (:flock);
-use Storable qw (nfreeze);
-use MIME::Base64 qw (encode_base64);
 
 use OpenFIBS::Util qw (empty format_time);
 use OpenFIBS::Database;
 use OpenFIBS::User;
-use OpenFIBS::Const qw (:comm);
+use OpenFIBS::Master::CommandDispatcher;
 
-# The index into this array are the COMM constants from OpenFIBS::Const.
-# They are mapped into method names, for example name_check is mapped
-# to __handleNameCheck.
-my @handlers = (
-    'welcome',
-    'name_check',
-    'create_user',
-    'authenticate',
-);
+# FIXME! Get rid of this!
+use OpenFIBS::Const qw (:comm);
 
 sub new {
     my ($class, $server) = @_;
@@ -79,6 +70,8 @@ sub new {
     $self->{__database} = $server->getDatabase;
     $self->{__database}->prepareStatements;
     
+    $self->__loadDispatcher;
+    
     return $self;
 }
 
@@ -101,7 +94,7 @@ sub broadcast {
         my $user = $rec->{user};
         next unless $user->{notify};
         next if $sender eq $user->{name};
-        $self->__queueResponse ($fd, $opcode, join ' ', @args);
+        $self->queueResponse ($fd, $opcode, join ' ', @args);
     }
     
     return $self;
@@ -150,41 +143,23 @@ sub checkInput {
             if ($!{EAGAIN} || $!{EWOUDBLOCK}) {
                 next;
             }
-            $self->__dropConnection ($fd, "Read error for $ident: $!!");
+            $self->dropConnection ($fd, "Read error for $ident: $!!");
         } elsif (0 == $bytes_read) {
-            $self->__dropConnection ($fd, "End-of-file reading from $ident.");
+            $self->dropConnection ($fd, "End-of-file reading from $ident.");
         }
         
         if ($rec->{in_queue} =~ s/(.*?)\n//) {
             my $line = $1;
-            my ($opcode, $msg) = split / /, $line, 2;
-            if ($opcode !~ /^0|[1-9][0-9]*$/) {
-                $self->__dropConnection ($fd, "Received garbage from $ident: $line");
-                next;
-            }
+            my ($command, $payload) = split / /, $line, 2;
             
-            if ($opcode > $#handlers || !defined $handlers[$opcode]) {
-                $self->__dropConnection ($fd, "Unknown opcode $opcode from $ident.");
-                next;
-            }
-            
-            if (!$rec->{welcome} && $opcode) {
-                $self->__dropConnection ($fd, "Got opcode $opcode from $fd"
+            if (!$rec->{welcome} && 'welcome' ne $command) {
+                $self->dropConnection ($fd, "Got command $command from $fd"
                                               . " before welcome message from"
                                               . " child.");
                 next;
             }
-            my $handler = $handlers[$opcode];
-            $handler =~ s/_(.)/uc $1/eg;
-            my $method = '__handle' . ucfirst $handler;
-            my $result = eval { $self->$method ($fd, $msg) };
-            if ($@) {
-                $self->__dropConnection ($fd, $@);
-                next;
-            } elsif (!$result) {
-                $self->__dropConnection ($fd, "$method ($msg) did not return.");
-                next;
-            }
+            
+            $self->{__dispatcher}->execute ($fd, $command, $payload);
         }
     }
             
@@ -209,10 +184,10 @@ sub checkInput {
                 $logger->debug ("Writing to socket $fd would block.");
                 next;
             }
-            $self->__dropConnection ($fd, "Error writing to $ident: $!!");
+            $self->dropConnection ($fd, "Error writing to $ident: $!!");
             next;
         } elsif (0 == $bytes_written) {
-            $self->__dropConnection ($fd, "End-of-file from $ident.");
+            $self->dropConnection ($fd, "End-of-file from $ident.");
             next;
         }
         
@@ -224,11 +199,42 @@ sub checkInput {
     return $self;
 }
 
-sub getMottoOfTheDay {
-    shift->{__motd};
+sub getLogger {
+    shift->{__logger};
 }
 
-sub __dropConnection {
+sub getSecret {
+    shift->{__server}->getSecret;
+}
+
+sub getSessionRecord {
+    my ($self, $fd) = @_;
+    
+    return $self->{__sockets}->{$fd};
+}
+
+sub getUsers {
+    shift->{__users};
+}
+
+sub getDatabase {
+    shift->{__database};
+}
+
+sub __loadDispatcher {
+    my ($self) = @_;
+    
+    my $logger = $self->{__logger};
+    
+    $logger->debug ("Loading master command plug-ins in \@INC.");
+    
+    $self->{__dispatcher} = 
+        OpenFIBS::Master::CommandDispatcher->new ($self, $logger, @INC);
+    
+    return $self;
+}
+
+sub dropConnection {
     my ($self, $fd, $msg) = @_;
 
     my $logger = $self->{__logger};
@@ -252,7 +258,7 @@ sub __dropConnection {
     return $self;
 }
 
-sub __queueResponse {
+sub queueResponse {
     my ($self, $fd, $opcode, @msg) = @_;
     
     my $sockets = $self->{__sockets};
@@ -288,97 +294,8 @@ sub __handleWelcome {
     
     $self->{__sockets}->{$fd}->{welcome} = 1;
     
-    $self->__queueResponse ($fd, MSG_ACK, $seqno);
+    $self->queueResponse ($fd, MSG_ACK, $seqno);
 
-    return $self;
-}
-
-sub __handleNameCheck {
-    my ($self, $fd, $msg) = @_;
-        
-    my ($seqno, $name) = split / /, $msg, 3;
-    
-    my $logger = $self->{__logger};
-    $logger->debug ("Check availability of name `$name'.");
-
-    my $available = $self->{__database}->existsUser ($name) ? 0 : 1;
-
-    $self->__queueResponse ($fd, MSG_ACK, $seqno, $name, $available);
-
-    return $self;
-}
-
-sub __handleCreateUser {
-    my ($self, $fd, $msg) = @_;
-    
-    # Password may contain spaces.
-    my ($seqno, $name, $ip, $password) = split / /, $msg, 4;
-    
-    my $logger = $self->{__logger};
-    
-    my $status;
-    if ($self->{__database}->createUser ($name, $password, $ip)) {
-        $logger->notice ("Created user `$name', connected from $ip.");
-        $status = 1;
-    } else {
-        $logger->notice ("Creating user `$name', connected from $ip, failed.");
-        $status = 0;
-    }
-    
-    $self->__queueResponse ($fd, MSG_ACK, $seqno, $name, $status);
-        
-    return $self;
-}
-
-sub __handleAuthenticate {
-    my ($self, $fd, $msg) = @_;
-    
-    # Password may contain spaces.
-    my ($seqno, $name, $ip, $client, $password) = split / /, $msg, 5;
-    
-    my $logger = $self->{__logger};
-    
-    my $data = $self->{__database}->getUser ($name, $password, $ip);
-    if (!$data) {
-        $self->__queueResponse ($fd, MSG_ACK, $seqno, 0);
-        return $self;
-    }
-
-    if (exists $self->{__users}->{$name}) {
-        # Kick out users that log in twice.  FIBS allows parallel logins
-        # but this would be hard to implement for us.  Maybe, FIBS does
-        # this only to allow parallel registrations.  The warning
-        # "You are already logged in" for guest logins kind of suggests
-        # that.
-        my $other_fd = $self->{__users}->{$name};
-        my $other_rec = $self->{__sockets}->{$other_fd};
-        my $other_host = $other_rec->{user}->{last_host};
-
-        $self->__queueResponse ($other_fd, MSG_KICK_OUT,
-                                "You just logged in a second time from"
-                                . " $other_host, terminating this session.");
-    }
-    
-    my $user = OpenFIBS::User->new (@$data);
-    $user->{client} = $client;
-    $user->{login} = time;
-    $user->{ip} = $ip;
-    $self->{__sockets}->{$fd}->{user} = $user;
-    $self->{__users}->{$name} = $fd; 
-    
-    my %users;
-    foreach my $login (keys %{$self->{__users}}) {
-        my $rec = $self->{__sockets}->{$self->{__users}->{$login}};
-        my $user = $rec->{user};
-        $users{$user->{name}} = $user;
-    }
-    my $payload = encode_base64 nfreeze \%users;
-    $payload =~ s/[^A-Za-z0-9\/+=]//g;
-    
-    $self->__queueResponse ($fd, MSG_ACK, $seqno, 1, $payload);
-    
-    $self->broadcast (MSG_LOGIN, $name, @$data);
-    
     return $self;
 }
 

@@ -115,7 +115,7 @@ sub run {
     
     my $seqno = $self->{__seqno}++;
     my $secret = $server->getSecret;
-    my $code = COMM_WELCOME;
+    my $code = 'welcome';
     $self->__queueMasterExpect ($seqno, 'welcome');
     $self->__queueMasterOutput ($code, $seqno, $secret, $$);
     
@@ -396,7 +396,7 @@ sub __login {
     
     my $seqno = $self->{__seqno}++;
     $self->__queueMasterExpect ($seqno, 'login');
-    $self->__queueMasterOutput (COMM_AUTHENTICATE, $seqno, $name, $self->{__ip},
+    $self->__queueMasterOutput ('authenticate', $seqno, $name, $self->{__ip},
                                 $self->{__client}, $password);
     
     return $self;
@@ -669,7 +669,7 @@ sub __checkName {
         
     my $seqno = $self->{__seqno}++;
     $self->__queueMasterExpect ($seqno, 'name_available');
-    $self->__queueMasterOutput (COMM_NAME_AVAILABLE, $seqno, $name);
+    $self->__queueMasterOutput (check_name => $seqno, $name);
     
     $self->{__state} = 'name_check';
     $self->{__name} = $name;
@@ -728,7 +728,7 @@ sub __checkPassword2 {
         my $seqno = $self->{__seqno}++;
         # Password must come last because it may contain spaces!
         $self->__queueMasterExpect ($seqno, 'user_created');
-        $self->__queueMasterOutput (COMM_CREATE_USER, $seqno, 
+        $self->__queueMasterOutput (create_user => $seqno, 
                                     $self->{__name}, $self->{__ip},
                                     $password);
     }

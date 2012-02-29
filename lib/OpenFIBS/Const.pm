@@ -26,11 +26,6 @@ our %EXPORT_TAGS = (colors => [qw (BLACK WHITE)],
                     log_levels => [qw (LOG_ERROR LOG_WARN LOG_NOTICE
                                        LOG_INFO LOG_DEBUG)],
                     comm => [qw (
-                        COMM_WELCOME
-                        COMM_ACK
-                        COMM_NAME_AVAILABLE
-                        COMM_CREATE_USER
-                        COMM_AUTHENTICATE
                         MSG_ACK
                         MSG_LOGIN
                         MSG_LOGOUT
@@ -51,11 +46,6 @@ use constant LOG_WARN   => 1;
 use constant LOG_NOTICE => 2;
 use constant LOG_INFO   => 3;
 use constant LOG_DEBUG  => 4;
-
-use constant COMM_WELCOME        => 0;
-use constant COMM_NAME_AVAILABLE => 1;
-use constant COMM_CREATE_USER    => 2;
-use constant COMM_AUTHENTICATE   => 3;
 
 use constant MSG_ACK             => 0;
 use constant MSG_LOGIN           => 1;
