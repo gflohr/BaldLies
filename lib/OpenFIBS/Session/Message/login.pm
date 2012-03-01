@@ -16,43 +16,54 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenFIBS.  If not, see <http://www.gnu.org/licenses/>.
 
-package OpenFIBS::Session::Command::shout;
+package OpenFIBS::Session::Message::login;
 
 use strict;
 
-use base qw (OpenFIBS::Session::Command);
+use base qw (OpenFIBS::Session::Message);
+
+use OpenFIBS::User;
 
 sub execute {
-    my ($self, $payload) = @_;
+    my ($self, $session, $payload) = @_;
     
-    my $session = $self->{_session};
+    my $logger = $session->getLogger;
+
+    my (@props) = split / /, $payload;
+    
+    my $new_user = OpenFIBS::User->new (@props);
+    
+    $session->addUser ($new_user);
 
     my $user = $session->getUser;
-    if ($user->{silent}) {
-        $session->reply ("** Please type 'toggle silent' again before you"
-                         . " shout.\n");
-        return $self;
+    if ($user->{notify}) {
+        my $prefix;
+        
+        if ($session->getClip) {
+            $prefix = "7 $new_user->{name} ";
+        } else {
+            $prefix = "\n";
+        }
+        $session->reply ("$prefix$new_user->{name} logs in.\n");
     }
- 
-    $session->clipBroadcast ("13 $user->{name} $payload");
- 
-    return $self;
+    
+    return $session;    
 }
 
 1;
 
 =head1 NAME
 
-OpenFIBS::Session::Command::shout - OpenFIBS Command `shout'
+OpenFIBS::Session::Message::authenticate - OpenFIBS Message `authenticate'
 
 =head1 SYNOPSIS
 
-  use OpenFIBS::Session::Command::shout->new (shout => $session, $call);
+  use OpenFIBS::Session::Message::authenticate->new;
   
 =head1 DESCRIPTION
 
-This plug-in handles the ommand `shout'.
+This plug-in handles the master message `authenticate'.
 
 =head1 SEE ALSO
 
-OpenFIBS::Session::Command(3pm), openfibs(1), perl(1)
+OpenFIBS::Session::Message(3pm), openfibs(1), perl(1)

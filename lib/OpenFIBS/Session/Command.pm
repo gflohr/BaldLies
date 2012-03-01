@@ -96,7 +96,7 @@ sub execute {
     my ($self, $payload) = @_;
     
     $self->{_session}->reply ("The command `$self->{_name}' is not yet"
-                              . " implemented.");
+                              . " implemented.\n");
     
     return $self;
 }

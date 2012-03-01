@@ -16,31 +16,17 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenFIBS.  If not, see <http://www.gnu.org/licenses/>.
 
-package OpenFIBS::Server::Session;
+package OpenFIBS::Session;
 
 use strict;
 
 use Fcntl qw (F_GETFL F_SETFL O_NONBLOCK);
 use IO::Select;
 use IO::Socket::UNIX;
-use MIME::Base64 qw (decode_base64);
-use Storable qw (thaw);
 
-use OpenFIBS::Util qw (empty format_time);
-use OpenFIBS::Const qw (:comm);
+use OpenFIBS::Util qw (empty);
 use OpenFIBS::User;
-
-use constant MASTER_HANDLERS => {
-    MSG_ACK, 'ack',
-    MSG_LOGIN, 'login',
-    MSG_LOGOUT, 'logout',
-    MSG_KICK_OUT, 'kick_out',
-};
-
-use constant TELNET_ECHO_WILL => "\xff\xfb\x01";
-use constant TELNET_ECHO_WONT => "\xff\xfc\x01";
-use constant TELNET_ECHO_DO => "\xff\xfd\x01";
-use constant TELNET_ECHO_DONT => "\xff\xfe\x01";
+use OpenFIBS::Const qw (:telnet);
 
 sub new {
     my ($class, $server, $ip, $peer) = @_;
@@ -56,10 +42,8 @@ sub new {
         __master_out => '',
         __state => 'login',
         __clip => 0,
-        __seqno => 0,
-        __expect => {},
         __cmd_dispatcher => $server->getCommandDispatcher,
-        # __msg_dispatcher => $server->getMessageDispatcher,
+        __msg_dispatcher => $server->getMessageDispatcher,
         __users => {},
         __client => '-',
     };
@@ -114,13 +98,11 @@ sub run {
     my $config = $self->{__config};
     my $server = $self->{__server};
     
-    my $seqno = $self->{__seqno}++;
     my $secret = $server->getSecret;
     my $code = 'welcome';
-    $self->__queueMasterExpect ($seqno, 'welcome');
-    $self->__queueMasterOutput ($code, $seqno, $secret, $$);
+    $self->__queueMasterOutput (hello => $secret, $$);
     
-    $self->__queueClientOutput ($self->{__banner} . "\nlogin: ", 1);
+    $self->reply ($self->{__banner} . "\nlogin: ", 1);
 
     my $peer = $self->{__peer};
     my $master = $self->{__master_sock};
@@ -225,6 +207,18 @@ sub run {
     return $self;
 }
 
+sub reinit {
+    my ($self) = @_;
+    
+    $self->setState ('login');
+    delete $self->{__name};
+    delete $self->{__password};
+    $self->{__clip} = 0;
+    $self->{__client} = '-';
+
+    return $self;
+}
+
 sub getLogger {
     shift->{__logger};
 }
@@ -233,31 +227,26 @@ sub getCommandDispatcher {
     shift->{__cmd_dispatcher};
 }
 
-sub reply {
-    my ($self, $what, $no_prompt) = @_;
+sub broadcast {
+    my ($self, $payload) = @_;
     
-    $what = '' if empty $what;
-    chomp $what;
-    $what .= "\n";
-    
-    $self->__queueClientOutput ($what, $no_prompt);
+    $self->__queueMasterOutput (broadcast => $payload);
     
     return $self;
 }
 
-sub broadcast {
-    my ($self, $msg) = @_;
+sub clipBroadcast {
+    my ($self, $code, $payload) = @_;
     
-    my $logger = $self->{__logger};
-    $logger->error ("Broadcast not yet implemented: $msg");
+    $self->__queueMasterOutput (clip_broadcast => $code, $payload);
     
     return $self;
 }
 
 sub quit {
-    my ($self) = @_;
+    my ($self, $silent) = @_;
     
-    $self->__queueClientOutput ($self->{__bye_msg}, 1);
+    $self->reply ($self->{__bye_msg}, 1) unless $silent;
     $self->{__quit} = 1;
     
     return $self;
@@ -268,11 +257,31 @@ sub getClip {
 }
 
 sub getMottoOfTheDay {
-    shift->{__motd}
+    shift->{__motd};
 }
 
 sub getUsers {
-    shift->{__users}
+    shift->{__users};
+}
+
+sub addUser {
+    my ($self, $user) = @_;
+    
+    $self->{__users}->{$user->{name}} = $user;
+    
+    return $self;
+}
+
+sub removeUser {
+    my ($self, $name) = @_;
+    
+    delete $self->{__users}->{$name};
+    
+    return $self;
+}
+
+sub getUser {
+    shift->{__user};
 }
 
 sub __checkClientInput {
@@ -298,7 +307,7 @@ sub __checkClientInput {
     if ('login' eq $state) {
         return $self->__parseLogin ($input);
     } elsif ('pwprompt' eq $state) {
-        return $self->__login ($self->{__name}, $input);
+        return $self->login ($self->{__name}, $input);
     } elsif ('password1' eq $state) {
         return $self->__checkPassword1 ($input);
     } elsif ('password2' eq $state) {
@@ -307,7 +316,7 @@ sub __checkClientInput {
     
     if (empty $input) {
         if (!$self->{__clip}) {
-            $self->__queueClientOutput ('> ', 1);
+            $self->reply ('> ', 1);
         }
         return $self;
     }
@@ -346,18 +355,8 @@ sub __parseLogin {
 
     $self->{__state} = 'pwprompt';
     $self->{__name} = $input;
-    $self->__queueClientOutput (TELNET_ECHO_WILL, 1);
-    $self->__queueClientOutput ("password: ", 1);
-    return $self;
-}
-
-sub __queueMasterExpect {
-    my ($self, $seqno, $handler) = @_;
-    
-    $self->{__logger}->debug ("Queing response handler `$handler' for"
-                              . " sequence number $seqno.");
-    $self->{__expect}->{$seqno} = $handler;
-    
+    $self->reply (TELNET_ECHO_WILL, 1);
+    $self->reply ("password: ", 1);
     return $self;
 }
 
@@ -372,22 +371,15 @@ sub __checkMasterInput {
 
     # $logger->debug ("Got master input $input.");
     
-    my ($code, $payload) = split / /, $input, 2;
-    if (!exists MASTER_HANDLERS->{$code}) {
-        $logger->fatal ("Unknown opcode $code from master.");
-    }
+    my ($msg, $payload) = split / /, $input, 2;
     
-    my $handler = ucfirst MASTER_HANDLERS->{$code};
-    $handler =~ s/_(.)/uc $1/eg;
-    my $method = '__handleMaster' . $handler;
-    
-    return $self->$method ($payload);
+    return $self->{__msg_dispatcher}->execute ($self, $msg, $payload);
 }
 
-sub __login {
+sub login {
     my ($self, $name, $password) = @_;
     
-    $self->__queueClientOutput ("\n", 1) if !$self->{__clip};
+    $self->reply ("\n", 1) if !$self->{__clip};
     
     my $logger = $self->{__logger};
     
@@ -395,156 +387,61 @@ sub __login {
     
     $self->{state} = 'logging_in';
     
-    my $seqno = $self->{__seqno}++;
-    $self->__queueMasterExpect ($seqno, 'login');
-    $self->__queueMasterOutput ('authenticate', $seqno, $name, $self->{__ip},
+    $self->__queueMasterOutput ('authenticate', $name, $self->{__ip},
                                 $self->{__client}, $password);
     
     return $self;
 }
 
-sub __handleMasterAck {
-    my ($self, $payload) = @_;
+sub setReady {
+    my ($self, $ready) = @_;
     
-    my ($seqno, $rest) = split / /, $payload, 2;
-    
-    my $logger = $self->{__logger};
-    
-    $logger->fatal ("Unexpected ack from master with sequence number $seqno.")
-        if !exists $self->{__expect}->{$seqno};
-    
-    my $handler = ucfirst $self->{__expect}->{$seqno};
-    $handler =~ s/_(.)/uc $1/eg;
-    my $method = '__handleMasterAck' . $handler;
-    
-    return $self->$method ($rest);
-}
-
-sub __handleMasterAckWelcome {
-    my ($self) = @_;
-    
-    $self->{__logger}->debug ("Client received ack welcome.");
-    $self->{__ready} = 1;
+    $self->{__ready} = $ready;
     
     return $self;
 }
 
-sub __handleMasterAckNameAvailable {
-    my ($self, $msg) = @_;
-
-    my $logger = $self->{__logger};
-        
-    my ($name, $available) = split / /, $msg;
-    if (!$available) {
-        $logger->debug ("Name `$name' is not available.");
-        $self->{__state} = 'name';
-        return $self->__queueClientOutput ("** Please use another name. '$name'"
-                                           . " is already used by someone"
-                                           . " else.\n");
-    }
+sub setState {
+    my ($self, $state) = @_;
     
-    $logger->debug ("Name `$name' is available.");
-    $self->__queueClientOutput (<<EOF, 1);
-Your name will be $name
-Type in no password and hit Enter/Return if you want to change it now.
-EOF
-
-    $self->__queueClientOutput (TELNET_ECHO_WILL, 1);
-    $self->__queueClientOutput ("Please give your password: ", 1);
-    
-    $self->{__state} = 'password1';
+    $self->{__state} = $state;
     
     return $self;
 }
 
-sub __handleMasterAckUserCreated {
-    my ($self, $msg) = @_;
+sub getState {
+    shift->{__state};
+}
 
-    my $logger = $self->{__logger};
-        
-    my ($name, $created) = split / /, $msg;
-    if (!$created) {
-        $logger->debug ("Name `$name' is not available.");
-        $self->{__state} = 'name';
-        return $self->__queueClientOutput ("** Please use another name. '$name'"
-                                           . " is already used by someone"
-                                           . " else.\n");
-    }
+sub getLogin {
+    shift->{__name};
+}
+
+sub setUsers {
+    my ($self, $users) = @_;
     
-    $logger->notice ("User `$name' account created.");
-    my $welcome = <<EOF;
-You are registered.
-Type 'help beginner' to get started.
-EOF
-    chomp $welcome;
-    $self->__queueClientOutput ($welcome, 1);
-
-    $self->{__first_login} = 1;
-    $self->__login ($name, delete $self->{__password});
+    $self->{__users} = $users;
     
     return $self;
 }
 
-sub __handleMasterAckLogin {
-    my ($self, $msg) = @_;
-
-    my $logger = $self->{__logger};
-
-    my ($status, $payload) = split / /, $msg;
+sub setUser {
+    my ($self, $user) = @_;
     
-    if (!$status) {
-        $self->{__state} = 'login';
-        delete $self->{__name};
-        delete $self->{__password};
-        $self->{__clip} = 0;
-        $self->{__client} = '-';
-        $logger->debug ("Authentication failed");
-        $self->__queueClientOutput (TELNET_ECHO_WONT, 1);
-        $self->__queueClientOutput ("\nlogin: ", 1);
-        
-        return $self;
-    }
-    
-    $self->{__state} = 'logged_in';
-    
-    # No error checking here.  This will fail if the data is not transmitted
-    # correctly.
-    $self->{__users} = thaw decode_base64 $payload;
-    my $user = $self->{__user} = $self->{__users}->{$self->{__name}}->copy;
-    
-    $logger->debug ("User $user->{name} logged in from $self->{__ip}.");
-    
-    my $last_host = $user->{last_host} 
-        ? "  from $user->{last_host}" : '';
-    
-    if ($self->{__clip}) {
-        $self->__queueClientOutput ("1 $user->{name} $user->{last_host}\n");
-        my $own_info = join ' ', @{$user}{
-            qw (allowpip autoboard autodouble automove away bell crawford 
-                double experience greedy moreboards moves notify rating ratings 
-                ready redoubles report silent timezone)
-        };
-        $self->__queueClientOutput ("2 $own_info\n");
-        $self->__motd;
-    } else {
-        my $last_login = format_time ($user->{last_login} ?
-                                      $user->{last_login} : time);
-        if (!$self->{__quiet_login}) {
-            $self->__queueClientOutput (<<EOF, 1);
-** User $user->{name} authenticated.
-** Last login: $last_login$last_host
-EOF
-            $self->__queueClientOutput ("@{[TELNET_ECHO_WONT]}");
-            $self->__motd;
-        } else {
-            $self->__queueClientOutput ("@{[TELNET_ECHO_WONT]}\n");
-        }
-    }
+    $self->{__user} = $user;
     
     return $self;
 }
 
-sub __motd {
+sub getIP {
+    shift->{__ip};
+}
+
+sub stealPassword {
+    delete shift->{__password};
+}
+
+sub motd {
     my ($self) = @_;
 
     eval { $self->{__cmd_dispatcher}->execute ($self, 'motd') };
@@ -553,61 +450,10 @@ sub __motd {
     return $self;
 }
 
-sub __handleMasterLogin {
-    my ($self, $data) = @_;
- 
-    my (@props) = split / /, $data;
-    
-    my $user = OpenFIBS::User->new (@props);
-    my $name = $user->{name};
-    $self->{__users}->{$name} = $user;
-
-    if ($self->{__user}->{notify}) {
-        my $prefix;
-        
-        if ($self->{__clip}) {
-            $prefix = "7 $name ";
-        } else {
-            $prefix = "\n";
-        }
-        $self->__queueClientOutput ("$prefix$name logs in.\n");
-    }
-    
-    return $self;
-}
-
-sub __handleMasterLogout {
-    my ($self, $name) = @_;
-    
-    delete $self->{__users}->{$name};
-    
-    if ($self->{__user}->{notify}) {
-        my $prefix;
-        
-        if ($self->{__clip}) {
-            $prefix = "8 $name ";
-        } else {
-            $prefix = "\n";
-        }
-        $self->__queueClientOutput ("$prefix$name drops connection.\n");
-    }
-    
-    return $self;
-}
-
-sub __handleMasterKickOut {
-    my ($self, $msg) = @_;
-    
-    $self->{__quit} = 1;
-    $self->__queueClientOutput ("\n** $msg\n", 1);
-    
-    $self->{__logger}->info ("Kicked out: $msg");
-    
-    return $self;
-}
-
-sub __queueClientOutput {
+sub reply {
     my ($self, $text, $no_prompt) = @_;
+    
+    $text = '' if empty $text;
     
     $text =~ s/\n/\015\012/g;
     
@@ -632,7 +478,7 @@ sub __guestLogin {
     
     $self->{__state} = 'name';
     
-    $self->__queueClientOutput (<<EOF);
+    $self->reply (<<EOF);
 Welcome to OpenFIBS. You just logged in as guest.
 Please register before using this server:
 
@@ -656,21 +502,19 @@ sub __checkName {
     
     $self->{__logger}->debug ("Check new username `$name'.");
 
-    return $self->__queueClientOutput ("** Your name may only contain letters"
-                                       . " and the underscore character _ .\n")
+    return $self->reply ("** Your name may only contain letters"
+                         . " and the underscore character _ .\n")
         if empty $name;
 
-    return $self->__queueClientOutput ("** Your name may only contain letters"
-                                       . " and the underscore character _ .\n")
+    return $self->reply ("** Your name may only contain letters"
+                         . " and the underscore character _ .\n")
         if $name =~ /[^A-Za-z_]/;
     
-    return $self->__queueClientOutput ("** Please use another name. '$name'"
-                                       . " is already used by someone else.\n")
+    return $self->reply ("** Please use another name. '$name'"
+                         . " is already used by someone else.\n")
         if $name eq 'guest';
         
-    my $seqno = $self->{__seqno}++;
-    $self->__queueMasterExpect ($seqno, 'name_available');
-    $self->__queueMasterOutput (check_name => $seqno, $name);
+    $self->__queueMasterOutput (check_name => $name);
     
     $self->{__state} = 'name_check';
     $self->{__name} = $name;
@@ -683,28 +527,27 @@ sub __checkPassword1 {
     
     my $logger = $self->{__logger};
     
-    $self->__queueClientOutput ("\n", 1);
+    $self->reply ("\n", 1);
     
     if (empty $password) {
         $logger->debug ("Password was empty.");
-        $self->__queueClientOutput ("** No password given. Please choose a"
-                                    . " new name\n");
-        $self->__queueClientOutput (TELNET_ECHO_WONT, 1);
+        $self->reply ("** No password given. Please choose a"
+                      . " new name\n");
+        $self->reply (TELNET_ECHO_WONT, 1);
         $self->{__state} = 'name';
     } elsif (4 > length $password) {
         $logger->debug ("Password too short.");
-        $self->__queueClientOutput ("Minimal password length is 4 characters.\n",
-                                    1);
-        $self->__queueClientOutput ("Please give your password: ", 1);
+        $self->reply ("Minimal password length is 4 characters.\n",
+                      1);
+        $self->reply ("Please give your password: ", 1);
     } elsif (-1 != index $password, ':') {
         $logger->debug ("Password contains a colon.");
-        $self->__queueClientOutput ("Your password may not contain ':'\n",
-                                    1);
-        $self->__queueClientOutput ("Please give your password: ", 1);
+        $self->reply ("Your password may not contain ':'\n", 1);
+        $self->reply ("Please give your password: ", 1);
     } else {
         $logger->debug ("Password is acceptable.");
-        $self->__queueClientOutput ("Please retype your password: ", 1);
-        $self->__queueClientOutput (TELNET_ECHO_WILL, 1);
+        $self->reply ("Please retype your password: ", 1);
+        $self->reply (TELNET_ECHO_WILL, 1);
         $self->{__state} = 'password2';
         $self->{__password} = $password;
     }
@@ -717,21 +560,18 @@ sub __checkPassword2 {
     
     my $logger = $self->{__logger};
     
-    $self->__queueClientOutput ("\n", 1);
+    $self->reply ("\n", 1);
     
     if (empty $password || $password ne $self->{__password}) {
         $logger->debug ("Password mismatch.");
-        $self->__queueClientOutput ("** The two passwords were not identical."
+        $self->reply ("** The two passwords were not identical."
                                     . " Please give them again. Password: ", 1);
-        $self->__queueClientOutput (TELNET_ECHO_WILL, 1);
+        $self->reply (TELNET_ECHO_WILL, 1);
         $self->{__state} = 'password1';
     } else {
-        my $seqno = $self->{__seqno}++;
         # Password must come last because it may contain spaces!
-        $self->__queueMasterExpect ($seqno, 'user_created');
-        $self->__queueMasterOutput (create_user => $seqno, 
-                                    $self->{__name}, $self->{__ip},
-                                    $password);
+        $self->__queueMasterOutput (create_user => $self->{__name}, 
+                                    $self->{__ip}, $password);
     }
 
     return $self;

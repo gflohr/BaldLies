@@ -16,26 +16,24 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenFIBS.  If not, see <http://www.gnu.org/licenses/>.
 
-package OpenFIBS::Session::Command::shout;
+package OpenFIBS::Session::Message::kick_out;
 
 use strict;
 
-use base qw (OpenFIBS::Session::Command);
+use base qw (OpenFIBS::Session::Message);
+
+use OpenFIBS::User;
 
 sub execute {
-    my ($self, $payload) = @_;
+    my ($self, $session, $msg) = @_;
     
-    my $session = $self->{_session};
+    my $logger = $session->getLogger;
 
-    my $user = $session->getUser;
-    if ($user->{silent}) {
-        $session->reply ("** Please type 'toggle silent' again before you"
-                         . " shout.\n");
-        return $self;
-    }
- 
-    $session->clipBroadcast ("13 $user->{name} $payload");
- 
+    $session->quit (1);    
+    $session->reply ("\n** $msg\n", 1);
+    
+    $logger->info ("Kicked out: $msg");
+    
     return $self;
 }
 
@@ -43,16 +41,16 @@ sub execute {
 
 =head1 NAME
 
-OpenFIBS::Session::Command::shout - OpenFIBS Command `shout'
+OpenFIBS::Session::Message::kick_out - OpenFIBS Message `kick_out'
 
 =head1 SYNOPSIS
 
-  use OpenFIBS::Session::Command::shout->new (shout => $session, $call);
+  use OpenFIBS::Session::Message::kick_out->new;
   
 =head1 DESCRIPTION
 
-This plug-in handles the ommand `shout'.
+This plug-in handles the master message `kick_out'.
 
 =head1 SEE ALSO
 
-OpenFIBS::Session::Command(3pm), openfibs(1), perl(1)
+OpenFIBS::Session::Message(3pm), openfibs(1), perl(1)

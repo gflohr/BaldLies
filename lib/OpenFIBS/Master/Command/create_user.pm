@@ -25,15 +25,13 @@ use base qw (OpenFIBS::Master::Command);
 use Storable qw (nfreeze);
 use MIME::Base64 qw (encode_base64);
 
-use OpenFIBS::Const qw (:comm);
-
 sub execute {
     my ($self, $fd, $payload) = @_;
     
     my $master = $self->{_master};
     
     # Password may contain spaces.
-    my ($seqno, $name, $ip, $password) = split / /, $payload, 4;
+    my ($name, $ip, $password) = split / /, $payload, 4;
     
     my $logger = $master->getLogger;
     
@@ -46,7 +44,7 @@ sub execute {
         $status = 0;
     }
     
-    $master->queueResponse ($fd, MSG_ACK, $seqno, $name, $status);
+    $master->queueResponse ($fd, user_created => $name, $status);
 
     return $self;
 }

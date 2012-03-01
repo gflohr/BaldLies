@@ -16,34 +16,32 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenFIBS.  If not, see <http://www.gnu.org/licenses/>.
 
-package OpenFIBS::Master::Command::welcome;
+package OpenFIBS::Session::Message::logout;
 
 use strict;
 
-use base qw (OpenFIBS::Master::Command);
+use base qw (OpenFIBS::Session::Message);
 
-use OpenFIBS::Const qw (:comm);
+use OpenFIBS::User;
 
 sub execute {
-    my ($self, $fd, $payload) = @_;
+    my ($self, $session, $name) = @_;
     
-    my $master = $self->{_master};
+    $session->removeUser ($name);
     
-    my ($seqno, $secret, $pid) = split / /, $payload, 4;
-    
-    my $logger = $master->getLogger;
-    $logger->debug ("Got welcome from pid $pid.");
-
-    unless ($secret eq $master->getSecret) {
-        return $master->dropConnection ("Child pid $pid sent wrong secret.");
-    }
-
-    my $rec = $master->getSessionRecord ($fd);
+    my $user = $session->getUser;
         
-    $rec->{welcome} = 1;
-    
-    $master->queueResponse ($fd, MSG_ACK, $seqno);
-
+    if ($user->{notify}) {
+        my $prefix;
+        
+        if ($self->{__clip}) {
+            $prefix = "8 $name ";
+        } else {
+            $prefix = "\n";
+        }
+        $session->reply ("$prefix$name drops connection.\n");
+    }
+        
     return $self;
 }
 
@@ -51,16 +49,16 @@ sub execute {
 
 =head1 NAME
 
-OpenFIBS::Master::Command::welcome - OpenFIBS Command `welcome'
+OpenFIBS::Session::Message::logout - OpenFIBS Message `logout'
 
 =head1 SYNOPSIS
 
-  use OpenFIBS::Master::Command::welcome->new ($master);
+  use OpenFIBS::Session::Message::logout->new;
   
 =head1 DESCRIPTION
 
-This plug-in handles the master command `welcome'.
+This plug-in handles the master message `logout'.
 
 =head1 SEE ALSO
 
-OpenFIBS::Master::Command(3pm), openfibs(1), perl(1)
+OpenFIBS::Session::Message(3pm), openfibs(1), perl(1)

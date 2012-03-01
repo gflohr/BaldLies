@@ -27,13 +27,13 @@ use IO::File;
 use Fcntl qw (:DEFAULT :flock F_GETFL F_SETFL O_NONBLOCK :mode);
 use Socket qw (AF_INET);
 use Time::HiRes qw (usleep tv_interval gettimeofday);
-use POSIX qw (:sys_wait_h setsid);
+use POSIX qw (:sys_wait_h setsid setlocale LC_ALL);
 
 use OpenFIBS::Util qw (empty untaint);
-use OpenFIBS::Const qw (:log_levels :comm);
+use OpenFIBS::Const qw (:log_levels);
 use OpenFIBS::Logger;
 use OpenFIBS::Master;
-use OpenFIBS::Server::Session;
+use OpenFIBS::Session;
 use OpenFIBS::Server::Listener;
 use OpenFIBS::Session::CommandDispatcher;
 use OpenFIBS::Session::MessageDispatcher;
@@ -153,6 +153,7 @@ sub run {
     my $listeners = $self->{__listeners};
 
     eval {
+        POSIX::setlocale (LC_ALL, "POSIX");
         while (1) {
             foreach my $listener (@$listeners) {
                 my $sock = $listener->accept;
@@ -197,7 +198,8 @@ sub shutdownServer {
 
     $logger->notice ("Shutdown complete, server exiting with code $exit_code.");
     
-    exit $exit_code;
+    # ptkdb overloads exit().
+    CORE::exit ($exit_code);
 }
 
 sub __loadMessageDispatcher {
@@ -256,21 +258,28 @@ sub __handleConnection {
     my $pid = fork;
     $logger->error ("Cannot fork: $!!") if !defined $pid;
     if (!$pid) {
-        # Restore signal handlers.
-        $SIG{INT} = 'DEFAULT';
-        $SIG{TERM} = 'DEFAULT';
-        $SIG{HUP} = 'DEFAULT';
-        $SIG{QUIT} = 'DEFAULT';
-        $SIG{CHLD} = 'DEFAULT';
+        eval {
+            # Restore signal handlers.
+            $SIG{INT} = 'DEFAULT';
+            $SIG{TERM} = 'DEFAULT';
+            $SIG{HUP} = 'DEFAULT';
+            $SIG{QUIT} = 'DEFAULT';
+            $SIG{CHLD} = 'DEFAULT';
         
-        $self->__unlockDaemon;
-        foreach my $l (@{$self->{__listeners}}) {
-            $l->close;
+            $self->__unlockDaemon;
+            foreach my $l (@{$self->{__listeners}}) {
+                $l->close;
+            }
+            $self->{__master}->close;
+            delete $self->{__master};
+
+            my $session = OpenFIBS::Session->new ($self, $sockhost, $sock);
+            $session->run;
+        };
+        if ($@) {
+            $logger->error ($@);
+            exit 1;
         }
-        $self->{__master}->close;
-        undef $self->{__master};
-        my $session = OpenFIBS::Server::Session->new ($self, $sockhost, $sock);
-        $session->run;
         exit 0;
     }
     $self->{__children}->{$pid} = 1;

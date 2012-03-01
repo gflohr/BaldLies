@@ -25,60 +25,55 @@ use base qw (OpenFIBS::Master::Command);
 use Storable qw (nfreeze);
 use MIME::Base64 qw (encode_base64);
 
-use OpenFIBS::Const qw (:comm);
-
 sub execute {
     my ($self, $fd, $payload) = @_;
     
     my $master = $self->{_master};
     
     # Password may contain spaces.
-    my ($seqno, $name, $ip, $client, $password) = split / /, $payload, 5;
+    my ($name, $ip, $client, $password) = split / /, $payload, 4;
     
     my $logger = $master->getLogger;
     $logger->debug ("Authenticating `$name' from $ip.");
     
     my $data = $master->getDatabase->getUser ($name, $password, $ip);
     if (!$data) {
-        $master->queueResponse ($fd, MSG_ACK, $seqno, 0);
+        $master->queueResponse ($fd, authenticated => 0);
         return $self;
     }
 
-    my $users = $master->getUsers;
-    if (exists $users->{$name}) {
+    my %logins = map { $_ => 1 } $master->getLoggedIn;
+    if (exists $logins{$name}) {
         # Kick out users that log in twice.  FIBS allows parallel logins
         # but this would be hard to implement for us.  Maybe, FIBS does
         # this only to allow parallel registrations.  The warning
         # "You are already logged in" for guest logins kind of suggests
         # that.
-        my $other_fd = $users->{$name};
-        my $other_rec = $master->getClientRecord ($other_fd);
-        my $other_host = $other_rec->{user}->{last_host};
+        my $other_user = $master->getUser ($name);
+        my $other_host = $other_user->{last_host};
 
-        $master->queueResponse ($other_fd, MSG_KICK_OUT,
-                                "You just logged in a second time from"
-                                . " $other_host, terminating this session.");
+        $master->tell ($name, kick_out =>
+                              "You just logged in a second time from"
+                              . " $other_host, terminating this session.");
     }
     
     my $user = OpenFIBS::User->new (@$data);
     $user->{client} = $client;
     $user->{login} = time;
     $user->{ip} = $ip;
-    $self->{__sockets}->{$fd}->{user} = $user;
-    $self->{__users}->{$name} = $fd; 
+    $master->setClientUser ($fd, $user);
     
-    my %users;
-    foreach my $login (keys %{$self->{__users}}) {
-        my $rec = $self->{__sockets}->{$self->{__users}->{$login}};
-        my $user = $rec->{user};
+    my %users = ($user->{name} => $user);
+    foreach my $login (keys %logins) {
+        my $user = $master->getUser ($login);
         $users{$user->{name}} = $user;
     }
     $payload = encode_base64 nfreeze \%users;
     $payload =~ s/[^A-Za-z0-9\/+=]//g;
         
-    $master->queueResponse ($fd, MSG_ACK, $seqno, 1, $payload);
+    $master->queueResponse ($fd, authenticated => 1, $payload);
     
-    $master->broadcast (MSG_LOGIN, $name, @$data);
+    $master->broadcast (login => $name, @$data);
     
     return $self;    
 }

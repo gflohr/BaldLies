@@ -219,23 +219,23 @@ CREATE TABLE users (
     -- Toggles.
     allowpip BOOLEAN NOT NULL DEFAULT 1,
     autoboard BOOLEAN NOT NULL DEFAULT 1,
-    autodouble BOOLEAN NOT NULL DEFAULT 1,
-    automove BOOLEAN NOT NULL DEFAULT 1,
-    bell BOOLEAN NOT NULL DEFAULT 1,
+    autodouble BOOLEAN NOT NULL DEFAULT 0,
+    automove BOOLEAN NOT NULL DEFAULT 0,
+    bell BOOLEAN NOT NULL DEFAULT 0,
     crawford BOOLEAN NOT NULL DEFAULT 1,
     -- Per-game settings.
     --double BOOLEAN NOT NULL DEFAULT 1,
-    --greedy BOOLEAN NOT NULL DEFAULT 1,
-    moreboards BOOLEAN NOT NULL DEFAULT 1,
-    moves BOOLEAN NOT NULL DEFAULT 1,
+    --greedy BOOLEAN NOT NULL DEFAULT 0,
+    moreboards BOOLEAN NOT NULL DEFAULT 0,
+    moves BOOLEAN NOT NULL DEFAULT 0,
     notify BOOLEAN NOT NULL DEFAULT 1,
-    ratings BOOLEAN NOT NULL DEFAULT 1,
-    ready BOOLEAN NOT NULL DEFAULT 1,
+    ratings BOOLEAN NOT NULL DEFAULT 0,
+    ready BOOLEAN NOT NULL DEFAULT 0,
     report BOOLEAN NOT NULL DEFAULT 1,
-    silent BOOLEAN NOT NULL DEFAULT 1,
+    silent BOOLEAN NOT NULL DEFAULT 0,
     -- No need to store that in the database, determined on login.
     -- telnet BOOLEAN,
-    wrap BOOLEAN NOT NULL DEFAULT 1
+    wrap BOOLEAN NOT NULL DEFAULT 0
 )
 EOF
 

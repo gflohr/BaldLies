@@ -23,12 +23,10 @@ use strict;
 use File::Spec;
 
 sub new {
-    my ($class, $session, $logger, @inc) = @_;
+    my ($class, $logger, @inc) = @_;
 
     my $self = bless { 
-        __logger => $logger,
         __names => {},
-        __session => $session,
     }, $class;
 
     foreach my $inc (@inc) {
@@ -60,9 +58,9 @@ sub new {
 }
 
 sub execute {
-    my ($self, $msg, $payload) = @_;
+    my ($self, $session, $msg, $payload) = @_;
     
-    my $logger = $self->{__logger};
+    my $logger = $session->getLogger;
 
     $logger->debug ("Session handling command `$msg'.");
         
@@ -71,8 +69,7 @@ sub execute {
     }
 
     my $module = $self->{__names}->{$msg};
-    my $plug_in = $module->new ($self->{__master});
-    $plug_in->execute ($payload);
+    $module->new->execute ($session, $payload);
     
     return $self;
 }

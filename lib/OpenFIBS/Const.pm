@@ -25,17 +25,13 @@ use base qw (Exporter);
 our %EXPORT_TAGS = (colors => [qw (BLACK WHITE)],
                     log_levels => [qw (LOG_ERROR LOG_WARN LOG_NOTICE
                                        LOG_INFO LOG_DEBUG)],
-                    comm => [qw (
-                        MSG_ACK
-                        MSG_LOGIN
-                        MSG_LOGOUT
-                        MSG_KICK_OUT
-                        )]
+                    telnet => [qw (TELNET_ECHO_DO   TELNET_ECHO_DONT
+                                   TELNET_ECHO_WILL TELNET_ECHO_WONT)],
                     );
 our @EXPORT_OK = (
     @{$EXPORT_TAGS{colors}},
     @{$EXPORT_TAGS{log_levels}},
-    @{$EXPORT_TAGS{comm}},
+    @{$EXPORT_TAGS{telnet}},
 );
 
 use constant BLACK => -1;
@@ -47,10 +43,10 @@ use constant LOG_NOTICE => 2;
 use constant LOG_INFO   => 3;
 use constant LOG_DEBUG  => 4;
 
-use constant MSG_ACK             => 0;
-use constant MSG_LOGIN           => 1;
-use constant MSG_LOGOUT          => 2;
-use constant MSG_KICK_OUT        => 3;
+use constant TELNET_ECHO_WILL => "\xff\xfb\x01";
+use constant TELNET_ECHO_WONT => "\xff\xfc\x01";
+use constant TELNET_ECHO_DO   => "\xff\xfd\x01";
+use constant TELNET_ECHO_DONT => "\xff\xfe\x01";
 
 1;
 

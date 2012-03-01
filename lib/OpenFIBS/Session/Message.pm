@@ -16,24 +16,23 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenFIBS.  If not, see <http://www.gnu.org/licenses/>.
 
-package OpenFIBS::Master::Message;
+package OpenFIBS::Session::Message;
 
 use strict;
 
 use OpenFIBS::Util qw (empty);
 
 sub new {
-    my ($class, $session) = @_;
+    my ($class) = @_;
 
     my $name = $class;
     $name =~ s/.*:://;
-    bless { _name => $name, _session => $session }, $class;
+    bless { _name => $name }, $class;
 }
 
 sub execute {
-    my ($self, $payload) = @_;
+    my ($self, $session, $payload) = @_;
     
-    my $session = $self->{_sessoin};
     my $name = $self->{_name};
     my $logger = $session->getLogger;
 
@@ -54,7 +53,7 @@ OpenFIBS::Session::Message - OpenFIBS Stub Message Handler
 
   use OpenFIBS::Session::Message;
   
-  my $cmd = OpenFIBS::Session::Message->new ($session);
+  my $msg = OpenFIBS::Session::Message->new;
   
 =head1 DESCRIPTION
 

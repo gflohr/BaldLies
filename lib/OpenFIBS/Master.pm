@@ -30,9 +30,6 @@ use OpenFIBS::Database;
 use OpenFIBS::User;
 use OpenFIBS::Master::CommandDispatcher;
 
-# FIXME! Get rid of this!
-use OpenFIBS::Const qw (:comm);
-
 sub new {
     my ($class, $server) = @_;
     
@@ -86,6 +83,7 @@ sub close {
     return $self;
 }
 
+# FIXME! This must be split into methods broadcast() and notify().
 sub broadcast {
     my ($self, $opcode, $sender, @args) = @_;
     
@@ -152,14 +150,14 @@ sub checkInput {
             my $line = $1;
             my ($command, $payload) = split / /, $line, 2;
             
-            if (!$rec->{welcome} && 'welcome' ne $command) {
+            if (!$rec->{hello} && 'hello' ne $command) {
                 $self->dropConnection ($fd, "Got command $command from $fd"
-                                              . " before welcome message from"
-                                              . " child.");
+                                            . " before hello message from"
+                                            . " child.");
                 next;
-            }
-            
+            }            
             $self->{__dispatcher}->execute ($fd, $command, $payload);
+            $rec->{hello} = 1;
         }
     }
             
@@ -207,18 +205,43 @@ sub getSecret {
     shift->{__server}->getSecret;
 }
 
-sub getSessionRecord {
-    my ($self, $fd) = @_;
-    
-    return $self->{__sockets}->{$fd};
-}
-
-sub getUsers {
-    shift->{__users};
-}
-
 sub getDatabase {
     shift->{__database};
+}
+
+sub setClientUser {
+    my ($self, $fd, $user) = @_;
+    
+    my $rec = $self->{__sockets}->{$fd} or return;
+    $rec->{user} = $user;
+    $self->{__users}->{$user->{name}} = $fd;
+    
+    return $self;
+}
+
+sub getLoggedIn {
+    my ($self) = @_;
+    
+    return keys %{$self->{__users}};
+}
+
+sub getUser {
+    my ($self, $name) = @_;
+    
+    my $fd = $self->{__users}->{$name} or return;
+    my $rec = $self->{__sockets}->{$fd} or return;
+    
+    return $rec->{user};
+}
+
+sub tell {
+    my ($self, $name, $opcode, @payload) = @_;
+    
+    my $fd = $self->{__users}->{$name} or return;
+    
+    $self->queueResponse ($fd, $opcode, @payload);
+    
+    return $self;
 }
 
 sub __loadDispatcher {
@@ -250,10 +273,7 @@ sub dropConnection {
     
     $logger->info ($msg);
     
-    if ($user) {
-        my $name = $user->{name};
-        return $self->broadcast (MSG_LOGOUT, $name, $name);
-    }
+    $self->broadcast (logout => $user->{name}, $user->{name}) if $user;
     
     return $self;
 }
@@ -276,26 +296,6 @@ sub queueResponse {
     # $logger->debug ("Queue message `$opcode $msg'.");
     $rec->{out_queue} .= "$opcode $msg\n";
     
-    return $self;
-}
-
-sub __handleWelcome {
-    my ($self, $fd, $msg) = @_;
-    
-    my ($seqno, $secret, $pid) = split / /, $msg, 4;
-    
-    my $logger = $self->{__logger};
-    $logger->debug ("Got welcome from pid $pid.");
-
-    unless ($secret eq $self->{__server}->getSecret) {
-        $logger->error ("Child pid $pid sent wrong secret.");
-        return;
-    }
-    
-    $self->{__sockets}->{$fd}->{welcome} = 1;
-    
-    $self->queueResponse ($fd, MSG_ACK, $seqno);
-
     return $self;
 }
 

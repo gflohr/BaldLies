@@ -22,21 +22,17 @@ use strict;
 
 use base qw (OpenFIBS::Master::Command);
 
-use OpenFIBS::Const qw (:comm);
-
 sub execute {
-    my ($self, $fd, $payload) = @_;
+    my ($self, $fd, $name) = @_;
     
     my $master = $self->{_master};
-    
-    my ($seqno, $name) = split / /, $payload, 3;
     
     my $logger = $master->getLogger;
     $logger->debug ("Check availability of name `$name'.");
 
     my $available = $master->getDatabase->existsUser ($name) ? 0 : 1;
 
-    $master->queueResponse ($fd, MSG_ACK, $seqno, $name, $available);
+    $master->queueResponse ($fd, name_available => $available);
 
     return $self;    
 }

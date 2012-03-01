@@ -49,7 +49,7 @@ sub execute {
     }
     
     chomp $help;
-    return $session->reply ("$help\n.");
+    return $session->reply ("$help\n.\n");
 }
 
 sub _helpName {

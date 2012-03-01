@@ -16,26 +16,28 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenFIBS.  If not, see <http://www.gnu.org/licenses/>.
 
-package OpenFIBS::Session::Command::shout;
+package OpenFIBS::Master::Command::hello;
 
 use strict;
 
-use base qw (OpenFIBS::Session::Command);
+use base qw (OpenFIBS::Master::Command);
 
 sub execute {
-    my ($self, $payload) = @_;
+    my ($self, $fd, $payload) = @_;
     
-    my $session = $self->{_session};
+    my $master = $self->{_master};
+    
+    my ($secret, $pid) = split / /, $payload, 3;
+    
+    my $logger = $master->getLogger;
+    $logger->debug ("Got welcome from pid $pid.");
 
-    my $user = $session->getUser;
-    if ($user->{silent}) {
-        $session->reply ("** Please type 'toggle silent' again before you"
-                         . " shout.\n");
-        return $self;
+    unless ($secret eq $master->getSecret) {
+        return $master->dropConnection ("Child pid $pid sent wrong secret.");
     }
- 
-    $session->clipBroadcast ("13 $user->{name} $payload");
- 
+
+    $master->queueResponse ($fd, 'welcome');
+
     return $self;
 }
 
@@ -43,16 +45,16 @@ sub execute {
 
 =head1 NAME
 
-OpenFIBS::Session::Command::shout - OpenFIBS Command `shout'
+OpenFIBS::Master::Command::welcome - OpenFIBS Command `welcome'
 
 =head1 SYNOPSIS
 
-  use OpenFIBS::Session::Command::shout->new (shout => $session, $call);
+  use OpenFIBS::Master::Command::welcome->new ($master);
   
 =head1 DESCRIPTION
 
-This plug-in handles the ommand `shout'.
+This plug-in handles the master command `welcome'.
 
 =head1 SEE ALSO
 
-OpenFIBS::Session::Command(3pm), openfibs(1), perl(1)
+OpenFIBS::Master::Command(3pm), openfibs(1), perl(1)
