@@ -20,8 +20,6 @@ package BaldLies::Session::Message;
 
 use strict;
 
-use BaldLies::Util qw (empty);
-
 sub new {
     my ($class) = @_;
 
