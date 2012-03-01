@@ -1,20 +1,20 @@
 #! /usr/bin/env perl
 
-# This file is part of OpenFIBS.
+# This file is part of BaldLies.
 # Copyright (C) 2012 Guido Flohr, http://guido-flohr.net/.
 #
-# OpenFIBS is free software: you can redistribute it and/or modify
+# BaldLies is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# OpenFIBS is distributed in the hope that it will be useful,
+# BaldLies is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with OpenFIBS.  If not, see <http://www.gnu.org/licenses/>.
+# along with BaldLies.  If not, see <http://www.gnu.org/licenses/>.
 
 use strict;
 
@@ -22,25 +22,25 @@ use Test;
 
 BEGIN { plan tests => 10 }
 
-use OpenFIBS::Backgammon::Board;
+use BaldLies::Backgammon::Board;
 
-my $empty = OpenFIBS::Backgammon::Board->new;
+my $empty = BaldLies::Backgammon::Board->new;
 
 ok $empty;
-ok 'OpenFIBS::Backgammon::Board', ref $empty;
+ok 'BaldLies::Backgammon::Board', ref $empty;
 
-my $initial = OpenFIBS::Backgammon::Board->init;
+my $initial = BaldLies::Backgammon::Board->init;
 ok $initial;
-ok 'OpenFIBS::Backgammon::Board', ref $initial;
+ok 'BaldLies::Backgammon::Board', ref $initial;
 
-$initial = OpenFIBS::Backgammon::Board->new->init;
+$initial = BaldLies::Backgammon::Board->new->init;
 ok $initial;
-ok 'OpenFIBS::Backgammon::Board', ref $initial;
+ok 'BaldLies::Backgammon::Board', ref $initial;
 
-my $copy = OpenFIBS::Backgammon::Board->copy ($initial);
+my $copy = BaldLies::Backgammon::Board->copy ($initial);
 ok $copy;
-ok 'OpenFIBS::Backgammon::Board', ref $copy;
+ok 'BaldLies::Backgammon::Board', ref $copy;
 
 $copy = $initial->copy;
 ok $copy;
-ok 'OpenFIBS::Backgammon::Board', ref $copy;
+ok 'BaldLies::Backgammon::Board', ref $copy;

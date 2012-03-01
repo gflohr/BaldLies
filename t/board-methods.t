@@ -1,20 +1,20 @@
 #! /usr/bin/env perl
 
-# This file is part of OpenFIBS.
+# This file is part of BaldLies.
 # Copyright (C) 2012 Guido Flohr, http://guido-flohr.net/.
 #
-# OpenFIBS is free software: you can redistribute it and/or modify
+# BaldLies is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# OpenFIBS is distributed in the hope that it will be useful,
+# BaldLies is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with OpenFIBS.  If not, see <http://www.gnu.org/licenses/>.
+# along with BaldLies.  If not, see <http://www.gnu.org/licenses/>.
 
 use strict;
 
@@ -22,15 +22,15 @@ use Test;
 
 BEGIN { plan tests => 16 }
 
-use OpenFIBS::Backgammon::Board;
-use OpenFIBS::Const qw (:colors);
-use OpenFIBS::Backgammon::Move;
+use BaldLies::Backgammon::Board;
+use BaldLies::Const qw (:colors);
+use BaldLies::Backgammon::Move;
 
-my $empty = OpenFIBS::Backgammon::Board->new;
+my $empty = BaldLies::Backgammon::Board->new;
 ok 15, $empty->borneOff (BLACK);
 ok 15, $empty->borneOff (WHITE);
 
-my $initial = OpenFIBS::Backgammon::Board->init;
+my $initial = BaldLies::Backgammon::Board->init;
 ok 0, $initial->borneOff (BLACK);
 ok 0, $initial->borneOff (WHITE);
 
@@ -53,7 +53,7 @@ ok 2, $saw->borneOff (WHITE);
 ok -2, $saw->[6];
 ok +3, $saw->[19];
 
-my $move = OpenFIBS::Backgammon::Move->new (4, 3, 
+my $move = BaldLies::Backgammon::Move->new (4, 3, 
                                             24, 21, 
                                             13, 9);
 my $copy = $initial->copy;
