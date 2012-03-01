@@ -374,10 +374,6 @@ The server runs without problems in Perl's taint mode (perl option `-T').
 
 This seems to be an issue in Fcntl(3pm), not in BaldLies.
 
-=item B<A debugged server will not terminate.>
-
-When you debug the server, you have to kill it with signal 9.
-
 =back
 
 =head1 SEE ALSO
