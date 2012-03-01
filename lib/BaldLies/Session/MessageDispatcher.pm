@@ -22,40 +22,7 @@ use strict;
 
 use File::Spec;
 
-sub new {
-    my ($class, $logger, @inc) = @_;
-
-    my $self = bless { 
-        __names => {},
-    }, $class;
-
-    foreach my $inc (@inc) {
-        my $dir = File::Spec->catdir ($inc, 'BaldLies', 'Session', 'Message');
-        next unless -d $dir;
-        
-        $logger->debug ("Searching message plug-ins in `$dir'.");
-
-        local *DIR;
-        opendir DIR, $dir
-            or $logger->fatal ("Cannot open message directory `$dir': $!!");
-
-        my @modules = grep /^[a-z_][a-z_0-9]*\.pm$/, readdir DIR;
-        foreach my $module (@modules) {
-            next unless $module =~ /^(.*)\.pm$/;
-            my $cmd = $1;
-            my $plug_in = 'BaldLies::Session::Message::' . $cmd;
-            $logger->debug ("Initializing plug-in `$plug_in'.");
-            eval "use $plug_in ()";
-            $logger->fatal ($@) if $@;
-            eval {
-                $self->__registerHandlers ($cmd);
-            };
-            $logger->fatal ($@) if $@;
-        }
-    }
-    
-    return $self;
-}
+use base qw (BaldLies::Dispatcher);
 
 sub execute {
     my ($self, $session, $msg, $payload) = @_;
@@ -70,16 +37,6 @@ sub execute {
 
     my $module = $self->{__names}->{$msg};
     $module->new->execute ($session, $payload);
-    
-    return $self;
-}
-
-sub __registerHandlers {
-    my ($self, $msg) = @_;
-
-    my $plug_in = 'BaldLies::Session::Message::' . $msg;
-    
-    $self->{__names}->{$msg} = $plug_in;
     
     return $self;
 }

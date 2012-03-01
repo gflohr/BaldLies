@@ -48,7 +48,7 @@ sub new {
         foreach my $module (@modules) {
             next unless $module =~ /^(.*)\.pm$/;
             my $cmd = $1;
-            my $plug_in = 'BaldLies::Master::Command::' . $cmd;
+            my $plug_in = $self->{__realm} . '::' . $cmd;
             $logger->debug ("Initializing plug-in `$plug_in'.");
             eval "use $plug_in ()";
             $logger->fatal ($@) if $@;
@@ -65,7 +65,7 @@ sub new {
 sub _registerCommands {
     my ($self, $cmd) = @_;
 
-    my $plug_in = 'BaldLies::Master::Command::' . $cmd;
+    my $plug_in = $self->{__realm} . '::' . $cmd;
     
     $self->{__names}->{$cmd} = $plug_in;
     

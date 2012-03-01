@@ -209,8 +209,11 @@ sub __loadMessageDispatcher {
     
     $logger->debug ("Loading message plug-ins in \@INC.");
     
-    $self->{__msg_dispatcher} = BaldLies::Session::MessageDispatcher->new ($logger, 
-                                                                           @INC);
+    my $realm = 'BaldLies::Session::Message';
+    $self->{__msg_dispatcher} = 
+        BaldLies::Session::MessageDispatcher->new (realm => $realm,
+                                                   logger => $logger, 
+                                                   inc => \@INC);
     
     return $self;
 }
