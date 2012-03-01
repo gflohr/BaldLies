@@ -34,7 +34,7 @@ sub execute {
     if (!empty $payload) {
         my ($topic) = split /[ \t]+/, $payload;
         
-        my $dispatcher = $session->getDispatcher;
+        my $dispatcher = $session->getCommandDispatcher;
         my $class = $dispatcher->module ($payload) if !empty $topic;
         if (!empty $class) {
             my $obj = $class->new ($self->{_session}, $topic);
@@ -66,7 +66,7 @@ sub _helpDescription {
     my ($self) = @_;
 
     my $session = $self->{_session};
-    my $dispatcher = $session->getDispatcher;
+    my $dispatcher = $session->getCommandDispatcher;
     my @topics = $dispatcher->all;
     
     my $topics = '';

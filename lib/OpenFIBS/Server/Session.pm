@@ -58,7 +58,8 @@ sub new {
         __clip => 0,
         __seqno => 0,
         __expect => {},
-        __dispatcher => $server->getDispatcher,
+        __cmd_dispatcher => $server->getCommandDispatcher,
+        # __msg_dispatcher => $server->getMessageDispatcher,
         __users => {},
         __client => '-',
     };
@@ -228,8 +229,8 @@ sub getLogger {
     shift->{__logger};
 }
 
-sub getDispatcher {
-    shift->{__dispatcher};
+sub getCommandDispatcher {
+    shift->{__cmd_dispatcher};
 }
 
 sub reply {
@@ -322,7 +323,7 @@ sub __checkClientInput {
         return $self->__guestLogin;
     }
 
-    eval { $self->{__dispatcher}->execute ($self, @tokens) };
+    eval { $self->{__cmd_dispatcher}->execute ($self, @tokens) };
     $logger->fatal ($@) if $@;
 
     return $self;
@@ -546,7 +547,7 @@ EOF
 sub __motd {
     my ($self) = @_;
 
-    eval { $self->{__dispatcher}->execute ($self, 'motd') };
+    eval { $self->{__cmd_dispatcher}->execute ($self, 'motd') };
     $self->{_logger}->fatal ($@) if $@;
     
     return $self;

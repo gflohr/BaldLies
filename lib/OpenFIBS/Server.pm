@@ -133,7 +133,7 @@ sub run {
     $self->__openPorts;
     $self->__changePersona;
     $self->__upgradeDatabaseSchema;
-    $self->__loadDispatcher;
+    $self->__loadCommandDispatcher;
     $self->__daemonize if !$config->{debug};
     eval {
         $self->__generateSecret;    
@@ -198,15 +198,15 @@ sub shutdownServer {
     exit $exit_code;
 }
 
-sub __loadDispatcher {
+sub __loadCommandDispatcher {
     my ($self) = @_;
     
     my $logger = $self->{__logger};
     
     $logger->debug ("Loading command plug-ins in \@INC.");
     
-    $self->{__dispatcher} = OpenFIBS::Session::CommandDispatcher->new ($logger, 
-                                                                       @INC);
+    $self->{__cmd_dispatcher} = OpenFIBS::Session::CommandDispatcher->new ($logger, 
+                                                                           @INC);
     
     return $self;
 }
@@ -478,8 +478,8 @@ sub getSecret {
     shift->{__secret};
 }
 
-sub getDispatcher {
-    shift->{__dispatcher};
+sub getCommandDispatcher {
+    shift->{__cmd_dispatcher};
 }
 
 sub __readConfiguration {
