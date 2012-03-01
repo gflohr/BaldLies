@@ -20,48 +20,11 @@ package BaldLies::Master::CommandDispatcher;
 
 use strict;
 
-use File::Spec;
-
-sub new {
-    my ($class, $master, $logger, @inc) = @_;
-
-    my $self = bless { 
-        __logger => $logger,
-        __names => {},
-        __master => $master,
-    }, $class;
-
-    foreach my $inc (@inc) {
-        my $dir = File::Spec->catdir ($inc, 'BaldLies', 'Master', 'Command');
-        next unless -d $dir;
-        
-        $logger->debug ("Searching command plug-ins in `$dir'.");
-
-        local *DIR;
-        opendir DIR, $dir
-            or $logger->fatal ("Cannot open command directory `$dir': $!!");
-
-        my @modules = grep /^[a-z_][a-z_0-9]*\.pm$/, readdir DIR;
-        foreach my $module (@modules) {
-            next unless $module =~ /^(.*)\.pm$/;
-            my $cmd = $1;
-            my $plug_in = 'BaldLies::Master::Command::' . $cmd;
-            $logger->debug ("Initializing plug-in `$plug_in'.");
-            eval "use $plug_in ()";
-            $logger->fatal ($@) if $@;
-            eval {
-                $self->__registerCommands ($cmd);
-            };
-            $logger->fatal ($@) if $@;
-        }
-    }
-    
-    return $self;
-}
+use base qw (BaldLies::Dispatcher);
 
 sub execute {
     my ($self, $fd, $cmd, $payload) = @_;
-    
+  
     my $logger = $self->{__logger};
 
     $logger->debug ("Master handling command `$cmd'.");
@@ -78,16 +41,6 @@ sub execute {
     return $self;
 }
 
-sub __registerCommands {
-    my ($self, $cmd) = @_;
-
-    my $plug_in = 'BaldLies::Master::Command::' . $cmd;
-    
-    $self->{__names}->{$cmd} = $plug_in;
-    
-    return $self;
-}
-
 1;
 
 =head1 NAME
@@ -98,7 +51,7 @@ BaldLies::Master::Command - BaldLies Master Command Dispatcher
 
   use BaldLies::Session::CommandDispatcher;
   
-  my $cmd = BaldLies::Session::CommandDispatcher->new ($master, $logger, @INC);
+  my $cmd = BaldLies::Session::CommandDispatcher->new (%args);
   
 =head1 DESCRIPTION
 

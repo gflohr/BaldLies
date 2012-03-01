@@ -251,8 +251,12 @@ sub __loadDispatcher {
     
     $logger->debug ("Loading master command plug-ins in \@INC.");
     
+    my $realm = 'BaldLies::Master::Command';
     $self->{__dispatcher} = 
-        BaldLies::Master::CommandDispatcher->new ($self, $logger, @INC);
+        BaldLies::Master::CommandDispatcher->new (realm => $realm,
+                                                  inc => \@INC,
+                                                  logger => $logger,
+                                                  master => $self);
     
     return $self;
 }
