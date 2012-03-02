@@ -373,6 +373,39 @@ loopback interface, unless specified otherwise with the option `--listen'.
 
 The server runs without problems in Perl's taint mode (perl option `-T').
 
+=head1 DEVELOPER OPTIONS
+
+There are some rather esoteric options not exactly suited for the general
+public.
+
+=over 4
+
+=item B<--auto-recompile>
+
+The workhorses of the server are plug-ins.
+
+There are plug-ins that handle commands given by the user (see
+BaldLies::Session::Command(3pm)), plug-ins that handle commands send by a
+particular client session to the coordinating master process (see
+BaldLies::Master::Command(3pm)) and plug-ins for the other direction of the
+client server communication, for messages send by the coordinating master
+process to the individual sessions (see BaldLies::Session::Message(3pm)).
+
+The option `--auto-recompile' allows you hot deployment of these plug-ins
+at the price of a minimal performance penalty, caused by checking the last
+modification date of the corresponding files containing the source code.
+
+This has two limitations:
+
+If you modify the base class of a plug-in, the derived class will not be 
+re-compiled.  You have to make sure that both class files get a new
+timestamp.
+
+Likewise, if you modify code outside of a plug-in class file, such changes
+will go unnoticed until the server is restarted.
+
+=back
+
 =head1 BUGS
 
 =over 4

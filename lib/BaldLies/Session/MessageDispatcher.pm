@@ -30,12 +30,21 @@ sub execute {
     my $logger = $session->getLogger;
 
     $logger->debug ("Session handling command `$msg'.");
+
+    my $module = eval { $self->_loadModule ($msg) };
+    if ($@) {
+        my $exception = $@;
         
-    if (!exists $self->{_names}->{$msg}) {
-        $logger->fatal ("Got unknown msg `$msg' from master.");
+        $exception =~ s/[ \t\r\n]+/ /g;
+        $logger->error ($exception);
+        $session->reply ("** $exception");
+        return $self;
+    }
+    if (!$module) {
+        $logger->error ("Got unknown message `$msg' from master.");
+        return $self;
     }
 
-    my $module = $self->{_names}->{$msg};
     $module->new->execute ($session, $payload);
     
     return $self;
