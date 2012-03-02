@@ -20,41 +20,12 @@ package BaldLies::Session::CommandDispatcher;
 
 use strict;
 
-use File::Spec;
+use base qw (BaldLies::Dispatcher);
 
 sub new {
-    my ($class, $logger, @inc) = @_;
+    my ($class, %args) = @_;
 
-    my $self = bless { 
-        __logger => $logger,
-        __names => {},
-        __real_names => {},
-    }, $class;
-
-    foreach my $inc (@inc) {
-        my $dir = File::Spec->catdir ($inc, 'BaldLies', 'Session', 'Command');
-        next unless -d $dir;
-        
-        $logger->debug ("Searching command plug-ins in `$dir'.");
-
-        local *DIR;
-        opendir DIR, $dir
-            or $logger->fatal ("Cannot open command directory `$dir': $!!");
-
-        my @modules = grep /^[a-z_][a-z_0-9]*\.pm$/, readdir DIR;
-        foreach my $module (@modules) {
-            next unless $module =~ /^(.*)\.pm$/;
-            my $cmd = $1;
-            my $plug_in = 'BaldLies::Session::Command::' . $cmd;
-            $logger->debug ("Initializing plug-in `$plug_in'.");
-            eval "use $plug_in ()";
-            $logger->fatal ($@) if $@;
-            eval {
-                $self->_registerCommands ($cmd, $plug_in);
-            };
-            $logger->fatal ($@) if $@;
-        }
-    }
+    my $self = $class->SUPER::new (%args);
     
     my %specials = (
         b => 'board',
@@ -93,7 +64,7 @@ sub execute {
 sub all {
     my ($self) = @_;
     
-    return keys %{$self->{__names}};
+    return keys %{$self->{__real_names}};
 }
 
 sub module {
@@ -103,7 +74,8 @@ sub module {
     # should also be possible for the cmd attribute.  But FIBS does not
     # display help, when the topic is an alias.  Maybe this should be made
     # configurable.
-    return $self->{__names}->{$cmd} if exists $self->{__names}->{$cmd};
+    return $self->{__real_names}->{$cmd} 
+        if exists $self->{__real_names}->{$cmd};
 
     return;
 }

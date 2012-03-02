@@ -22,6 +22,10 @@ use strict;
 
 use base qw (BaldLies::Session::Command);
 
+sub aliases {
+    return 'tellx', 'tell';
+}
+
 1;
 
 =head1 NAME

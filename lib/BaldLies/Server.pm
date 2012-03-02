@@ -225,8 +225,11 @@ sub __loadCommandDispatcher {
     
     $logger->debug ("Loading command plug-ins in \@INC.");
     
-    $self->{__cmd_dispatcher} = BaldLies::Session::CommandDispatcher->new ($logger, 
-                                                                           @INC);
+    my $realm = 'BaldLies::Session::Command';
+    $self->{__cmd_dispatcher} = 
+        BaldLies::Session::CommandDispatcher->new (realm => $realm,
+                                                   logger => $logger, 
+                                                   inc => \@INC);
     
     return $self;
 }
