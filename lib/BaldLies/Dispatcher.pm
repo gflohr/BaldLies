@@ -22,6 +22,8 @@ use strict;
 
 use File::Spec;
 
+use BaldLies::Util qw (empty);
+
 sub new {
     my ($class, %args) = @_;
 
@@ -70,6 +72,41 @@ sub _registerCommands {
     $self->{__names}->{$cmd} = $module;
     
     return $self;
+}
+
+sub _loadModule {
+    my ($self, $cmd) = @_;
+
+    if (exists $self->{__names}->{$cmd}) {
+        return $self->{__names}->{$cmd};
+    }
+    
+    return if !$self->{__reload};
+    
+    # Try to find the module again.
+    my $path;
+    foreach my $inc (@{$self->{__inc}}) {
+        my $dir = File::Spec->catdir ($inc, @{$self->{__realms}});
+        next unless -d $dir;
+        
+        my $filename = lc "$cmd.pm";
+        my $try_path = File::Spec->catfile ($dir, $filename);
+
+        next unless -e $try_path;
+        
+        $path = $try_path;
+        last;
+    }
+
+    return if empty $path;
+
+    my $module = $self->{__realm} . '::' . $cmd;
+    eval "use $module";
+    die $@ if ($@);
+
+    $self->_registerCommands ($cmd, $module, 1);
+    
+    return $self->_loadModule ($cmd);
 }
 
 1;

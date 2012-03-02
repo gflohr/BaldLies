@@ -53,8 +53,11 @@ GetOptions (
 
     'upgrade'         => \$options{upgrade},
     'dump-configuration' => \$options{dump_configuration},
+  
+    'auto-recompile'  => \$options{auto_recompile},
     
     'h|help'          => \$option_help,
+    
     'v|verbose+'      => \$options{verbose},
     'V|version'       => \$option_version,
 ) or usage_error;
@@ -244,6 +247,10 @@ Administrative options:
                               automatically with the default SQLite 
                               backend)
   --dump-configuration        dump all configuration values and exit
+  
+Developer options:
+
+  --auto-recompile            recompile plug-ins before execution
   
 Informative output:
 

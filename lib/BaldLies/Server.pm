@@ -209,11 +209,14 @@ sub __loadMessageDispatcher {
     
     $logger->debug ("Loading message plug-ins in \@INC.");
     
+    my $reload = $self->{__config}->{auto_recompile};
+    
     my $realm = 'BaldLies::Session::Message';
     $self->{__msg_dispatcher} = 
         BaldLies::Session::MessageDispatcher->new (realm => $realm,
                                                    logger => $logger, 
-                                                   inc => \@INC);
+                                                   inc => \@INC,
+                                                   reload => $reload);
     
     return $self;
 }
@@ -225,11 +228,14 @@ sub __loadCommandDispatcher {
     
     $logger->debug ("Loading command plug-ins in \@INC.");
     
+    my $reload = $self->{__config}->{auto_recompile};
+    
     my $realm = 'BaldLies::Session::Command';
     $self->{__cmd_dispatcher} = 
         BaldLies::Session::CommandDispatcher->new (realm => $realm,
                                                    logger => $logger, 
-                                                   inc => \@INC);
+                                                   inc => \@INC,
+                                                   reload => $reload);
     
     return $self;
 }

@@ -49,14 +49,19 @@ sub execute {
     my ($self, $session, $call, $payload) = @_;
     
     my $cmd = lc $call;
-    
-    if (!exists $self->{__names}->{$cmd}) {
-        $session->reply ("** Unknown command: '$call'\n");
-    } else {
-        my $module = $self->{__names}->{$cmd};
-        my $plug_in = $module->new ($session, $call);
-        $plug_in->execute ($payload);
+    my $module = eval { $self->_loadModule ($cmd) };
+    if ($@) {
+        my $exception = $@;
+        
+        $exception =~ s/[ \t\r\n]+/ /g;
+        return $session->reply ("** $exception\n");
     }
+    if (!$module) {
+        return $session->reply ("** Unknown command: '$call'\n");
+    }
+    
+    my $plug_in = $module->new ($session, $call);
+    $plug_in->execute ($payload);
     
     return $self;
 }
@@ -81,7 +86,7 @@ sub module {
 }
 
 sub _registerCommands {
-    my ($self, $cmd, $plug_in) = @_;
+    my ($self, $cmd, $plug_in, $no_resolve) = @_;
 
     my @aliases = $plug_in->aliases;
     
@@ -89,34 +94,41 @@ sub _registerCommands {
     
     my $logger = $self->{__logger};
 
-    # Check for conflicts.
-    foreach my $name ($cmd, map { lc $_ } @aliases) {
-        if (exists $self->{__real_names}->{$name}) {
-            my $other = $self->{__real_names}->{$name};
-            $logger->error (<<EOF);
+    if (!$no_resolve) {
+        # Check for conflicts.
+        foreach my $name ($cmd, map { lc $_ } @aliases) {
+            if (exists $self->{__real_names}->{$name}) {
+                my $other = $self->{__real_names}->{$name};
+                $logger->error (<<EOF);
 The alias `$name' was already registered by plug-in `$other'.
 All definitions from `$module' will be ignored.
 EOF
-            return;
-        }
-    }
-
-    $self->{__real_names}->{$cmd} = $plug_in;
-    foreach my $name ($cmd, map { lc $_ } @aliases) {
-        my @chars = split //, $name;
-        
-        # Standard aliases are at least two characters long.  We shift the
-        # first one, before entering the loop.
-        my $alias = shift @chars;        
-        while (@chars) {
-            $alias .= shift @chars;
-            if (exists $self->{__names}->{$alias}) {
-                delete $self->{__names}->{$alias};
-            } else {
-                $self->{__names}->{$alias} = $plug_in;
+                return;
             }
         }
-        $self->{__names}->{$name} = $plug_in;
+    }
+    
+    $self->{__real_names}->{$cmd} = $plug_in;
+    
+    if (!$no_resolve) {
+        foreach my $name ($cmd, map { lc $_ } @aliases) {
+            my @chars = split //, $name;
+            
+            # Standard aliases are at least two characters long.  We shift the
+            # first one, before entering the loop.
+            my $alias = shift @chars;        
+            while (@chars) {
+                $alias .= shift @chars;
+                if (exists $self->{__names}->{$alias}) {
+                    delete $self->{__names}->{$alias};
+                } else {
+                    $self->{__names}->{$alias} = $plug_in;
+                }
+            }
+            $self->{__names}->{$name} = $plug_in;
+        }
+    } else {
+        $self->{__names}->{$cmd} = $plug_in;
     }
     
     return $self;
