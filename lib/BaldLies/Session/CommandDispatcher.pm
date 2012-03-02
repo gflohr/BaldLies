@@ -38,7 +38,7 @@ sub new {
         wh => 'whisper'
     );
     while (my ($alias, $name) = each %specials) {
-        $self->{__names}->{$alias} = "BaldLies::Session::Command::$name"
+        $self->{_names}->{$alias} = "BaldLies::Session::Command::$name"
             if exists $self->{__real_names}->{$name};
     }
     
@@ -92,7 +92,7 @@ sub _registerCommands {
     
     my $module = 'BaldLies::Session::Command::' . $cmd;
     
-    my $logger = $self->{__logger};
+    my $logger = $self->_getLogger;
 
     if (!$no_resolve) {
         # Check for conflicts.
@@ -119,16 +119,16 @@ EOF
             my $alias = shift @chars;        
             while (@chars) {
                 $alias .= shift @chars;
-                if (exists $self->{__names}->{$alias}) {
-                    delete $self->{__names}->{$alias};
+                if (exists $self->{_names}->{$alias}) {
+                    delete $self->{_names}->{$alias};
                 } else {
-                    $self->{__names}->{$alias} = $plug_in;
+                    $self->{_names}->{$alias} = $plug_in;
                 }
             }
-            $self->{__names}->{$name} = $plug_in;
+            $self->{_names}->{$name} = $plug_in;
         }
     } else {
-        $self->{__names}->{$cmd} = $plug_in;
+        $self->{_names}->{$cmd} = $plug_in;
     }
     
     return $self;

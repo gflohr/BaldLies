@@ -25,16 +25,16 @@ use base qw (BaldLies::Dispatcher);
 sub execute {
     my ($self, $fd, $cmd, $payload) = @_;
   
-    my $logger = $self->{__logger};
+    my $logger = $self->_getLogger;
 
     $logger->debug ("Master handling command `$cmd'.");
         
-    if (!exists $self->{__names}->{$cmd}) {
+    if (!exists $self->{_names}->{$cmd}) {
         $logger->error ("Got unknown command `$cmd' from `$fd'.");
         return $self->{__master}->dropConnection ($fd);
     }
 
-    my $module = $self->{__names}->{$cmd};
+    my $module = $self->{_names}->{$cmd};
     my $plug_in = $module->new ($self->{__master});
     $plug_in->execute ($fd, $payload);
     

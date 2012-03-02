@@ -32,7 +32,7 @@ sub new {
         $self->{'__' . $key} = $value;
     }
     bless $self, $class;
-    $self->{__names} = {};
+    $self->{_names} = {};
     $self->{__realms} = [split '::', $self->{__realm}];
     
     my $logger = $self->{__logger};
@@ -58,10 +58,27 @@ sub new {
                 $self->_registerCommands ($cmd, $plug_in);
             };
             $logger->fatal ($@) if $@;
+            
+            next if !$self->{__reload};
+            
+            my $inc_path = join '/', @{$self->{__realms}}, "$cmd.pm";
+            my $full_path = File::Spec->catfile ($inc, @{$self->{__realms}}, 
+                                                 "$cmd.pm");            
+            my @sb = stat $full_path 
+                or $logger->fatal ("Cannot stat `$full_path': $!!");
+            $self->{__module_info}->{$plug_in} = {
+                inc_path => $inc_path,
+                mtime => $sb[9],
+                path => $full_path,
+            };
         }
     }
     
     return $self;
+}
+
+sub _getLogger {
+    shift->{__logger};
 }
 
 sub _registerCommands {
@@ -69,7 +86,7 @@ sub _registerCommands {
 
     my $module = $self->{__realm} . '::' . $cmd;
     
-    $self->{__names}->{$cmd} = $module;
+    $self->{_names}->{$cmd} = $module;
     
     return $self;
 }
@@ -77,8 +94,30 @@ sub _registerCommands {
 sub _loadModule {
     my ($self, $cmd) = @_;
 
-    if (exists $self->{__names}->{$cmd}) {
-        return $self->{__names}->{$cmd};
+    my $logger = $self->_getLogger;
+    
+    if (exists $self->{_names}->{$cmd}) {
+        my $module = $self->{_names}->{$cmd};
+        
+        if ($self->{__reload}) {
+            my $modinfo = $self->{__module_info}->{$module};
+            my @sb = stat $modinfo->{path};
+            if (!@sb) {
+                $logger->warning ("Plug-in `$modinfo->{path}' has vanished:"
+                                  . " $!!");
+                return;
+            }
+            my $mtime = $sb[9];
+            if ($mtime != $modinfo->{mtime}) {
+                $logger->info ("Must re-compile $module.");
+                $logger->info (delete $INC{$modinfo->{inc_path}});
+                eval "use $module";
+                die $@ if $@;
+                return $module;
+            }
+        }
+        
+        return $module;
     }
     
     return if !$self->{__reload};

@@ -31,11 +31,11 @@ sub execute {
 
     $logger->debug ("Session handling command `$msg'.");
         
-    if (!exists $self->{__names}->{$msg}) {
+    if (!exists $self->{_names}->{$msg}) {
         $logger->fatal ("Got unknown msg `$msg' from master.");
     }
 
-    my $module = $self->{__names}->{$msg};
+    my $module = $self->{_names}->{$msg};
     $module->new->execute ($session, $payload);
     
     return $self;
