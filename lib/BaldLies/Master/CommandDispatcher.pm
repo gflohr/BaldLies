@@ -28,13 +28,19 @@ sub execute {
     my $logger = $self->_getLogger;
 
     $logger->debug ("Master handling command `$cmd'.");
+    
+    my $module = eval { $self->_loadModule ($cmd) };
+    if ($@) {
+        my $exception = $@;
         
-    if (!exists $self->{_names}->{$cmd}) {
-        $logger->error ("Got unknown command `$cmd' from `$fd'.");
-        return $self->{__master}->dropConnection ($fd);
+        $exception =~ s/[ \t\r\n]+/ /g;
+        $logger->error ($exception);
+        return $self;
     }
-
-    my $module = $self->{_names}->{$cmd};
+    if (!$module) {
+        $logger->error ("Got unknown command `$cmd' from `$fd'.");
+    }
+    
     my $plug_in = $module->new ($self->{__master});
     $plug_in->execute ($fd, $payload);
     
