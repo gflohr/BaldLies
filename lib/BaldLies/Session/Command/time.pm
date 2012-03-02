@@ -22,6 +22,24 @@ use strict;
 
 use base qw (BaldLies::Session::Command);
 
+use POSIX qw (strftime);
+
+use BaldLies::Util qw (format_time);
+
+sub execute {
+    my ($self, $payload) = @_;
+    
+    my $session = $self->{_session};
+    
+    my $client = strftime '%A, %B %d %H:%M:%S UTC', gmtime time;
+    my $server = format_time $now;
+    
+    # FIBS does that funny formatting of parentheses.
+    $session->reply ("$client  ( $server UTC )\n");
+    
+    return $self;
+}
+
 1;
 
 =head1 NAME
