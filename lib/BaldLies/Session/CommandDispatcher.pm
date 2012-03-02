@@ -28,7 +28,7 @@ sub new {
     my $self = bless { 
         __logger => $logger,
         __names => {},
-        __aliases => {},
+        __real_names => {},
     }, $class;
 
     foreach my $inc (@inc) {
@@ -50,7 +50,7 @@ sub new {
             eval "use $plug_in ()";
             $logger->fatal ($@) if $@;
             eval {
-                $self->__registerCommands ($cmd, $plug_in->aliases);
+                $self->_registerCommands ($cmd, $plug_in);
             };
             $logger->fatal ($@) if $@;
         }
@@ -67,8 +67,8 @@ sub new {
         wh => 'whisper'
     );
     while (my ($alias, $name) = each %specials) {
-        $self->{__aliases}->{$alias} = "BaldLies::Session::Command::$name"
-            if exists $self->{__names}->{$name};
+        $self->{__names}->{$alias} = "BaldLies::Session::Command::$name"
+            if exists $self->{__real_names}->{$name};
     }
     
     return $self;
@@ -79,10 +79,10 @@ sub execute {
     
     my $cmd = lc $call;
     
-    if (!exists $self->{__aliases}->{$cmd}) {
+    if (!exists $self->{__names}->{$cmd}) {
         $session->reply ("** Unknown command: '$call'\n");
     } else {
-        my $module = $self->{__aliases}->{$cmd};
+        my $module = $self->{__names}->{$cmd};
         my $plug_in = $module->new ($session, $call);
         $plug_in->execute ($payload);
     }
@@ -108,26 +108,28 @@ sub module {
     return;
 }
 
-sub __registerCommands {
-    my ($self, $cmd, @aliases) = @_;
+sub _registerCommands {
+    my ($self, $cmd, $plug_in) = @_;
 
-    my $plug_in = 'BaldLies::Session::Command::' . $cmd;
+    my @aliases = $plug_in->aliases;
+    
+    my $module = 'BaldLies::Session::Command::' . $cmd;
     
     my $logger = $self->{__logger};
 
     # Check for conflicts.
     foreach my $name ($cmd, map { lc $_ } @aliases) {
-        if (exists $self->{__names}->{$name}) {
-            my $other = $self->{__names}->{$name};
+        if (exists $self->{__real_names}->{$name}) {
+            my $other = $self->{__real_names}->{$name};
             $logger->error (<<EOF);
 The alias `$name' was already registered by plug-in `$other'.
-All definitions from `$plug_in' will be ignored.
+All definitions from `$module' will be ignored.
 EOF
             return;
         }
     }
 
-    $self->{__names}->{$cmd} = $plug_in;
+    $self->{__real_names}->{$cmd} = $plug_in;
     foreach my $name ($cmd, map { lc $_ } @aliases) {
         my @chars = split //, $name;
         
@@ -136,13 +138,13 @@ EOF
         my $alias = shift @chars;        
         while (@chars) {
             $alias .= shift @chars;
-            if (exists $self->{__aliases}->{$alias}) {
-                delete $self->{__aliases}->{$alias};
+            if (exists $self->{__names}->{$alias}) {
+                delete $self->{__names}->{$alias};
             } else {
-                $self->{__aliases}->{$alias} = $plug_in;
+                $self->{__names}->{$alias} = $plug_in;
             }
         }
-        $self->{__aliases}->{$name} = $plug_in;
+        $self->{__names}->{$name} = $plug_in;
     }
     
     return $self;

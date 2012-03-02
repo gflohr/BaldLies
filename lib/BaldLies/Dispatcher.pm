@@ -53,7 +53,7 @@ sub new {
             eval "use $plug_in ()";
             $logger->fatal ($@) if $@;
             eval {
-                $self->_registerCommands ($cmd);
+                $self->_registerCommands ($cmd, $plug_in);
             };
             $logger->fatal ($@) if $@;
         }
@@ -65,9 +65,9 @@ sub new {
 sub _registerCommands {
     my ($self, $cmd) = @_;
 
-    my $plug_in = $self->{__realm} . '::' . $cmd;
+    my $module = $self->{__realm} . '::' . $cmd;
     
-    $self->{__names}->{$cmd} = $plug_in;
+    $self->{__names}->{$cmd} = $module;
     
     return $self;
 }
