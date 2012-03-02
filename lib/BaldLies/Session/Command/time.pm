@@ -31,7 +31,9 @@ sub execute {
     
     my $session = $self->{_session};
     
-    my $client = strftime '%A, %B %d %H:%M:%S UTC', gmtime time;
+    my $now = time;
+
+    my $client = strftime '%A, %B %d %H:%M:%S UTC', gmtime $now;
     my $server = format_time $now;
     
     # FIBS does that funny formatting of parentheses.
