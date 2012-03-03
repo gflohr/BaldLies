@@ -41,9 +41,15 @@ sub execute {
         $logger->error ("Got unknown command `$cmd' from `$fd'.");
         return $self;
     }
-    
-    my $plug_in = $module->new ($self->{__master});
-    $plug_in->execute ($fd, $payload);
+
+    eval {
+        my $plug_in = $module->new ($self->{__master});
+        $plug_in->execute ($fd, $payload);
+    };
+    if ($@) {
+        $logger->error ($@);
+        return $self;
+    }
     
     return $self;
 }
