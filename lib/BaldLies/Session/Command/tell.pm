@@ -73,7 +73,8 @@ sub execute {
     # TODO! Check whether we have gagged recipient or recipient has gagged us.
 
     $message .= "\n";
-    $session->clipTell ($recipient, 12, $recipient, $message);
+    my $user = $session->getUser;
+    $session->clipTell ($recipient, 12, $user->{name}, $message);
     $session->clipReply (16, $recipient, $message);
     
     return $self;
