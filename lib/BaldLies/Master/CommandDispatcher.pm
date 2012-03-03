@@ -39,6 +39,7 @@ sub execute {
     }
     if (!$module) {
         $logger->error ("Got unknown command `$cmd' from `$fd'.");
+        return $self;
     }
     
     my $plug_in = $module->new ($self->{__master});
