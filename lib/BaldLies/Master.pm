@@ -234,6 +234,12 @@ sub getUser {
     return $rec->{user};
 }
 
+sub getUserFromDescriptor {
+    my ($self, $fd) = @_;
+    
+    return $self->{__sockets}->{$fd}->{user};
+}
+
 sub tell {
     my ($self, $name, $opcode, @payload) = @_;
     

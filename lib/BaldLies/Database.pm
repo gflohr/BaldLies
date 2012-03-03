@@ -182,6 +182,12 @@ EOF
     $sths->{TOUCH_USER} = 
         $dbh->prepare ($statements->{TOUCH_USER});
 
+    $statements->{SET_BOARDSTYLE} = <<EOF;
+UPDATE users SET boardstyle = ? WHERE name = ?
+EOF
+    $sths->{SET_BOARDSTYLE} = 
+        $dbh->prepare ($statements->{SET_BOARDSTYLE});
+
     return $self;
 }
 
@@ -390,6 +396,16 @@ sub getUser {
     return if !$self->_commit;
 
     return $row;
+}
+
+sub setBoardstyle {
+    my ($self, $name, $style) = @_;
+    
+    return if !$self->_doStatement (SET_BOARDSTYLE => $style, $name);
+    return if !$self->_commit;
+    
+    return $self;
+    
 }
 
 1;

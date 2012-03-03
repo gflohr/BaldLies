@@ -100,7 +100,7 @@ sub run {
     
     my $secret = $server->getSecret;
     my $code = 'welcome';
-    $self->__queueMasterOutput (hello => $secret, $$);
+    $self->sendMaster (hello => $secret, $$);
     
     $self->reply ($self->{__banner} . "\nlogin: ", 1);
 
@@ -230,7 +230,7 @@ sub getCommandDispatcher {
 sub broadcast {
     my ($self, @payload) = @_;
     
-    $self->__queueMasterOutput (broadcast => @payload);
+    $self->sendMaster (broadcast => @payload);
     
     return $self;
 }
@@ -238,7 +238,7 @@ sub broadcast {
 sub clipBroadcast {
     my ($self, $sender, $code, @payload) = @_;
     
-    $self->__queueMasterOutput (clip_broadcast => $sender, $code, @payload);
+    $self->sendMaster (clip_broadcast => $sender, $code, @payload);
     
     return $self;
 }
@@ -246,7 +246,7 @@ sub clipBroadcast {
 sub tell {
     my ($self, $recipient, @payload) = @_;
     
-    $self->__queueMasterOutput (tell => $recipient, @payload);
+    $self->sendMaster (tell => $recipient, @payload);
     
     return $self;
 }
@@ -254,7 +254,7 @@ sub tell {
 sub clipTell {
     my ($self, $recipient, $code, @payload) = @_;
     
-    $self->__queueMasterOutput (clip_tell => $recipient, $code, @payload);
+    $self->sendMaster (clip_tell => $recipient, $code, @payload);
     
     return $self;
 }
@@ -299,8 +299,6 @@ sub removeUser {
 sub getUser {
     shift->{__user};
 }
-
-
 
 sub __checkClientInput {
     my ($self) = @_;
@@ -351,7 +349,7 @@ sub __checkClientInput {
     }
 
     eval { $self->{__cmd_dispatcher}->execute ($self, @tokens) };
-    $logger->fatal ($@) if $@;
+    $logger->error ($@) if $@;
 
     return $self;
 }
@@ -405,7 +403,7 @@ sub login {
     
     $self->{state} = 'logging_in';
     
-    $self->__queueMasterOutput ('authenticate', $name, $self->{__ip},
+    $self->sendMaster ('authenticate', $name, $self->{__ip},
                                 $self->{__client}, $password);
     
     return $self;
@@ -557,7 +555,7 @@ sub clipReply {
     }
 }
 
-sub __queueMasterOutput {
+sub sendMaster {
     my ($self, $code, @args) = @_;
     
     $self->{__master_out} .= (join ' ', $code, @args) . "\n";
@@ -606,7 +604,7 @@ sub __checkName {
                          . " is already used by someone else.\n")
         if $name eq 'guest';
         
-    $self->__queueMasterOutput (check_name => $name);
+    $self->sendMaster (check_name => $name);
     
     $self->{__state} = 'name_check';
     $self->{__name} = $name;
@@ -662,7 +660,7 @@ sub __checkPassword2 {
         $self->{__state} = 'password1';
     } else {
         # Password must come last because it may contain spaces!
-        $self->__queueMasterOutput (create_user => $self->{__name}, 
+        $self->sendMaster (create_user => $self->{__name}, 
                                     $self->{__ip}, $password);
     }
 
