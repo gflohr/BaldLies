@@ -227,6 +227,10 @@ sub getCommandDispatcher {
     shift->{__cmd_dispatcher};
 }
 
+sub getMessageDispatcher {
+    shift->{__msg_dispatcher};
+}
+
 sub broadcast {
     my ($self, @payload) = @_;
     

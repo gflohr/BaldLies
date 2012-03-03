@@ -46,11 +46,17 @@ sub __setBoardstyle {
     my ($self, $value) = @_;
     
     my $session = $self->{_session};
+    my $user = $session->getUser;
+    my $current = $user->{boardstyle};
     
     if ($value ne '1' && $value ne '2' && $value ne '3') {
         $session->reply ("** Valid arguments are the numbers 1 to 3.\n");
+    } elsif ($value eq $current) {
+        # Silently bypass database.
+        my $msg_dispatcher = $session->getMessageDispatcher;
+        $msg_dispatcher->execute ($session, set => "boardstyle $value");
     } else {
-        $session->sendMaster (set => 'boardstyle', $value);
+        $session->sendMaster (set => "boardstyle $value");
     }
     
     return $self;

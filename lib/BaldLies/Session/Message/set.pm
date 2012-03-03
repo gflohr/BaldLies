@@ -16,45 +16,46 @@
 # You should have received a copy of the GNU General Public License
 # along with BaldLies.  If not, see <http://www.gnu.org/licenses/>.
 
-package BaldLies::Master::Command::set;
+package BaldLies::Session::Message::set;
 
 use strict;
 
-use base qw (BaldLies::Master::Command);
+use base qw (BaldLies::Session::Message);
 
 sub execute {
-    my ($self, $fd, $payload) = @_;
+    my ($self, $session, $payload) = @_;
+
+    my $logger = $session->getLogger;
+
+    my ($variable, $value) = split / /, $payload, 2;
     
-    my $master = $self->{_master};
+    my $user = $session->getUser;
+    $user->{$variable} = $value;
     
-    my $logger = $master->getLogger;
-    my ($variable, $value) = split / /, $payload;
+    if ('redoubles' eq $variable) {
+        $value = $value ? $value : 'none';
+        $value = 'unlimited' if $value eq '-1';
+    }
     
-    my $user = $master->getUserFromDescriptor ($fd);
-    
-    my $db = $master->getDatabase;
-    my $method = 'set' . ucfirst $variable;
-    $db->$method ($user->{name}, $value);
-    
-    $master->queueResponse ($fd, set => $variable, $value);
+    $session->reply ("set $variable $value\n");
         
-    return $self;    
+    return $self;
 }
 
 1;
 
 =head1 NAME
 
-BaldLies::Master::Command::set - BaldLies Command `set'
+BaldLies::Session::Message::set - BaldLies Message `set'
 
 =head1 SYNOPSIS
 
-  use BaldLies::Master::Command::set->new ($master);
+  use BaldLies::Session::Message::set->new;
   
 =head1 DESCRIPTION
 
-This plug-in handles the command `set'.
+This plug-in handles the master message `set'.
 
 =head1 SEE ALSO
 
-BaldLies::Master::Command(3pm), baldlies(1), perl(1)
+BaldLies::Session::Message(3pm), baldlies(1), perl(1)
