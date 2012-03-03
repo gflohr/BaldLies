@@ -188,6 +188,36 @@ EOF
     $sths->{SET_BOARDSTYLE} = 
         $dbh->prepare ($statements->{SET_BOARDSTYLE});
 
+    $statements->{SET_LINELENGTH} = <<EOF;
+UPDATE users SET linelength = ? WHERE name = ?
+EOF
+    $sths->{SET_LINELENGTH} = 
+        $dbh->prepare ($statements->{SET_LINELENGTH});
+
+    $statements->{SET_PAGELENGTH} = <<EOF;
+UPDATE users SET pagelength = ? WHERE name = ?
+EOF
+    $sths->{SET_PAGELENGTH} = 
+        $dbh->prepare ($statements->{SET_PAGELENGTH});
+
+    $statements->{SET_REDOUBLES} = <<EOF;
+UPDATE users SET redoubles = ? WHERE name = ?
+EOF
+    $sths->{SET_REDOUBLES} = 
+        $dbh->prepare ($statements->{SET_REDOUBLES});
+
+    $statements->{SET_SORTWHO} = <<EOF;
+UPDATE users SET sortwho = ? WHERE name = ?
+EOF
+    $sths->{SET_SORTWHO} = 
+        $dbh->prepare ($statements->{SET_SORTWHO});
+
+    $statements->{SET_TIMEZONE} = <<EOF;
+UPDATE users SET timezone = ? WHERE name = ?
+EOF
+    $sths->{SET_TIMEZONE} = 
+        $dbh->prepare ($statements->{SET_TIMEZONE});
+
     return $self;
 }
 
@@ -402,6 +432,56 @@ sub setBoardstyle {
     my ($self, $name, $style) = @_;
     
     return if !$self->_doStatement (SET_BOARDSTYLE => $style, $name);
+    return if !$self->_commit;
+    
+    return $self;
+    
+}
+
+sub setLinelength {
+    my ($self, $name, $value) = @_;
+    
+    return if !$self->_doStatement (SET_LINELENGTH => $value, $name);
+    return if !$self->_commit;
+    
+    return $self;
+    
+}
+
+sub setPagelength {
+    my ($self, $name, $value) = @_;
+    
+    return if !$self->_doStatement (SET_PAGELENGTH => $value, $name);
+    return if !$self->_commit;
+    
+    return $self;
+    
+}
+
+sub setRedoubles {
+    my ($self, $name, $value) = @_;
+    
+    return if !$self->_doStatement (SET_REDOUBLES => $value, $name);
+    return if !$self->_commit;
+    
+    return $self;
+    
+}
+
+sub setSortwho {
+    my ($self, $name, $value) = @_;
+    
+    return if !$self->_doStatement (SET_SORTWHO => $value, $name);
+    return if !$self->_commit;
+    
+    return $self;
+    
+}
+
+sub setTimezone {
+    my ($self, $name, $value) = @_;
+    
+    return if !$self->_doStatement (SET_TIMEZONE => $value, $name);
     return if !$self->_commit;
     
     return $self;

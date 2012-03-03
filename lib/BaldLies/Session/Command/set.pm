@@ -22,6 +22,8 @@ use strict;
 
 use base qw (BaldLies::Session::Command);
 
+use File::Find;
+
 use BaldLies::Util qw (empty);
 
 sub execute {
@@ -37,9 +39,19 @@ sub execute {
         return $self->__showValue ($variable);
     } elsif ('boardstyle' eq $variable) {
         return $self->__setBoardstyle ($value);
+    } elsif ('linelength' eq $variable) {
+        return $self->__setLinelength ($value);
+    } elsif ('pagelength' eq $variable) {
+        return $self->__setPagelength ($value);
+    } elsif ('redoubles' eq $variable) {
+        return $self->__setRedoubles ($value);
+    } elsif ('sortwho' eq $variable) {
+        return $self->__setSortwho ($value);
+    } elsif ('timezone' eq $variable) {
+        return $self->__setTimezone ($value);
     }
     
-    $session->reply ("** todo ...\n");
+    return $self->__invalidArgument;
 }
 
 sub __setBoardstyle {
@@ -57,6 +69,119 @@ sub __setBoardstyle {
         $msg_dispatcher->execute ($session, set => "boardstyle $value");
     } else {
         $session->sendMaster (set => "boardstyle $value");
+    }
+    
+    return $self;
+}
+
+sub __setLinelength {
+    my ($self, $value) = @_;
+    
+    my $session = $self->{_session};
+    my $user = $session->getUser;
+    my $current = $user->{linelength};
+    
+    if ($value !~ /^0|[1-9][0-9]{0,2}$/) {
+        $session->reply ("** Valid arguments are the numbers 0 to 999. Use 0"
+                         . " for no linelength.\n");
+    } elsif ($value eq $current) {
+        # Silently bypass database.
+        my $msg_dispatcher = $session->getMessageDispatcher;
+        $msg_dispatcher->execute ($session, set => "linelength $value");
+    } else {
+        $session->sendMaster (set => "linelength $value");
+    }
+    
+    return $self;
+}
+
+sub __setPagelength {
+    my ($self, $value) = @_;
+    
+    my $session = $self->{_session};
+    my $user = $session->getUser;
+    my $current = $user->{pagelength};
+    
+    if ($value !~ /^0|[1-9][0-9]{0,2}$/) {
+        $session->reply ("** Valid arguments are the numbers 0 to 999. Use 0"
+                         . " for no pagelength.\n");
+    } elsif ($value eq $current) {
+        # Silently bypass database.
+        my $msg_dispatcher = $session->getMessageDispatcher;
+        $msg_dispatcher->execute ($session, set => "pagelength $value");
+    } else {
+        $session->sendMaster (set => "pagelength $value");
+    }
+    
+    return $self;
+}
+
+sub __setSortwho {
+    my ($self, $value) = @_;
+    
+    my $session = $self->{_session};
+    my $user = $session->getUser;
+    my $current = $user->{sortwho};
+    
+    if ('login' ne $value && 'name' ne $value
+        && 'rating' ne $value && 'rrating' ne $value) {
+        $session->reply ("** Unknown value '$value'. Try 'login', 'name',"
+                         . " 'rating' or 'rrating'.\n");
+    } elsif ($value eq $current) {
+        # Silently bypass database.
+        my $msg_dispatcher = $session->getMessageDispatcher;
+        $msg_dispatcher->execute ($session, set => "sortwho $value");
+    } else {
+        $session->sendMaster (set => "sortwho $value");
+    }
+    
+    return $self;
+}
+
+sub __setRedoubles {
+    my ($self, $value) = @_;
+    
+    my $session = $self->{_session};
+    my $user = $session->getUser;
+    my $current = $user->{sortwho};
+    
+    if ('none' eq $value) {
+        $value = 0;
+    } elsif ('unlimited' eq $value) {
+        $value = -1;
+    } elsif ($value !~ /^[1-9][0-9]?$/) {
+        $session->reply ("** Valid arguments are 'none', 'unlimited' and the"
+                         . " numbers 1 to 99.\n");
+        return $self;
+    }
+    
+    if ($value eq $current) {
+        # Silently bypass database.
+        my $msg_dispatcher = $session->getMessageDispatcher;
+        $msg_dispatcher->execute ($session, set => "redoubles $value");
+    } else {
+        $session->sendMaster (set => "redoubles $value");
+    }
+    
+    return $self;
+}
+
+sub __setTimezone {
+    my ($self, $value) = @_;
+    
+    my $session = $self->{_session};
+    my $user = $session->getUser;
+    my $current = $user->{sortwho};
+    
+    if ('UTC' ne $value) {
+        $session->reply ("** Can't find timezone '$value'. Try one of:\n"
+                         . "UTC\n");
+    } elsif ($value eq $current) {
+        # Silently bypass database.
+        my $msg_dispatcher = $session->getMessageDispatcher;
+        $msg_dispatcher->execute ($session, set => "timezone $value");
+    } else {
+        $session->sendMaster (set => "timezone $value");
     }
     
     return $self;

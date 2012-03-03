@@ -36,6 +36,8 @@ sub execute {
     my $method = 'set' . ucfirst $variable;
     $db->$method ($user->{name}, $value);
     
+    $user->{$variable} = $value;
+
     $master->queueResponse ($fd, set => $variable, $value);
         
     return $self;    
