@@ -37,6 +37,7 @@ sub new {
     
     # The first user is automatically superuser.
     $self{admin} = 1 if !$self{id};
+    $self{away} = 0;
 
     bless \%self, $class;
 }
@@ -53,10 +54,10 @@ sub rawwho {
     my $opponent = $self->{opponent} || '-';
     my $watching = $self->{watching} || '-';
     my $away = $self->{away} || 0;
-    my $rating = sprintf '%.2f', $self->{__rating};
+    my $rating = sprintf '%.2f', $self->{rating};
     my $address = $self->{address} || '-';
     
-    return "$self->{name} $opponent $watching $self->{ready}"
+    return "5 $self->{name} $opponent $watching $self->{ready}"
            . " $away $rating $self->{experience} 0 $self->{login} $self->{ip}"
            . " $self->{client} $address\n";
 }
