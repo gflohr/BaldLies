@@ -22,6 +22,94 @@ use strict;
 
 use base qw (BaldLies::Session::Command);
 
+use BaldLies::Util qw (empty);
+
+sub execute {
+    my ($self, $payload) = @_;
+    
+    my $session = $self->{_session};
+    
+    my ($variable, $value) = split / /, $payload, 2 if defined $payload;
+        
+    if (empty $variable) {
+        return $self->__showAll;
+    } elsif (empty $value) {
+        return $self->__showValue ($variable);
+    } elsif ('boardstyle' eq $variable) {
+        return $self->__setBoardstyle ($value);
+    }
+    
+    $session->reply ("** todo ...\n");
+}
+
+sub __setBoardstyle {
+    my ($self, $value) = @_;
+    
+    my $session = $self->{_session};
+    
+    if ($value ne '1' && $value ne '2' && $value ne '3') {
+        $session->reply ("** Valid arguments are the numbers 1 to 3.\n");
+    } else {
+        $session->sendMaster (set => 'boardstyle', $value);
+    }
+    
+    return $self;
+}
+
+sub __showAll {
+    my ($self) = @_;
+    
+    my $session = $self->{_session};
+    my $user = $session->getUser;
+    
+    my $redoubles = $user->{redoubles} ? $user->{redoubles} : 'none';
+    $redoubles = 'unlimited' if $redoubles eq '-1';
+    
+    my $output = <<EOF;
+Settings of variables:
+boardstyle: $user->{boardstyle}
+linelength: $user->{linelength}
+pagelength: $user->{pagelength}
+redoubles:  $redoubles
+sortwho:    $user->{sortwho}
+timezone:   $user->{timezone}
+EOF
+
+    $session->reply ($output);
+    
+    return $self;
+}
+
+sub __invalidArgument {
+    my ($self) = @_;
+    
+    $self->{_session}->reply ("Invalid argument. Type 'help set'.\n");
+    
+    return $self;
+}
+
+sub __showValue {
+    my ($self, $variable) = @_;
+    
+    my $session = $self->{_session};
+    
+    my %valid = map { $_ => 1 } qw (boardstyle linelength pagelength
+                                    redoubles sortwho timezone);
+    if (!$valid{$variable}) {
+        return $self->__invalidArgument ("Invalid argument. Type 'help set'.\n");
+    }
+    
+    my $value = $session->getUser->{$variable};
+    if ('redoubles' eq $variable) {
+        $value = $value ? $value : 'none';
+        $value = 'unlimited' if $value eq '-1';
+    }
+    
+    $session->reply ("Value of '$variable' is $value\n");
+    
+    return $self;
+}
+
 1;
 
 =head1 NAME
