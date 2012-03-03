@@ -462,8 +462,7 @@ sub stealPassword {
 sub motd {
     my ($self) = @_;
 
-    eval { $self->{__cmd_dispatcher}->execute ($self, 'motd') };
-    $self->{_logger}->fatal ($@) if $@;
+    $self->{__cmd_dispatcher}->execute ($self, 'motd');
     
     return $self;
 }
