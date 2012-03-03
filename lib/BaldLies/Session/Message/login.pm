@@ -26,7 +26,7 @@ use BaldLies::User;
 
 sub execute {
     my ($self, $session, $payload) = @_;
-    
+
     my $logger = $session->getLogger;
 
     my (@props) = split / /, $payload;
@@ -36,16 +36,8 @@ sub execute {
     $session->addUser ($new_user);
 
     my $user = $session->getUser;
-    if ($user->{notify}) {
-        my $prefix;
-        
-        if ($session->getClip) {
-            $prefix = "7 $new_user->{name} ";
-        } else {
-            $prefix = "\n";
-        }
-        $session->reply ("$prefix$new_user->{name} logs in.\n");
-    }
+    $session->clipReply (7, "$new_user->{name} $new_user->{name} logs in.\n")
+        if $user->{notify};
     
     return $session;    
 }

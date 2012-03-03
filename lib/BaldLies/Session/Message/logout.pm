@@ -31,16 +31,8 @@ sub execute {
     
     my $user = $session->getUser;
         
-    if ($user->{notify}) {
-        my $prefix;
-        
-        if ($self->{__clip}) {
-            $prefix = "8 $name ";
-        } else {
-            $prefix = "\n";
-        }
-        $session->reply ("$prefix$name drops connection.\n");
-    }
+    $session->clipReply (8, "$name $name drops connection.\n")
+        if $user->{notify};
         
     return $self;
 }

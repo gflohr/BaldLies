@@ -228,17 +228,33 @@ sub getCommandDispatcher {
 }
 
 sub broadcast {
-    my ($self, $payload) = @_;
+    my ($self, @payload) = @_;
     
-    $self->__queueMasterOutput (broadcast => $payload);
+    $self->__queueMasterOutput (broadcast => @payload);
     
     return $self;
 }
 
 sub clipBroadcast {
-    my ($self, $code, $payload) = @_;
+    my ($self, $sender, $code, @payload) = @_;
     
-    $self->__queueMasterOutput (clip_broadcast => $code, $payload);
+    $self->__queueMasterOutput (clip_broadcast => $sender, $code, @payload);
+    
+    return $self;
+}
+
+sub tell {
+    my ($self, $recipient, @payload) = @_;
+    
+    $self->__queueMasterOutput (tell => $recipient, @payload);
+    
+    return $self;
+}
+
+sub clipTell {
+    my ($self, $recipient, $code, @payload) = @_;
+    
+    $self->__queueMasterOutput (clip_tell => $recipient, $code, @payload);
     
     return $self;
 }
@@ -283,6 +299,8 @@ sub removeUser {
 sub getUser {
     shift->{__user};
 }
+
+
 
 sub __checkClientInput {
     my ($self) = @_;
@@ -350,7 +368,7 @@ sub __parseLogin {
         $self->{__name} = $name;
         $self->{__password} = $password;
         $self->{__client} = $client;
-        return $self->__login ($name, $password);
+        return $self->login ($name, $password);
     }
 
     $self->{__state} = 'pwprompt';
@@ -463,6 +481,81 @@ sub reply {
     }
 
     return $self;
+}
+
+my @non_clip_handlers = (
+    # 0 is unused.
+    undef,
+    # 1 (welcome), not used in this context.
+    undef,
+    # 2 (owninfo), not used in this context.
+    undef,
+    # 3 and 4 (motd), not used in this context.
+    undef,
+    undef,
+    # 5 and 6 (who info), not used in this context.
+    undef,
+    undef,
+    # 7 (login) someplayer someplayer logs in.
+    sub {
+        $_[0] =~ s/[^ ]+ //;
+    },
+    # 8 (logout) someplayer someplayer drops connection.
+    sub {
+        $_[0] =~ s/[^ ]+ //;
+    },
+    # 9 (message) from time message
+    sub {
+        $_[0] =~ s/([^ ]+) [1-9]|[0-9]*/Message from $1:/;
+    },
+    # 10 (message delivered) recipient, not used in this context.
+    undef,
+    # 11 (message saved) recipient, not used in this context.
+    undef,
+    # 12 (says) name message
+    sub {
+        $_[0] =~ s/([^ ]+)/$1 says:/;
+    },
+    # 13 (shouts) name message
+    sub {
+        $_[0] =~ s/([^ ]+)/$1 shouts:/;
+    },
+    # 14 (shouts) name message
+    sub {
+        $_[0] =~ s/([^ ]+)/$1 whispers:/;
+    },
+    # 15 (kibitzes) name message
+    sub {
+        $_[0] =~ s/([^ ]+)/$1 kibitzes:/;
+    },
+    # 16 (you tell) recipient message
+    sub {
+        $_[0] =~ s/([^ ]+)/** You tell $1:/;
+    },
+    # 17 (you shout) recipient message
+    sub {
+        $_[0] =~ s/([^ ]+)/** You shout $1:/;
+    },
+    # 18 (you whisper) recipient message
+    sub {
+        $_[0] =~ s/([^ ]+)/** You whisper $1:/;
+    },
+    # 19 (you kibitz) recipient message
+    sub {
+        $_[0] =~ s/([^ ]+)/** You kibitz $1:/;
+    },
+);
+
+sub clipReply {
+    my ($self, $opcode, @text) = @_;
+    
+    my $text = join ' ', @text;
+    if (!$self->getClip && $opcode < @non_clip_handlers) {
+        $non_clip_handlers[$opcode]->($text);
+        return $self->reply ($text);
+    } else {
+        return $self->reply (join ' ', $opcode, $text);
+    }
 }
 
 sub __queueMasterOutput {
