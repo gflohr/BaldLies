@@ -416,8 +416,8 @@ This seems to be an issue in Fcntl(3pm), not in BaldLies.
 
 =item B<Timezones are not supported.>
 
-And this is unlikely to ever change.  Everything is done in UTC.  You can
-change your timezone, but it will not have any effect.
+And this is unlikely to ever change.  Everything is done in UTC.  You cannot
+even change your timezone.
 
 =item B<Idle time is always 0.>
 
