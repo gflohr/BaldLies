@@ -48,20 +48,6 @@ sub copy {
     bless {%$self}, ref $self;
 }
 
-sub rawwho {
-    my ($self) = @_;
-    
-    my $opponent = $self->{opponent} || '-';
-    my $watching = $self->{watching} || '-';
-    my $away = $self->{away} || 0;
-    my $rating = sprintf '%.2f', $self->{rating};
-    my $address = $self->{address} || '-';
-    
-    return "5 $self->{name} $opponent $watching $self->{ready}"
-           . " $away $rating $self->{experience} 0 $self->{login} $self->{ip}"
-           . " $self->{client} $address\n";
-}
-
 1;
 
 =head1 NAME
