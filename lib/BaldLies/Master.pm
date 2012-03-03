@@ -306,6 +306,20 @@ sub queueResponse {
     return $self;
 }
 
+sub queueResponseForUser {
+    my ($self, $name, $opcode, @msg) = @_;
+
+    my $users = $self->{__users};    
+    my $logger = $self->{__logger};
+    
+    unless (exists $users->{$name}) {
+        $logger->info ("Message for vanished user `$name'.");
+        return $self;
+    }
+    my $fd = $users->{$name};
+    return $self->queueResponse ($fd, $opcode, @msg);
+}
+
 1;
 
 =head1 NAME
