@@ -69,6 +69,8 @@ sub execute {
         };
         $session->reply ("2 $own_info\n");
         $session->motd;
+        my $dispatcher = $session->getCommandDispatcher;
+        $dispatcher->execute ($session, 'rawwho');
     } else {
         my $last_login = format_time ($user->{last_login} ?
                                       $user->{last_login} : time);
