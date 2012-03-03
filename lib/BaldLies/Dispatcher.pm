@@ -110,6 +110,7 @@ sub _loadModule {
             my $mtime = $sb[9];
             if ($mtime != $modinfo->{mtime}) {
                 $logger->info ("Must re-compile $module.");
+                delete $INC{$modinfo->{inc_path}};
                 eval "no warnings 'redefine'; use $module";
                 die $@ if $@;
                 return $module;
