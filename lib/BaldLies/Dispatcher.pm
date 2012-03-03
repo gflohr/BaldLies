@@ -110,8 +110,7 @@ sub _loadModule {
             my $mtime = $sb[9];
             if ($mtime != $modinfo->{mtime}) {
                 $logger->info ("Must re-compile $module.");
-                $logger->info (delete $INC{$modinfo->{inc_path}});
-                eval "use $module";
+                eval "no warnings 'redefine'; use $module";
                 die $@ if $@;
                 return $module;
             }
@@ -124,6 +123,7 @@ sub _loadModule {
     
     # Try to find the module again.
     my $path;
+    my $mtime;
     foreach my $inc (@{$self->{__inc}}) {
         my $dir = File::Spec->catdir ($inc, @{$self->{__realms}});
         next unless -d $dir;
@@ -131,9 +131,11 @@ sub _loadModule {
         my $filename = lc "$cmd.pm";
         my $try_path = File::Spec->catfile ($dir, $filename);
 
-        next unless -e $try_path;
+        my @sb = stat $try_path;
+        next unless @sb;
         
         $path = $try_path;
+        $mtime = $sb[9];
         last;
     }
 
@@ -144,6 +146,15 @@ sub _loadModule {
     die $@ if ($@);
 
     $self->_registerCommands ($cmd, $module, 1);
+    if (!exists $self->{__module_info}->{$module}) {
+        $logger->info ("Compile freshly appeared module `$module'.");
+        my $inc_path = join '/', @{$self->{__realms}}, "$cmd.pm";
+        $self->{__module_info}->{$module} = {
+                inc_path => $inc_path,
+                mtime => $mtime,
+                path => $path,
+        };
+    }
     
     return $self->_loadModule ($cmd);
 }
