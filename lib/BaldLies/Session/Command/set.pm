@@ -214,7 +214,7 @@ EOF
 sub __invalidArgument {
     my ($self) = @_;
     
-    $self->{_session}->reply ("Invalid argument. Type 'help set'.\n");
+    $self->{_session}->reply ("** Invalid argument. Type 'help set'.\n");
     
     return $self;
 }
