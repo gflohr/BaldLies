@@ -22,6 +22,49 @@ use strict;
 
 use base qw (BaldLies::Session::Command);
 
+use BaldLies::Util qw (empty);
+
+sub execute {
+    my ($self, $variable) = @_;
+    
+    my $session = $self->{_session};
+    
+    if (empty $variable) {
+        return $self->__showAll;
+    }
+    
+    return $self->__invalidArgument;
+}
+
+
+sub __showAll {
+    my ($self) = @_;
+    
+    my $session = $self->{_session};
+    my $user = $session->getUser;
+
+    my $output = "The current settings are:\n";
+    
+    foreach my $variable (qw (allowpip autoboard automove bell crawford double
+                              greedy moreboard moves notify ratings ready
+                              report silent telnet wrap)) {
+        $output .= sprintf "\%-15s \%s\n", $variable, 
+                                          $user->{$variable} ? 'YES' : 'NO';
+    }
+
+    $session->reply ($output);
+    
+    return $self;
+}
+
+sub __invalidArgument {
+    my ($self, $arg) = @_;
+    
+    $self->{_session}->reply ("** Don't know how to toggle arg\n");
+    
+    return $self;
+}
+
 1;
 
 =head1 NAME
