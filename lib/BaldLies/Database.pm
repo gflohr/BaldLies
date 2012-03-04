@@ -218,6 +218,90 @@ EOF
     $sths->{SET_TIMEZONE} = 
         $dbh->prepare ($statements->{SET_TIMEZONE});
 
+    $statements->{TOGGLE_ALLOWPIP} = <<EOF;
+UPDATE users SET allowpip = NOT allowpip WHERE name = ?
+EOF
+    $sths->{TOGGLE_ALLOWPIP} = 
+        $dbh->prepare ($statements->{TOGGLE_ALLOWPIP});
+
+    $statements->{TOGGLE_AUTOBOARD} = <<EOF;
+UPDATE users SET autoboard = NOT autoboard WHERE name = ?
+EOF
+    $sths->{TOGGLE_AUTOBOARD} = 
+        $dbh->prepare ($statements->{TOGGLE_AUTOBOARD});
+
+    $statements->{TOGGLE_AUTODOUBLE} = <<EOF;
+UPDATE users SET autodouble = NOT autodouble WHERE name = ?
+EOF
+    $sths->{TOGGLE_AUTODOUBLE} = 
+        $dbh->prepare ($statements->{TOGGLE_AUTODOUBLE});
+
+    $statements->{TOGGLE_AUTOMOVE} = <<EOF;
+UPDATE users SET automove = NOT automove WHERE name = ?
+EOF
+    $sths->{TOGGLE_AUTOMOVE} = 
+        $dbh->prepare ($statements->{TOGGLE_AUTOMOVE});
+
+    $statements->{TOGGLE_BELL} = <<EOF;
+UPDATE users SET bell = NOT bell WHERE name = ?
+EOF
+    $sths->{TOGGLE_BELL} = 
+        $dbh->prepare ($statements->{TOGGLE_BELL});
+
+    $statements->{TOGGLE_CRAWFORD} = <<EOF;
+UPDATE users SET crawford = NOT crawford WHERE name = ?
+EOF
+    $sths->{TOGGLE_CRAWFORD} = 
+        $dbh->prepare ($statements->{TOGGLE_CRAWFORD});
+
+    $statements->{TOGGLE_MOREBOARDS} = <<EOF;
+UPDATE users SET moreboards = NOT moreboards WHERE name = ?
+EOF
+    $sths->{TOGGLE_MOREBOARDS} = 
+        $dbh->prepare ($statements->{TOGGLE_MOREBOARDS});
+
+    $statements->{TOGGLE_MOVES} = <<EOF;
+UPDATE users SET moves = NOT moves WHERE name = ?
+EOF
+    $sths->{TOGGLE_MOVES} = 
+        $dbh->prepare ($statements->{TOGGLE_MOVES});
+
+    $statements->{TOGGLE_NOTIFY} = <<EOF;
+UPDATE users SET notify = NOT notify WHERE name = ?
+EOF
+    $sths->{TOGGLE_NOTIFY} = 
+        $dbh->prepare ($statements->{TOGGLE_NOTIFY});
+
+    $statements->{TOGGLE_RATINGS} = <<EOF;
+UPDATE users SET ratings = NOT ratings WHERE name = ?
+EOF
+    $sths->{TOGGLE_RATINGS} = 
+        $dbh->prepare ($statements->{TOGGLE_RATINGS});
+
+    $statements->{TOGGLE_READY} = <<EOF;
+UPDATE users SET ready = NOT ready WHERE name = ?
+EOF
+    $sths->{TOGGLE_READY} = 
+        $dbh->prepare ($statements->{TOGGLE_READY});
+
+    $statements->{TOGGLE_REPORT} = <<EOF;
+UPDATE users SET report = NOT ready WHERE name = ?
+EOF
+    $sths->{TOGGLE_REPORT} = 
+        $dbh->prepare ($statements->{TOGGLE_REPORT});
+
+    $statements->{TOGGLE_SILENT} = <<EOF;
+UPDATE users SET ready = NOT silent WHERE name = ?
+EOF
+    $sths->{TOGGLE_SILENT} = 
+        $dbh->prepare ($statements->{TOGGLE_SILENT});
+
+    $statements->{TOGGLE_WRAP} = <<EOF;
+UPDATE users SET wrap = NOT ready WHERE name = ?
+EOF
+    $sths->{TOGGLE_WRAP} = 
+        $dbh->prepare ($statements->{TOGGLE_WRAP});
+
     return $self;
 }
 
@@ -486,6 +570,132 @@ sub setTimezone {
     
     return $self;
     
+}
+
+sub toggleAllowpip {
+    my ($self, $name) = @_;
+    
+    return if !$self->_doStatement (TOGGLE_ALLOWPIP => $name);
+    return if !$self->_commit;
+    
+    return $self;    
+}
+
+sub toggleAutoboard {
+    my ($self, $name) = @_;
+    
+    return if !$self->_doStatement (TOGGLE_AUTOBOARD => $name);
+    return if !$self->_commit;
+    
+    return $self;    
+}
+
+sub toggleAutomove {
+    my ($self, $name) = @_;
+    
+    return if !$self->_doStatement (TOGGLE_AUTOMOVE => $name);
+    return if !$self->_commit;
+    
+    return $self;    
+}
+
+sub toggleAutodouble {
+    my ($self, $name) = @_;
+    
+    return if !$self->_doStatement (TOGGLE_AUTODOUBLE => $name);
+    return if !$self->_commit;
+    
+    return $self;    
+}
+
+sub toggleBell {
+    my ($self, $name) = @_;
+    
+    return if !$self->_doStatement (TOGGLE_BELL => $name);
+    return if !$self->_commit;
+    
+    return $self;    
+}
+
+sub toggleCrawford {
+    my ($self, $name) = @_;
+    
+    return if !$self->_doStatement (TOGGLE_CRAWFORD => $name);
+    return if !$self->_commit;
+    
+    return $self;    
+}
+
+sub toggleMoreboards {
+    my ($self, $name) = @_;
+    
+    return if !$self->_doStatement (TOGGLE_MOREBOARDS => $name);
+    return if !$self->_commit;
+    
+    return $self;    
+}
+
+sub toggleMoves {
+    my ($self, $name) = @_;
+    
+    return if !$self->_doStatement (TOGGLE_MOVES => $name);
+    return if !$self->_commit;
+    
+    return $self;    
+}
+
+sub toggleNotify {
+    my ($self, $name) = @_;
+    
+    return if !$self->_doStatement (TOGGLE_NOTIFY => $name);
+    return if !$self->_commit;
+    
+    return $self;    
+}
+
+sub toggleRatings {
+    my ($self, $name) = @_;
+    
+    return if !$self->_doStatement (TOGGLE_RATINGS => $name);
+    return if !$self->_commit;
+    
+    return $self;    
+}
+
+sub toggleReady {
+    my ($self, $name) = @_;
+    
+    return if !$self->_doStatement (TOGGLE_READY => $name);
+    return if !$self->_commit;
+    
+    return $self;    
+}
+
+sub toggleReport {
+    my ($self, $name) = @_;
+    
+    return if !$self->_doStatement (TOGGLE_REPORT => $name);
+    return if !$self->_commit;
+    
+    return $self;    
+}
+
+sub toggleSilent {
+    my ($self, $name) = @_;
+    
+    return if !$self->_doStatement (TOGGLE_SILENT => $name);
+    return if !$self->_commit;
+    
+    return $self;    
+}
+
+sub toggleWrap {
+    my ($self, $name) = @_;
+    
+    return if !$self->_doStatement (TOGGLE_WRAP => $name);
+    return if !$self->_commit;
+    
+    return $self;    
 }
 
 1;

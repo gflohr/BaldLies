@@ -393,7 +393,10 @@ sub __checkMasterInput {
     
     my ($msg, $payload) = split / /, $input, 2;
     
-    return $self->{__msg_dispatcher}->execute ($self, $msg, $payload);
+    eval { $self->{__msg_dispatcher}->execute ($self, $msg, $payload) };
+    $logger->error ($@) if $@;
+    
+    return $self;
 }
 
 sub login {

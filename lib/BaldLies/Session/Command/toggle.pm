@@ -24,6 +24,11 @@ use base qw (BaldLies::Session::Command);
 
 use BaldLies::Util qw (empty);
 
+my @toggles = qw (allowpip autoboard automove bell crawford double
+                  greedy moreboards moves notify ratings ready
+                  report silent telnet wrap);
+my %toggles = map { $_ => 1 } @toggles;
+
 sub execute {
     my ($self, $variable) = @_;
     
@@ -31,11 +36,42 @@ sub execute {
     
     if (empty $variable) {
         return $self->__showAll;
+    } elsif ('double' eq $variable) {
+        my $user = $session->getUser;
+        $user->{double} = !$user->{double};
+        if ($user->{double}) {
+            $session->reply ("** You will be asked if you want to double.\n");
+        } else {
+            $session->reply ("** You won't be asked if you want to double.\n");
+        }
+        return $self;
+    } elsif ('greedy' eq $variable) {
+        my $user = $session->getUser;
+        $user->{double} = !$user->{double};
+        if ($user->{double}) {
+            $session->reply ("** Will use automatic greedy bearoffs.\n");
+        } else {
+            $session->reply ("** Won't use automatic greedy bearoffs.\n");
+        }
+        return $self;
+    } elsif ('telnet' eq $variable) {
+        my $user = $session->getUser;
+        $user->{double} = !$user->{double};
+        if ($user->{double}) {
+            $session->reply ("** You use telnet and don't need extra"
+                             . " 'newlines'.\n");
+        } else {
+            $session->reply ("** You use a client program and will receive"
+                             . " extra 'newlines'.\n");
+        }
+        return $self;
+    } elsif (exists $toggles{$variable}) {
+        $session->sendMaster ("toggle $variable");
+        return $self;
     }
     
-    return $self->__invalidArgument;
+    return $self->__invalidArgument ($variable);
 }
-
 
 sub __showAll {
     my ($self) = @_;
@@ -43,11 +79,9 @@ sub __showAll {
     my $session = $self->{_session};
     my $user = $session->getUser;
 
-    my $output = "The current settings are:\n";
+    my $output = "Te current settings are:\n";
     
-    foreach my $variable (qw (allowpip autoboard automove bell crawford double
-                              greedy moreboard moves notify ratings ready
-                              report silent telnet wrap)) {
+    foreach my $variable (@toggles) {
         $output .= sprintf "\%-15s \%s\n", $variable, 
                                           $user->{$variable} ? 'YES' : 'NO';
     }
@@ -60,7 +94,7 @@ sub __showAll {
 sub __invalidArgument {
     my ($self, $arg) = @_;
     
-    $self->{_session}->reply ("** Don't know how to toggle arg\n");
+    $self->{_session}->reply ("** Don't know how to toggle $arg\n");
     
     return $self;
 }
