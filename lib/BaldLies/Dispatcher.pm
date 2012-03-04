@@ -111,8 +111,14 @@ sub _loadModule {
             if ($mtime != $modinfo->{mtime}) {
                 $logger->info ("Must re-compile $module.");
                 delete $INC{$modinfo->{inc_path}};
-                no warnings 'redefine';
-                eval "use $module";
+                my $namespace = $module . '::';
+                {
+                    no strict 'refs';
+                    undef *{$namespace};              
+                }
+                eval {
+                    require "$modinfo->{inc_path}";
+                };
                 die $@ if $@;
                 return $module;
             }
