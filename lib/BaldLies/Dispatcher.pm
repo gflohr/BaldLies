@@ -120,6 +120,7 @@ sub _loadModule {
                     require "$modinfo->{inc_path}";
                 };
                 die $@ if $@;
+                $modinfo->{mtime} = $mtime;
                 return $module;
             }
         }
