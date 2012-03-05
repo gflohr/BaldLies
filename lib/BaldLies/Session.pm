@@ -336,6 +336,7 @@ sub __checkClientInput {
     
     $input =~ s/^[ \t\r]+//;
     $input =~ s/[ \t\r]+$//;
+    $input =~ s/\t/        /g;
     
     my $state = $self->{__state};
     if ('login' eq $state) {
