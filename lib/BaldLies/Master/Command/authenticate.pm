@@ -73,7 +73,7 @@ sub execute {
         
     $master->queueResponse ($fd, authenticated => 1, $payload);
     
-    $master->broadcast (login => $name, @$data, $client, $ip);
+    $master->broadcast (login => $name, @$data, $client, $ip, $user->{login});
     
     return $self;    
 }

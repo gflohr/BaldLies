@@ -27,7 +27,7 @@ my @properties = qw (id name password address admin last_login last_logout
                      pagelength redoubles sortwho timezone allowpip autoboard 
                      autodouble automove bell crawford double greedy 
                      moreboards moves notify ratings ready report silent 
-                     telnet wrap client ip);
+                     telnet wrap client ip login);
                       
 sub new {
     my ($class, @args) = @_;
