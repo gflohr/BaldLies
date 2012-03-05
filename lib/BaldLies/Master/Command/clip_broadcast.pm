@@ -16,50 +16,39 @@
 # You should have received a copy of the GNU General Public License
 # along with BaldLies.  If not, see <http://www.gnu.org/licenses/>.
 
-package BaldLies::Session::Message::login;
+package BaldLies::Master::Command::clip_broadcast;
 
 use strict;
 
-use base qw (BaldLies::Session::Message);
-
-use BaldLies::User;
+use base qw (BaldLies::Master::Command);
 
 sub execute {
-    my ($self, $session, $payload) = @_;
-
-    my $logger = $session->getLogger;
-
-    my (@props) = split / /, $payload;
+    my ($self, $fd, $payload) = @_;
     
-    my $new_user = BaldLies::User->new (@props);
+    my $master = $self->{_master};
+    my $logger = $master->getLogger;
     
-    $session->addUser ($new_user);
-
-    my $user = $session->getUser;
-    $session->clipReply (7, "$new_user->{name} $new_user->{name} logs in.\n")
-        if $user->{notify};
-
-    if ($session->getClip) {
-        $session->reply ('5 ' . $session->rawwho ($new_user) . "6\n");
+    foreach my $name ($master->getLoggedIn) {
+        $master->queueResponseForUser ($name, clip_tell => $payload);
     }
     
-    return $session;    
+    return $self;
 }
 
 1;
 
 =head1 NAME
 
-BaldLies::Session::Message::authenticate - BaldLies Message `authenticate'
+BaldLies::Master::Command::clip_broadcast - BaldLies Command `clip_broadcast'
 
 =head1 SYNOPSIS
 
-  use BaldLies::Session::Message::authenticate->new;
+  use BaldLies::Master::Command::clip_broadcast->new ($master);
   
 =head1 DESCRIPTION
 
-This plug-in handles the master message `authenticate'.
+This plug-in handles the master command `clip_broadcast'.
 
 =head1 SEE ALSO
 
-BaldLies::Session::Message(3pm), baldlies(1), perl(1)
+BaldLies::Master::Command(3pm), baldlies(1), perl(1)

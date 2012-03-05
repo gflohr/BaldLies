@@ -38,8 +38,12 @@ sub execute {
         return $self->__showAll;
     } elsif ('double' eq $variable) {
         my $user = $session->getUser;
-        $user->{double} = !$user->{double};
-        if ($user->{double}) {
+        if ($user->{$variable}) {
+            $user->{$variable} = 0;
+        } else {
+            $user->{$variable} = 1;
+        }
+        if ($user->{$variable}) {
             $session->reply ("** You will be asked if you want to double.\n");
         } else {
             $session->reply ("** You won't be asked if you want to double.\n");
@@ -47,8 +51,7 @@ sub execute {
         return $self;
     } elsif ('greedy' eq $variable) {
         my $user = $session->getUser;
-        $user->{double} = !$user->{double};
-        if ($user->{double}) {
+        if ($user->{$variable}) {
             $session->reply ("** Will use automatic greedy bearoffs.\n");
         } else {
             $session->reply ("** Won't use automatic greedy bearoffs.\n");
@@ -56,8 +59,12 @@ sub execute {
         return $self;
     } elsif ('telnet' eq $variable) {
         my $user = $session->getUser;
-        $user->{double} = !$user->{double};
-        if ($user->{double}) {
+        if ($user->{$variable}) {
+            $user->{$variable} = 0;
+        } else {
+            $user->{$variable} = 1;
+        }
+        if ($user->{$variable}) {
             $session->reply ("** You use telnet and don't need extra"
                              . " 'newlines'.\n");
         } else {

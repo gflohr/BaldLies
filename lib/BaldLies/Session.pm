@@ -304,6 +304,20 @@ sub getUser {
     shift->{__user};
 }
 
+sub rawwho {
+    my ($self, $user) = @_;
+    
+    my $opponent = $user->{opponent} || '-';
+    my $watching = $user->{watching} || '-';
+    my $away = $user->{away} || 0;
+    my $rating = sprintf '%.2f', $user->{rating};
+    my $address = $user->{address} || '-';
+    
+    return "$user->{name} $opponent $watching $user->{ready}"
+           . " $away $rating $user->{experience} 0 $user->{login} $user->{ip}"
+           . " $user->{client} $address\n";
+}
+
 sub __checkClientInput {
     my ($self) = @_;
 
@@ -497,9 +511,13 @@ my @non_clip_handlers = (
     # 3 and 4 (motd), not used in this context.
     undef,
     undef,
-    # 5 and 6 (who info), not used in this context.
-    undef,
-    undef,
+    # 5 and 6 (who info), discarded in telnet mode.
+    sub {
+        $_[0] = '',
+    },
+    sub {
+        $_[0] = '',
+    },
     # 7 (login) someplayer someplayer logs in.
     sub {
         $_[0] =~ s/[^ ]+ //;
@@ -556,7 +574,7 @@ sub clipReply {
     my $text = join ' ', @text;
     if (!$self->getClip && $opcode < @non_clip_handlers) {
         $non_clip_handlers[$opcode]->($text);
-        return $self->reply ($text);
+        return $self->reply ($text) if !empty $text;
     } else {
         return $self->reply (join ' ', $opcode, $text);
     }
