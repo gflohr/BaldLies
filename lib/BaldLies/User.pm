@@ -27,7 +27,7 @@ my @properties = qw (id name password address admin last_login last_logout
                      pagelength redoubles sortwho timezone allowpip autoboard 
                      autodouble automove bell crawford double greedy 
                      moreboards moves notify ratings ready report silent 
-                     telnet wrap);
+                     telnet wrap client ip);
                       
 sub new {
     my ($class, @args) = @_;
@@ -37,7 +37,7 @@ sub new {
     
     # The first user is automatically superuser.
     $self{admin} = 1 if !$self{id};
-    $self{away} = 0;
+    $self{away} = '';
 
     bless \%self, $class;
 }

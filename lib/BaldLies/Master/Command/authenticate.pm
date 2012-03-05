@@ -34,7 +34,7 @@ sub execute {
     my ($name, $ip, $client, $password) = split / /, $payload, 4;
     
     my $logger = $master->getLogger;
-    $logger->debug ("Authenticating `$name' from $ip.");
+    $logger->debug ("Authenticating `$name' from $ip with client $client.");
     
     my $data = $master->getDatabase->getUser ($name, $password, $ip);
     if (!$data) {
@@ -73,7 +73,7 @@ sub execute {
         
     $master->queueResponse ($fd, authenticated => 1, $payload);
     
-    $master->broadcast (login => $name, @$data);
+    $master->broadcast (login => $name, @$data, $client, $ip);
     
     return $self;    
 }
