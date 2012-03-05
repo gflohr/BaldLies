@@ -40,7 +40,7 @@ sub execute {
         if $user->{notify};
 
     if ($session->getClip) {
-        $session->reply ('5 ' . $session->rawwho ($new_user) . "6\n");
+        $session->reply ('5 ' . $new_user->rawwho . "6\n");
     }
     
     return $session;    

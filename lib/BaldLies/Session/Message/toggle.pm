@@ -49,7 +49,7 @@ sub execute {
     $session->reply ($reply);
  
     if ('ready' eq $variable) {
-        my $rawwho = $session->rawwho ($user);
+        my $rawwho = $user->rawwho;
         # FIXME! Is this notify or broadcast?
         $session->clipBroadcast ('', 5, $rawwho . "6\n");
     }

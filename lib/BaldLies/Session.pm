@@ -304,20 +304,6 @@ sub getUser {
     shift->{__user};
 }
 
-sub rawwho {
-    my ($self, $user) = @_;
-    
-    my $opponent = $user->{opponent} || '-';
-    my $watching = $user->{watching} || '-';
-    my $away = $user->{away} || 0;
-    my $rating = sprintf '%.2f', $user->{rating};
-    my $address = $user->{address} || '-';
-    
-    return "$user->{name} $opponent $watching $user->{ready}"
-           . " $away $rating $user->{experience} 0 $user->{login} $user->{ip}"
-           . " $user->{client} $address\n";
-}
-
 sub __checkClientInput {
     my ($self) = @_;
 
