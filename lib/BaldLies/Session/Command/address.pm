@@ -22,6 +22,38 @@ use strict;
 
 use base qw (BaldLies::Session::Command);
 
+use BaldLies::Util qw (empty);
+
+sub execute {
+    my ($self, $payload) = @_;
+    
+    my $session = $self->{_session};
+    my $clip = $session->getClip;
+
+    # FIBS allows trailing garbage.
+    my ($address) = split / /, $payload;
+    
+    if (empty $address) {
+        $session->reply ("** You didn't give your address.\n");
+        return $self;
+    }
+    
+    if (60 < length $address) {
+        $session->reply ("** Your address is too long.\n");
+        return $self;
+    }
+    
+    # Hard to tell what is actually allowed by FIBS.
+    if ($address !~ /^[-_a-zA-Z0-9@\/\.]+$/) {
+        $session->reply ("** '$address' is not an email address.\n");
+        return $self;
+    }
+    
+    $session->sendMaster ("address $address\n");
+    
+    return $self;
+}
+
 1;
 
 =head1 NAME
