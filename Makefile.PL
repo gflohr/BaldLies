@@ -33,7 +33,7 @@ WriteMakefile (
         'Config::General' => 2.49,
         'File::HomeDir'   => 0.98,
         'File::Spec'      => 3.31,
-        'DBI'             => 1.616,
+        'DBD::SQLite'     => 0,
         'Digest::SHA'     => 5.47,
         'MIME::Base64'    => 0,
         'Storable'        => 0,
