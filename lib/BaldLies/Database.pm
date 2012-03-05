@@ -302,6 +302,12 @@ EOF
     $sths->{TOGGLE_WRAP} = 
         $dbh->prepare ($statements->{TOGGLE_WRAP});
 
+    $statements->{SET_ADDRESS} = <<EOF;
+UPDATE users SET address = ? WHERE name = ?
+EOF
+    $sths->{SET_ADDRESS} = 
+        $dbh->prepare ($statements->{SET_ADDRESS});
+
     return $self;
 }
 
@@ -566,6 +572,16 @@ sub setTimezone {
     my ($self, $name, $value) = @_;
     
     return if !$self->_doStatement (SET_TIMEZONE => $value, $name);
+    return if !$self->_commit;
+    
+    return $self;
+    
+}
+
+sub setAddress {
+    my ($self, $name, $value) = @_;
+    
+    return if !$self->_doStatement (SET_ADDRESS => $value, $name);
     return if !$self->_commit;
     
     return $self;
