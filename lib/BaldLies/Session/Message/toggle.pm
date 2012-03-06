@@ -50,8 +50,7 @@ sub execute {
  
     if ('ready' eq $variable) {
         my $rawwho = $user->rawwho;
-        # FIXME! Is this notify or broadcast?
-        $session->clipBroadcast ('-', 5, $rawwho . "6\n");
+        $session->sendMaster (status => $rawwho);
     }
         
     return $self;

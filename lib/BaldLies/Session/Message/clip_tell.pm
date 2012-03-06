@@ -30,6 +30,7 @@ sub execute {
     my $logger = $session->getLogger;
     
     my ($clip_code, $msg) = split / /, $payload, 2;
+    $msg = '' unless defined $msg;
     $session->clipReply ($clip_code, "$msg\n");
 
     return $self;
