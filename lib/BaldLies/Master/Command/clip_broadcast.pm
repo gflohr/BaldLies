@@ -27,9 +27,11 @@ sub execute {
     
     my $master = $self->{_master};
     my $logger = $master->getLogger;
-    
+
+    my ($sender, $msg) = split / /, $payload, 2;
     foreach my $name ($master->getLoggedIn) {
-        $master->queueResponseForUser ($name, clip_tell => $payload);
+        $master->queueResponseForUser ($name, clip_tell => $msg)
+            if $name ne $sender;
     }
     
     return $self;
