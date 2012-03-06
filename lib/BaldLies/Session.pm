@@ -181,7 +181,9 @@ sub run {
                         $logger->warning ("Too much data from $self->{__ip}.");
                         return $self;
                     }
-                    $self->__checkClientInput;
+                    while ($self->{__client_in} =~ /\n/) {
+                        $self->__checkClientInput;
+                    }
                 }
             } elsif ($fh == $master) {
                 my $offset = length $self->{__master_in};
@@ -198,7 +200,9 @@ sub run {
                         $logger->info ("Lost connection to master.");
                         return $self;
                     }
-                    $self->__checkMasterInput;
+                    while ($self->{__master_in} =~ /\n/) {
+                        $self->__checkMasterInput;
+                    }
                 }
             }
         }      
@@ -390,8 +394,6 @@ sub __checkMasterInput {
     
     my $input = $1;
 
-    # $logger->debug ("Got master input $input.");
-    
     my ($msg, $payload) = split / /, $input, 2;
     
     eval { $self->{__msg_dispatcher}->execute ($self, $msg, $payload) };
