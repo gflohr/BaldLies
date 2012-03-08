@@ -48,6 +48,8 @@ sub execute {
         delete $user->{watching};
     }
     $user->{ready} = $ready;
+    $user->{rating} = $rating;
+    $user->{experience} = $experience;
     foreach my $login ($master->getLoggedIn) {
         $master->queueResponseForUser ($login, status => $payload);
     }

@@ -49,6 +49,8 @@ sub execute {
         delete $user->{watching};
     }
     $user->{ready} = $ready;
+    $user->{rating} = $rating;
+    $user->{experience} = $experience;
     
     if ($session->getClip) {
         $session->reply ("5 $payload\n6\n");
