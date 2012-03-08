@@ -22,6 +22,35 @@ use strict;
 
 use base qw (BaldLies::Session::Command);
 
+use BaldLies::Util qw (empty);
+
+sub execute {
+    my ($self, $payload) = @_;
+    
+    my $session = $self->{_session};
+    
+    my ($who, $length) = split / /, $payload, 2;
+    
+    if (empty $who) {
+        $session->reply ("** invite who?\n");
+        return $self;
+    }
+    
+    my $users = $session->getUsers;
+    if (!exists $users->{$who}) {
+        $session->reply ("** There is no one called $who\n");
+        return $self;        
+    }
+    
+    my $invitee = $users->{$who};
+    if (!$invitee->{ready}) {
+        $session->reply ("** $who is refusing games.\n");
+        return $self;        
+    }
+    
+    return $self;
+}
+
 1;
 
 =head1 NAME

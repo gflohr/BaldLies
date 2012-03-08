@@ -16,47 +16,60 @@
 # You should have received a copy of the GNU General Public License
 # along with BaldLies.  If not, see <http://www.gnu.org/licenses/>.
 
-package BaldLies::Session::Message::login;
+package BaldLies::Session::Message::status;
 
 use strict;
 
 use base qw (BaldLies::Session::Message);
 
-use BaldLies::User;
-
 sub execute {
     my ($self, $session, $payload) = @_;
 
     my $logger = $session->getLogger;
-
-    my (@props) = split / /, $payload;
     
-    my $new_user = BaldLies::User->new (@props);
-    
-    $session->addUser ($new_user);
+    my ($name, $opponent, $watching, $ready, $away, $rating, $experience,
+        $idle, $login, $hostname, $client, $email) = split / /, $payload;
+    $logger->debug ("Got status change for user `$name'\n");
 
-    my $user = $session->getUser;
-    $session->clipReply (7, "$new_user->{name} $new_user->{name} logs in.\n")
-        if $user->{notify};
+    my $users = $session->getUsers;
+    if (!exists $users->{$name}) {
+        $logger->warning ("Status change for unknown user `$name'.\n");
+        return $self;
+    }
 
-    $session->sendMaster (status => $new_user->rawwho);
+    my $user = $users->{$name};
+    if ('-' ne $opponent) {
+        $user->{opponent} = $opponent;
+    } else {
+        delete $user->{opponent};
+    }
+    if ('-' ne $watching) {
+        $user->{watching} = $watching;
+    } else {
+        delete $user->{watching};
+    }
+    $user->{ready} = $ready;
     
-    return $session;    
+    if ($session->getClip) {
+        $session->reply ("5 $payload\n6\n");
+    }
+        
+    return $self;
 }
 
 1;
 
 =head1 NAME
 
-BaldLies::Session::Message::authenticate - BaldLies Message `authenticate'
+BaldLies::Session::Message::status - BaldLies Message `status'
 
 =head1 SYNOPSIS
 
-  use BaldLies::Session::Message::authenticate->new;
+  use BaldLies::Session::Message::status->new;
   
 =head1 DESCRIPTION
 
-This plug-in handles the master message `authenticate'.
+This plug-in handles the master message `status'.
 
 =head1 SEE ALSO
 

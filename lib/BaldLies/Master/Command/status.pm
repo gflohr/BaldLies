@@ -47,9 +47,9 @@ sub execute {
     } else {
         delete $user->{watching};
     }
+    $user->{ready} = $ready;
     foreach my $login ($master->getLoggedIn) {
-        $master->queueResponseForUser ($login, clip_tell => "5 $payload");
-        $master->queueResponseForUser ($login, clip_tell => "6");
+        $master->queueResponseForUser ($login, status => $payload);
     }
     
     return $self;
