@@ -51,6 +51,8 @@ sub new {
         Carp::croak (__PACKAGE__ . " was already instantiated");
     }
     
+    POSIX::setlocale (LC_ALL, "POSIX");
+ 
     my $self = $singleton = {};
     
     # Preliminary logger.
@@ -150,10 +152,9 @@ sub run {
         return $self->shutdownServer ($@);
     };
     
-    my $listeners = $self->{__listeners};
 
+    my $listeners = $self->{__listeners};
     eval {
-        POSIX::setlocale (LC_ALL, "POSIX");
         while (1) {
             foreach my $listener (@$listeners) {
                 my $sock = $listener->accept;
