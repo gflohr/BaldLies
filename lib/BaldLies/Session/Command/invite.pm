@@ -42,11 +42,44 @@ sub execute {
         return $self;        
     }
     
+    my $user = $session->getUser;
+    if ($who eq $user->{name}) {
+        $session->reply ("** You can't invite yourself.\n");
+        return $self;
+    }
+    
     my $invitee = $users->{$who};
     if (!$invitee->{ready}) {
         $session->reply ("** $who is refusing games.\n");
         return $self;        
     }
+ 
+    if (!empty $length) {
+        if ('unlimited' eq $length) {
+            $length = -1;
+        } elsif ($length =~ /^[1-9][0-9]*$/) {
+            if ($length !~ /^[1-9][0-9]?$/) {
+                $session->reply ("** You can't play a $length point match.\n");
+                return $self;
+            }
+        } else {
+            $session->reply ("** The second argument to 'invite' has to be a"
+                             . " number or the word 'unlimited'\n");
+            return $self;
+        }
+    } else {
+        $length = 0;
+    }
+    
+    if ($length > 9) {
+        if ($user->{experience} < 50) {
+            $session->reply ("** You're not experienced enough to play a"
+                             . " match of that length.\n");
+            return $self;
+        }
+    }
+        
+    $session->sendMaster (invite => $who, $length);
     
     return $self;
 }
