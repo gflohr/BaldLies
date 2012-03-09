@@ -16,25 +16,19 @@
 # You should have received a copy of the GNU General Public License
 # along with BaldLies.  If not, see <http://www.gnu.org/licenses/>.
 
-package BaldLies::Master::Command::address;
+package BaldLies::Session::Message::reply;
 
 use strict;
 
-use base qw (BaldLies::Master::Command);
+use base qw (BaldLies::Session::Message);
+
+use BaldLies::User;
 
 sub execute {
-    my ($self, $fd, $payload) = @_;
+    my ($self, $session, $payload) = @_;
     
-    my $master = $self->{_master};
-    
-    my $user = $master->getUserFromDescriptor ($fd);
-    
-    my $db = $master->getDatabase;
-    $db->setAddress ($user->{name}, $payload);
+    $session->reply ("$payload\n");
 
-    $master->queueResponseForUser ($user->{name}, reply =>
-                                   "Your email address is '$payload'.");
-    
     return $self;
 }
 
@@ -42,16 +36,16 @@ sub execute {
 
 =head1 NAME
 
-BaldLies::Master::Command::address - BaldLies Command `address'
+BaldLies::Session::Message::reply - BaldLies Message `reply'
 
 =head1 SYNOPSIS
 
-  use BaldLies::Master::Command::address->new ($master);
+  use BaldLies::Session::Message::reply->new;
   
 =head1 DESCRIPTION
 
-This plug-in handles the command `address'.
+This plug-in handles the master message `reply'.
 
 =head1 SEE ALSO
 
-BaldLies::Master::Command(3pm), baldlies(1), perl(1)
+BaldLies::Session::Message(3pm), baldlies(1), perl(1)

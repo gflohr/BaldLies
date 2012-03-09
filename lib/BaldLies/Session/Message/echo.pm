@@ -27,7 +27,7 @@ use BaldLies::User;
 sub execute {
     my ($self, $session, $payload) = @_;
     
-    $session->reply ("$payload\n");
+    $session->reply ("\n$payload\n");
 
     return $self;
 }

@@ -46,19 +46,12 @@ sub execute {
 
     my $match_spec = $length > 0 ? "a $length point" : "an unlimited";
     
-    $master->queueResponseForUser ($inviter->{name}, 'echo',
+    $master->queueResponseForUser ($inviter->{name}, 'reply',
                                    "** You invited $who to $match_spec match.");
-    $master->queueResponseForUser ($who, 'echo',
+    $master->queueResponseForUser ($who, 'echo_e',
                                    "$inviter->{name} wants to  play"
-                                   . " $match_spec match with you.\nType join"
-                                   . " '$inviter->{name} to accept.");
-    $master->queueResponseForUser ($who, 'echo',
-                                   "$inviter->{name} wants to  play"
-                                   . " $match_spec match with you.");
-    $master->queueResponseForUser ($who, 'echo',
-                                   "Type join '$inviter->{name} to accept.");
-    $master->queueResponseForUser ($who, 'echo',
-                                   "** FIXME! Telnet prompt is wrong here!");
+                                   . " $match_spec match with you.\\n"
+                                   . "Type join '$inviter->{name}' to accept.");
     
     # FIXME! Will we get the rawwho before or after the confirmations?
     if (!$inviter->{ready}) {
