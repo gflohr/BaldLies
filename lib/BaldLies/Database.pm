@@ -311,6 +311,14 @@ EOF
     $sths->{SET_ADDRESS} = 
         $dbh->prepare ($statements->{SET_ADDRESS});
 
+    $statements->{CREATE_MATCH} = <<EOF;
+INSERT INTO matches (player1, player2, match_length, last_action,
+                     crawford, autodouble)
+    VALUES (?, ?, ?, ?, ?, ?)
+EOF
+    $sths->{CREATE_MATCH} = 
+        $dbh->prepare ($statements->{CREATE_MATCH});
+
     return $self;
 }
 
@@ -383,13 +391,15 @@ sub _upgradeStepMatches {
     $self->{_dbh}->do (<<EOF);
 CREATE TABLE matches (
     id $auto_increment,
-    last_action BIGINT NOT NULL,
     player1 INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     player2 INTEGER NOT NULL CHECK (player1 != player2)
         REFERENCES users (id) ON DELETE CASCADE,
     match_length INTEGER NOT NULL CHECK (match_length != 0),
-    points1 INTEGER NOT NULL CHECK (match_length < 0 OR points1 < match_length),
-    points2 INTEGER NOT NULL CHECK (match_length < 0 OR points2 < match_length),
+    points1 INTEGER NOT NULL DEFAULT 0 
+        CHECK (match_length < 0 OR points1 < match_length),
+    points2 INTEGER NOT NULL DEFAULT 0 
+        CHECK (match_length < 0 OR points2 < match_length),
+    last_action BIGINT NOT NULL,
     crawford BOOLEAN NOT NULL DEFAULT 1,
     post_crawford BOOLEAN NOT NULL DEFAULT 0,
     autodouble BOOLEAN NOT NULL DEFAULT 0,
@@ -744,6 +754,19 @@ sub toggleWrap {
     return if !$self->_commit;
     
     return $self;    
+}
+
+sub createMatch {
+    my ($self, $player1, $player2, $length, %args) = @_;
+    
+    my $crawford = $args{crawford} ? 1 : 0;
+    my $autodouble = $args{autodouble} ? 1 : 0;
+    
+    return if !$self->_doStatement (CREATE_MATCH => $player1, $player2,
+                                    time, $crawford, $autodouble);
+    return if !$self->_commit;
+    
+    return $self;
 }
 
 1;

@@ -37,12 +37,14 @@ sub new {
     my $logger = $server->getLogger;
     
     my $self = {
-        __server  => $server,
-        __config  => $config,
-        __logger  => $logger,
-        __sockets => {},
-        __rsel    => IO::Select->new,
-        __users   => {},
+        __server      => $server,
+        __config      => $config,
+        __logger      => $logger,
+        __sockets     => {},
+        __rsel        => IO::Select->new,
+        __users       => {},
+        __inviters    => {},
+        __invitations => {},
     };
 
     bless $self, $class;
@@ -248,6 +250,14 @@ sub tell {
     $self->queueResponse ($fd, $opcode, @payload);
     
     return $self;
+}
+
+sub getInviters {
+    shift->{__inviters};
+}
+
+sub getInvitations {
+    shift->{__invitations};
 }
 
 sub __loadDispatcher {
