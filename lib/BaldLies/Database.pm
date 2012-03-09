@@ -24,11 +24,12 @@ use DBI;
 use Digest::SHA qw (sha512_base64);
 use BaldLies::Const qw (:log_levels);
 
-use constant SCHEMA_VERSION => 0;
-
 my $versions = [
-    'initial',
+    'users',
+    'matches'
 ];
+
+my $schema_version = $#$versions;
 
 sub new {
     my ($class, %args) = @_;
@@ -105,8 +106,9 @@ sub check {
     
     $sth->execute;
     
-    my ($wanted) = SCHEMA_VERSION;
+    my ($wanted) = $schema_version;
     my ($got) = $sth->fetchrow_array;
+    $logger->debug ("Need version $wanted, have version $got.");
     if ($wanted < $got) {
         $logger->fatal ("Cannot downgrade database schema from version "
                         . " $got to $wanted.");
@@ -120,18 +122,19 @@ sub check {
 sub upgrade {
     my ($self) = @_;
     
-    for (my $i = $self->{__schema_version}; $i <= SCHEMA_VERSION; ++$i) {
+    my $logger = $self->{__logger};
+    $logger->debug ("Upgrade database schema from version"
+                    . " $self->{__schema_version} to $schema_version.");
+    for (my $i = $self->{__schema_version} + 1; $i <= $schema_version; ++$i) {
         my $method = '_upgradeStep' . ucfirst $versions->[$i];
-        $self->$method;
+        $self->$method ($i);
     }
     
-    my $logger = $self->{__logger};
-    
-    $logger->info ("Storing new schema version @{[SCHEMA_VERSION]}.");
+    $logger->info ("Storing new schema version $schema_version.");
     my $sql = "UPDATE version SET schema_version = ?";
     my $dbh = $self->{_dbh};
     my $sth = $dbh->prepare ($sql);
-    $sth->execute (SCHEMA_VERSION);
+    $sth->execute ($schema_version);
     $dbh->commit;
     
     return $self;
@@ -312,8 +315,8 @@ EOF
 }
 
 # Upgrade steps.
-sub _upgradeStepInitial {
-    my ($self) = @_;
+sub _upgradeStepUsers {
+    my ($self, $version) = @_;
     
     my $auto_increment = $self->_getAutoIncrement;
     
@@ -365,8 +368,37 @@ CREATE TABLE users (
 )
 EOF
 
-    $self->{_dbh}->do (<<EOF, {}, 0);
+    $self->{_dbh}->do (<<EOF, {}, $version);
 INSERT INTO version (schema_version) VALUES (?)
+EOF
+
+    return $self;
+}
+
+sub _upgradeStepMatches {
+    my ($self, $version) = @_;
+    
+    my $auto_increment = $self->_getAutoIncrement;
+    
+    $self->{_dbh}->do (<<EOF);
+CREATE TABLE matches (
+    id $auto_increment,
+    last_action BIGINT NOT NULL,
+    player1 INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    player2 INTEGER NOT NULL CHECK (player1 != player2)
+        REFERENCES users (id) ON DELETE CASCADE,
+    match_length INTEGER NOT NULL CHECK (match_length != 0),
+    points1 INTEGER NOT NULL CHECK (match_length < 0 OR points1 < match_length),
+    points2 INTEGER NOT NULL CHECK (match_length < 0 OR points2 < match_length),
+    crawford BOOLEAN NOT NULL DEFAULT 1,
+    post_crawford BOOLEAN NOT NULL DEFAULT 0,
+    autodouble BOOLEAN NOT NULL DEFAULT 0,
+    UNIQUE (player1, player2)
+)
+EOF
+
+    $self->{_dbh}->do (<<EOF, {}, $version);
+UPDATE version SET schema_version = ?
 EOF
 
     return $self;
