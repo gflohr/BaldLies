@@ -563,7 +563,7 @@ sub clipReply {
     my $text = join ' ', @text;
     if (!$self->getClip && $opcode < @non_clip_handlers) {
         $non_clip_handlers[$opcode]->($text);
-        return $self->reply ($text) if !empty $text;
+        return $self->reply ("\n$text") if !empty $text;
     } else {
         return $self->reply (join ' ', $opcode, $text);
     }

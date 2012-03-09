@@ -43,6 +43,14 @@ sub execute {
     }
     
     # TODO: Additional checks!
+    
+    # Record this invitation both ways.  This is necessary for cleaning up,
+    # when one of the two parties drops connection.
+    my $inviters = $master->getInviters;
+    $inviters->{$inviter->{name}} = [$who => $length];
+
+    my $invitees = $master->getInvitees;
+    $invitees->{$who}->{$inviter->{name}} = 1;
 
     my $match_spec = $length > 0 ? "a $length point" : "an unlimited";
     

@@ -44,7 +44,7 @@ sub new {
         __rsel        => IO::Select->new,
         __users       => {},
         __inviters    => {},
-        __invitations => {},
+        __invitees    => {},
     };
 
     bless $self, $class;
@@ -256,8 +256,8 @@ sub getInviters {
     shift->{__inviters};
 }
 
-sub getInvitations {
-    shift->{__invitations};
+sub getInvitees {
+    shift->{__invitatees};
 }
 
 sub __loadDispatcher {
@@ -287,7 +287,14 @@ sub dropConnection {
 
     my $rec = $self->{__sockets}->{$fd};
     my $user = $rec->{user};
-    delete $self->{__users}->{$user->{name}} if $user;
+    if ($user) {
+        my $name = $user->{name};
+        delete $self->{__users}->{$name};
+        delete $self->{__inviters}->{$name};
+        delete $self->{__invitees}->{$name};
+        $self->broadcast (logout => $name, $name);    
+    }
+        
     $self->{__rsel}->remove ($fd);
     
     # This will break the cyclic reference.
@@ -295,8 +302,6 @@ sub dropConnection {
     delete $self->{__sockets}->{$fd};
     
     $logger->info ($msg);
-    
-    $self->broadcast (logout => $user->{name}, $user->{name}) if $user;
     
     return $self;
 }
