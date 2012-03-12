@@ -22,6 +22,63 @@ use strict;
 
 use base qw (BaldLies::Session::Command);
 
+use BaldLies::Util qw (empty);
+
+# There is no point in checking, whether we have a valid invitation.  The
+# inviter may already have issued another invitation.
+#
+# In order to do a check for necessary but still not sufficient prerequisites,
+# the master server would have to send us an additional message for cancelling
+# the invitation.  The optimistic/pessimistic approach saves us communication.
+# We either hope that our user will never reply to the invitation or that
+# it is still valid.
+#
+# We therefore only do checks, that we can do for free because we have all
+# required information, and we are sure that the information is still valid.
+sub execute {
+    my ($self, $payload) = @_;
+    
+    my $session = $self->{_session};
+
+    my ($opponent) = split / /, $payload;
+
+    if (empty $opponent) {
+        $session->reply ("** Error: Join who?\n");
+        return $self;
+    }
+
+    my $user = $session->getUser;
+    
+    # It does NOT matter whether we toggled our ready state to unavailable
+    # if we want to join.  But we can check whether our user is already
+    # playing with somebody else.
+    # FIXME! What would FIBS reply here?
+    if ($user->{playing}) {
+        $session->reply ("** $opponent didn't invite you.\n");
+        return $self;
+    }
+
+    # This is what FIBS replies, when you try to join yourself.
+    if ($opponent eq $user->{name}) {
+        $session->reply ("** $opponent didn't invite you.\n");
+        return $self;
+    }
+
+    my $users = $session->getUsers;
+    if (!exists $users->{$opponent}) {
+        $session->reply ("** Error: can't find player $opponent\n");
+        return $self;
+    }
+    
+    # FIXME! What happens if a user issues an invitation, then toggles the
+    # ready state, and then the invitee accepts the invitation?  We ignore
+    # the state change.
+    
+    $session->sendMaster (join => $opponent);
+    
+    return $self;
+}
+
 1;
 
 =head1 NAME
