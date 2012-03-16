@@ -257,7 +257,7 @@ sub getInviters {
 }
 
 sub getInvitees {
-    shift->{__invitatees};
+    shift->{__invitees};
 }
 
 sub __loadDispatcher {
