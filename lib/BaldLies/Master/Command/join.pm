@@ -31,8 +31,8 @@ sub execute {
 
     $logger->debug ("Checking invitation from `$who'.");
     
-    my $opponent = $master->getUser ($who);
-    if (!$opponent) {
+    my $inviter = $master->getUser ($who);
+    if (!$inviter) {
         $master->queueResponse ($fd, reply => 
                                 "** Error: can't find player $who");
         return $self;
@@ -46,81 +46,69 @@ sub execute {
         return $self;
     }
     
-    my $this_invitee = $master->getUserFromDescriptor ($fd);
+    my $invitee = $master->getUserFromDescriptor ($fd);
     my ($other_invitee, $length) = @$invitation;
-    if ($other_invitee ne $this_invitee->{name}) {
+    if ($other_invitee ne $invitee->{name}) {
         $master->queueResponse ($fd, reply => 
                                 "** $who didn't invite you.");
         return $self;
     }
 
-    my $this_inviter = $master->getUser ($who);
-    if ($this_inviter) {
-        $logger->debug ("Inviter `$who' has vanished.");
-        return $self;
-    }
-
-    if ($this_inviter->{playing}) {
+    if ($inviter->{playing}) {
         $master->queueResponse ($fd, reply => 
                                 "** $who is already playing with someone else.");
         return $self;
     }
 
-    if (!$this_inviter->{ready}) {
+    if (!$inviter->{ready}) {
         $master->queueResponse ($fd, reply => 
                                 "** $who is refusing games.");
         return $self;
     }
 
-    if ($this_invitee->{playing}) {
+    if ($invitee->{playing}) {
         $master->queueResponse ($fd, reply => 
                                 "** $who didn't invite you.");
-        return $self;
-    }
-
-    if (!$this_inviter->{ready}) {
-        $master->queueResponse ($fd, reply => 
-                                "** $who didn't in invite you.");
         return $self;
     }
 
     delete $inviters->{$who};
 
     my $invitees = $master->getInvitees;
-    delete $invitees->{$this_invitee->{name}};
+    delete $invitees->{$invitee->{name}};
     
     my %options = (
         crawford => 0,
         autodouble => 0
     );
     $options{crawford} = 0
-        if $length > 0 && $this_inviter->{crawford} && $this_invitee->{crawford};
+        if $length > 0 && $inviter->{crawford} && $invitee->{crawford};
     $options{autodouble} = 1
-        if $this_inviter->{autodouble} && $this_invitee->{autodouble};
+        if $inviter->{autodouble} && $invitee->{autodouble};
     
     my $database = $master->getDatabase;
-    $database->createMatch ($who, $this_invitee->{name}, $length, %options);
+# TODO! Create match in database, but after rest is done.
+#    $database->createMatch ($who, $invitee->{name}, $length, %options);
     
-    $this_inviter->{playing} = $this_invitee->{name};
-    $this_invitee->{playing} = $this_inviter->{name};
+    $inviter->{playing} = $invitee->{name};
+    $invitee->{playing} = $inviter->{name};
     
     foreach my $name ($master->getLoggedIn) {
-        if ($name eq $this_inviter->{name}) {
+        if ($name eq $inviter->{name}) {
             $master->queueResponseForUser ($name, report =>
-                                           'joined', $this_invitee->{name},
-                                           length);
-        } elsif ($name eq $this_invitee->{name}) {
+                                           'joined', $invitee->{name},
+                                           $length);
+        } elsif ($name eq $invitee->{name}) {
             $master->queueResponseForUser ($name, report =>
-                                           'invited', $this_inviter->{name},
-                                           length);
+                                           'invited', $inviter->{name},
+                                           $length);
         } else {
             $master->queueResponseForUser ($name, report =>
-                                           'start', $this_inviter->{name},
-                                           $this_invitee->{name},
-                                           length);
+                                           'start', $inviter->{name},
+                                           $invitee->{name},
+                                           $length);
         }
     }
-    
     
     return $self;
 }
