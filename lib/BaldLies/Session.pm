@@ -251,14 +251,6 @@ sub clipBroadcast {
     return $self;
 }
 
-sub tell {
-    my ($self, $recipient, @payload) = @_;
-    
-    $self->sendMaster (tell => $recipient, @payload);
-    
-    return $self;
-}
-
 sub clipTell {
     my ($self, $recipient, $code, @payload) = @_;
     

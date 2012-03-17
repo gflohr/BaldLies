@@ -48,11 +48,25 @@ sub proceed {
     my $state = $self->{__state};
     if (!$state) {
         $self->{__state} = MATCH_GAME_START;
-        return tell => 'start', 'game';
+        return $self->__msg (tell => 'start', 'game');
     }
     
     my $game = $self->{__game};
-    return $game->proceed;
+    return $self->__msg ($game->proceed);
+}
+
+sub player1 {
+    shift->{__player1};
+}
+
+sub player2 {
+    shift->{__player2};
+}
+
+sub __msg {
+    my ($self, @msg) = @_;
+
+    return $self->{__player1}, $self->{__player2}, @msg;
 }
 
 1;

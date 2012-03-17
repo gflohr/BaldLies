@@ -41,10 +41,10 @@ sub __handleJoined {
     
     if ($length > 0) {
         $session->reply ("\n** $opponent has joined you for a $length"
-                         . " point match.\n");
+                         . " point match.\n", 1);
     } else {
         $session->reply ("\n** $opponent has joined you for an unlimited"
-                         . " match.\n");
+                         . " match.\n", 1);
     }
     
     my $user = $session->getUser;
@@ -90,10 +90,10 @@ sub __handleInvited {
     
     if ($length > 0) {
         $session->reply ("** You are now playing a $length"
-                         . " point match with $opponent\n");
+                         . " point match with $opponent\n", 1);
     } else {
         $session->reply ("** You are now playing an unlimited match with"
-                         . " $opponent\n");
+                         . " $opponent\n", 1);
     }
     
     my $user = $session->getUser;
@@ -112,6 +112,24 @@ sub __handleInvited {
         $rawwho = $other->rawwho;
         $session->reply ("5 $rawwho\n6\n");
     }
+    
+    my %args = (
+        player1 => $other->{name},
+        player2 => $user->{name},
+        crawford => 0,
+        autodouble => 0,
+    );
+
+    $args{crawford} = 1 
+        if $length > 0 && $user->{crawford} && $other->{crawford};
+    $args{autodouble} = 1 if $user->{autodouble} && $other->{autodouble};
+    
+    $user->{match} = BaldLies::Backgammon::Match->new (%args);
+    
+    my @action = $user->{match}->proceed;
+
+    my $msg_dispatcher = $session->getMessageDispatcher;
+    $msg_dispatcher->execute ($session, play => join ' ', @action);
     
     return $self;
 }
