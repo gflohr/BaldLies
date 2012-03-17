@@ -23,6 +23,7 @@ use strict;
 use base qw (BaldLies::Session::Message);
 
 use BaldLies::User;
+use BaldLies::Backgammon::Match;
 
 sub execute {
     my ($self, $session, $payload) = @_;
@@ -54,14 +55,30 @@ sub __handleJoined {
     $other->{playing} = $user->{name};
     $other->{watching} = '-';
     
-    $user->{match} = 'TODO';
-    
     if ($session->getClip) {
         my $rawwho = $user->rawwho;
         $session->reply ("5 $rawwho\n6\n");
         $rawwho = $other->rawwho;
         $session->reply ("5 $rawwho\n6\n");
     }
+
+    my %args = (
+        player1 => $user->{name},
+        player2 => $other->{name},
+        crawford => 0,
+        autodouble => 0,
+    );
+
+    $args{crawford} = 1 
+        if $length > 0 && $user->{crawford} && $other->{crawford};
+    $args{autodouble} = 1 if $user->{autodouble} && $other->{autodouble};
+    
+    $user->{match} = BaldLies::Backgammon::Match->new (%args);
+    
+    my @action = $user->{match}->proceed;
+
+    my $msg_dispatcher = $session->getMessageDispatcher;
+    $msg_dispatcher->execute ($session, play => join ' ', @action);
     
     return $self;
 }

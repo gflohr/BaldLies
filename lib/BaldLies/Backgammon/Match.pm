@@ -20,8 +20,39 @@ package BaldLies::Backgammon::Match;
 
 use strict;
 
+use BaldLies::Const qw (:match :colors);
+use BaldLies::Util qw (empty);
+use BaldLies::Backgammon::Game;
+
 sub new {
-    bless {}, shift;
+    my ($class, %args) = @_;
+
+    my $self = {};
+    while (my ($key, $value) = each %args) {
+        $self->{'__' . $key} = $value;
+    }
+    $self->{__length} ||= -1;
+    $self->{__player1} = 'Black' if empty $self->{__player1};
+    $self->{__score1} ||= 0;
+    $self->{__player2} = 'White' if empty $self->{__player2};
+    $self->{__score2} ||= 0;
+    $self->{__state} ||= MATCH_GAME_START;
+    $self->{__game} ||= BaldLies::Backgammon::Game->new;    
+    
+    bless $self, $class;
+}
+
+sub proceed {
+    my ($self) = @_;
+    
+    my $state = $self->{__state};
+    if (!$state) {
+        $self->{__state} = MATCH_GAME_START;
+        return tell => 'start', 'game';
+    }
+    
+    my $game = $self->{__game};
+    return $game->proceed;
 }
 
 1;
