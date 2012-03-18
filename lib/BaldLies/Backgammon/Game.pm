@@ -162,12 +162,122 @@ sub move {
         die "You cannot move";
     }
     
-    my $wanted = @{$legal->[0]} >> 1;
+    my @legal;
+    if ($color < 0) {
+        foreach my $pairs (@$legal) {
+            my @p = map { 25 - $_ } @$pairs;
+            push @legal, \@p;
+        }
+    } else {
+        foreach my $pairs (@$legal) {
+            push @legal, \@$pairs;
+        }
+    }
+    
+    my $first = $legal[0];
+    
+    my $wanted = @$first >> 1;
     my $got = @pairs >> 1;
     if ($wanted < $got) {
         die "Please don't give more than $wanted moves.\n";
     } elsif ($wanted > $got) {
         die "You must give $wanted moves.\n";
+    }
+    
+    my @move_names = qw (first second third fourth);
+    
+    # Determine correct move direction.
+    if ($first->[2] < $first->[3]) {
+        for (my $i = 0; $i < @pairs; $i += 2) {
+            if ($pairs[$i] > $pairs[$i + 1]) {
+                my $move_name = $move_names[$i / 2];
+                die "You can't move home in your $move_name move.\n";
+            }
+        }
+    } else {
+        for (my $i = 0; $i < @pairs; $i += 2) {
+            if ($pairs[$i] < $pairs[$i + 1]) {
+                my $move_name = $move_names[$i / 2];
+                die "You can't move home in your $move_name move.\n";
+            }
+        }
+    }
+    
+    my $home = $color > 0 ? 0 : 25;
+    my $bar = 25 - $home;
+    
+    my $bar_movements = 0;
+    for (my $i = 0; $i < @$first; $i += 2) {
+        ++$bar_movements if $first->[$i] == $bar;
+    }
+    if ($bar_movements) {
+        my $max_non_bar_movements = (@pairs / 2) - $bar_movements;
+        my $non_bar_movements = 0;
+        for (my $i = 0; $i < @pairs; ++$i) {
+            ++$non_bar_movements if $pairs[$i] != $bar;
+            if ($non_bar_movements > $max_non_bar_movements) {
+                my $move_name = $move_names[$i / 2];
+                die "You have to remove pieces from the bar in your"
+                    . " move_name move.\n";
+            }
+        }
+    }
+
+    my $board = $self->{__board};
+    for (my $i = 0; $i < @pairs; $i += 2) {
+        my $to = $pairs[$i + 1];
+        next if $to == $home;
+        next if $to == $bar;
+        if ($color < 0 && $board->[$to] > 1) {
+            die "You can't move to $to in your first move.\n";
+        } elsif ($color > 0 && $board->[$to] < -1) {
+            die "You can't move to $to in your first move.\n";
+        }
+    }
+    
+    my %legal_movements;
+    foreach my $pairs (@legal) {
+        for (my $i = 0; $i < @$pairs; $i += 2) {
+            my $from = $pairs->[$i];
+            my $to = $pairs->[$i + 1];
+            ++$legal_movements{$from}->{$to};
+        }
+    }
+
+    # Now check that every particular movement is actually possible.
+    for (my $i = 0; $i < @pairs; $i += 2) {
+        my $from = $pairs[$i];
+        my $to = $pairs[$i + 1];
+        if (exists $legal_movements{$from}
+            && exists $legal_movements{$from}->{$to}) {
+            if (!--$legal_movements{$from}->{$to}) {
+                delete $legal_movements{$from}->{$to};
+                delete $legal_movements{$from} 
+                    if !keys %{$legal_movements{$from}};
+            }
+            next;
+        }
+        if (!exists $legal_movements{$from}) {
+            my $from_name = $from == $bar ? 'the bar' : $from;
+            my $move_name = $move_names[$i / 2];
+            die "You can't move from $from_name in your $move_name move.\n";
+        }
+        my $tos = $legal_movements{$from}->{$to};
+        if (!exists $tos->{$to}) {
+            my $distance = $from - $to;
+            $distance = -$distance if $distance < 0;
+            my $move_name = $move_names[$i / 2];
+            die "You can't move $distance points in your $move_name move.\n";
+        }
+        
+        if (!$legal_movements{$from}->{$to}) {
+            my $move_name = $move_names[$i / 2];
+            if ($to == $home) {
+                die "You can't remove this piece in your $move_name move.\n";
+            } else {
+                die "You can't move to $to in your $move_name move.\n";
+            }
+        }
     }
     
     # Last resort.
