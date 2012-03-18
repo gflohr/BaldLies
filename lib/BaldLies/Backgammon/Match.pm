@@ -74,6 +74,155 @@ sub over {
     shift->{__over};
 }
 
+sub board {
+    my ($self, $style) = @_;
+    
+    if ($style == 1 || $style == 2) {
+        return $self->__graphicalBoard ($style - 1);
+    }
+    die "Unsupported board style $style";
+}
+
+sub __graphicalBoard {
+    my ($self, $extra) = @_;
+
+    my $game = $self->{__game};
+    my $board = $game->getBoard;
+
+    my $white = 'O';
+    my $black = 'X';
+    
+    my $output;
+    if ($extra) {
+        $output = <<EOF;
+     1  2  3  4  5  6        7  8  9 10 11 12
+   +------------------------------------------+ O: $self->{__player1}
+EOF
+    } else {
+        $output = <<EOF;
+   +-1--2--3--4--5--6--------7--8--9-10-11-12-+ O: $self->{__player1}
+EOF
+    }
+    
+    $output .= '   |';
+    foreach my $p (1, 2, 3, 4, 5, 6, 25, 7, 8, 9, 10, 11, 12) {
+        if ($board->[$p] <= -10) {
+            $output .= -$board->[$p];
+        } elsif ($board->[$p] < -5) {
+            $output .= ' ' . -$board->[$p];
+        } elsif ($board->[$p] < 0) {
+            $output .= ' ' . $black;
+        } elsif ($board->[$p] >= 10) {
+            $output .= $board->[$p];
+        } elsif ($board->[$p] > 5) {
+            $output .= ' ' . $board->[$p];
+        } elsif ($board->[$p] > 0) {
+            $output .= ' ' . $white;
+        } else {
+            $output .= '  ';
+        }
+        $output .= ' ';
+        if ($p == 6) {
+            $output .= '|';
+        } elsif ($p == 25) {
+            $output .= '| ';
+        }
+    }
+    $output .= "|\n";
+
+    foreach my $i (2, 3, 4, 5) {
+        $output .= '   |';
+        foreach my $p (1, 2, 3, 4, 5, 6, 25, 7, 8, 9, 10, 11, 12) {
+            if ($board->[$p] <= -$i) {
+                $output .= ' ' . $black;
+            } elsif ($board->[$p] >= $i) {
+                $output .= ' ' . $white;
+            } else {
+                $output .= '  ';
+            }
+            $output .= ' ';
+            if ($p == 6) {
+                $output .= '|';
+            } elsif ($p == 25) {
+                $output .= '| ';
+            }
+        }
+        $output .= "|\n";
+    }
+            
+    $output .= <<EOF;
+   |                  |BAR|                   |
+EOF
+
+    foreach my $i (5, 4, 3, 2) {
+        $output .= '   |';
+        foreach my $p (24, 23, 22, 21, 20, 19, 0, 18, 17, 16, 15, 14, 13) {
+            if ($board->[$p] <= -$i) {
+                $output .= ' ' . $black;
+            } elsif ($board->[$p] >= $i) {
+                $output .= ' ' . $white;
+            } else {
+                $output .= '  ';
+            }
+            $output .= ' ';
+            if ($p == 19) {
+                $output .= '|';
+            } elsif ($p == 0) {
+                $output .= '| ';
+            }
+        }
+        $output .= "|\n";
+    }
+
+    $output .= '   |';
+    foreach my $p (24, 23, 22, 21, 20, 19, 0, 18, 17, 16, 15, 14, 13) {
+        if ($board->[$p] <= -10) {
+            $output .= -$board->[$p];
+        } elsif ($board->[$p] < -5) {
+            $output .= ' ' . -$board->[$p];
+        } elsif ($board->[$p] < 0) {
+            $output .= ' ' . $black;
+        } elsif ($board->[$p] >= 10) {
+            $output .= $board->[$p];
+        } elsif ($board->[$p] > 5) {
+            $output .= ' ' . $board->[$p];
+        } elsif ($board->[$p] > 0) {
+            $output .= ' ' . $white;
+        } else {
+            $output .= '  ';
+        }
+        $output .= ' ';
+        if ($p == 19) {
+            $output .= '|';
+        } elsif ($p == 0) {
+            $output .= '| ';
+        }
+    }
+    $output .= "|\n";
+
+    my $white_off = $board->borneOff (WHITE);
+    my $black_off = $board->borneOff (BLACK);
+    my $cube = 1;
+    my $turn = '';
+
+    if ($extra) {
+        $output .= <<EOF;
+   +------------------------------------------+ X: $self->{__player2}
+    24 23 22 21 20 19       18 17 16 15 14 13
+EOF
+    } else {
+        $output .= <<EOF;
+   +24-23-22-21-20-19-------18-17-16-15-14-13-+ X: $self->{__player2}
+EOF
+    }
+    $output .= <<EOF;
+
+   BAR: O-$board->[25] X-$board->[0]   OFF: O-$white_off X-$black_off   Cube: $cube  turn: $turn
+EOF
+
+    return $output;    
+}
+
 sub __newGame {
     my ($self) = @_;
  
@@ -136,3 +285,50 @@ B<BaldLies::Backgammon::Match> represents a backgammon match.
 =head1 SEE ALSO
 
 perl(1)
+
+=cut
+
+__END__
+
+> set boardstyle 1
+Value of 'boardstyle' set to 1.
+> board
+   +-1--2--3--4--5--6--------7--8--9-10-11-12-+ O: GibbonTestD - score: 0
+   | X              O |   |     O     O     X |
+   | X              O |   |     O           X |
+   |                O |   |     O           X |
+   |                O |   |                 X |
+   |                O |   |                   |
+   |                  |BAR|                   |v    unlimited match
+   |                X |   |                   |     No redoubles
+   |                X |   |                 O |
+   |                X |   |                 O |
+   |                X |   |  X  X           O |
+   | O              X |   |  X  X        O  O |
+   +24-23-22-21-20-19-------18-17-16-15-14-13-+ X: GibbonTestA - score: 0
+
+   BAR: O-0 X-0   OFF: O-0 X-0   Cube: 2 (owned by GibbonTestD)  You rolled 5 6.
+> set boardstyle 2
+Value of 'boardstyle' set to 2.
+> board
+     1  2  3  4  5  6        7  8  9 10 11 12
+   +------------------------------------------+ O: GibbonTestD - score: 0
+   | X              O |   |     O     O     X |
+   | X              O |   |     O           X |
+   |                O |   |     O           X |
+   |                O |   |                 X |
+   |                O |   |                   |
+   |                  |BAR|                   |v    unlimited match
+   |                X |   |                   |     No redoubles
+   |                X |   |                 O |
+   |                X |   |                 O |
+   |                X |   |  X  X           O |
+   | O              X |   |  X  X        O  O |
+   +------------------------------------------+ X: GibbonTestA - score: 0
+    24 23 22 21 20 19       18 17 16 15 14 13
+
+   BAR: O-0 X-0   OFF: O-0 X-0   Cube: 2 (owned by GibbonTestD)  You rolled 5 6.
+> set boardstyle 3
+Value of 'boardstyle' set to 3.
+> board
+board:You:GibbonTestD:9999:0:0:0:-2:0:0:0:0:5:0:3:0:1:0:-4:4:1:0:0:-2:-2:-5:0:0:0:0:1:0:-1:5:6:0:0:2:0:1:0:-1:1:25:0:0:0:0:0:2:0:0:0

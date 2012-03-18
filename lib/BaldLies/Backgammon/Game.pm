@@ -65,6 +65,10 @@ sub generateMoves {
     return $self->{__board}->generateMoves ($die1, $die2, $color);
 }
 
+sub getBoard {
+    shift->{__board};
+}
+
 sub roll {
     my ($self, $color, $die1, $die2) = @_;
 
