@@ -154,6 +154,22 @@ sub move {
     
     # Illegal move.  Find exact error according to FIBS.
     
+    # The first check should be, whether there is any legal move.  FIBS will
+    # not even try to move you, so this check is merely academical.  We
+    # do not add a newline to the exception, so that we can identify this
+    # case.
+    if (!@$legal && @pairs) {
+        die "You cannot move";
+    }
+    
+    my $wanted = @{$legal->[0]} >> 1;
+    my $got = @pairs >> 1;
+    if ($wanted < $got) {
+        die "Please don't give more than $wanted moves.\n";
+    } elsif ($wanted > $got) {
+        die "You must give $wanted moves.\n";
+    }
+    
     # Last resort.
     die "Illegal move (unknown error, this should not happen)";
     
