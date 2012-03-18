@@ -36,37 +36,87 @@ sub new {
     $self->{__score1} ||= 0;
     $self->{__player2} = 'White' if empty $self->{__player2};
     $self->{__score2} ||= 0;
-    $self->{__state} ||= MATCH_GAME_START;
-    $self->{__game} ||= BaldLies::Backgammon::Game->new;    
+    
+    if ($self->{__length} > 0) {
+        if ($self->{__score1} >= $self->{__length}) {
+            $self->{__over} = WHITE;
+        } elsif ($self->{__score2} >= $self->{__length}) {
+            $self->{__over} = BLACK;
+        } else {
+            $self->{__over} = 0;
+        }
+    } else {
+        $self->{__over} = 0;
+    }
+    $self->{__crawford} = 0 if $self->{__length} < 0;
     
     bless $self, $class;
+
+    $self->__newGame unless $self->{__game};
+    
+    return $self;    
 }
 
-sub proceed {
-    my ($self) = @_;
-    
-    my $state = $self->{__state};
-    if (!$state) {
-        $self->{__state} = MATCH_GAME_START;
-        return $self->__msg (tell => 'start', 'game');
-    }
+sub do {
+    my ($self, $action, @payload) = @_;
+
+    die "The match is already over.\n" if $self->{__over};
     
     my $game = $self->{__game};
-    return $self->__msg ($game->proceed);
+    $game->$action (@payload);
+
+    $self->__newGame if $game->over;
+    
+    return $self;
 }
 
-sub player1 {
-    shift->{__player1};
+sub over {
+    shift->{__over};
 }
 
-sub player2 {
-    shift->{__player2};
-}
-
-sub __msg {
-    my ($self, @msg) = @_;
-
-    return $self->{__player1}, $self->{__player2}, @msg;
+sub __newGame {
+    my ($self) = @_;
+ 
+    my $old_game = $self->{__game};
+    my $is_crawford;
+    if ($old_game) {
+        my $score = $old_game->over;
+        # Check, whether this will be the crawford game.  We first set it to
+        # true, and then reset it, when necessary.
+        if ($self->{__crawford}) {
+            $is_crawford = 1;
+            if ($self->{__score1} == $self->{__length} - 1
+               || $self->{__score2} == $self->{__length} - 1) {
+                   undef $is_crawford;
+            }
+        }
+        if ($score > 0) {
+            $self->{__score1} += $score;
+            if ($self->{__length} > 0 
+                && $self->{__score1} >= $self->{__length}) {
+                $self->{__over} = WHITE;
+            }
+        } elsif ($score < 0) {
+            $self->{__score2} -= $score;
+            if ($self->{__length} > 0 
+                && $self->{__score1} >= $self->{__length}) {
+                $self->{__over} = BLACK;
+            }
+        }
+        if ($is_crawford) {
+            if ($self->{__score1} != $self->{__length} - 1
+               && $self->{__score2} != $self->{__length} - 1) {
+                   undef $is_crawford;
+            }
+        }
+    }
+    
+    my %options = (
+        crawford => $is_crawford,
+    );
+    $self->{__game} = BaldLies::Backgammon::Game->new (%options);
+    
+    return $self;   
 }
 
 1;

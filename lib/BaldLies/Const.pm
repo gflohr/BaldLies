@@ -53,12 +53,13 @@ use constant TELNET_ECHO_WONT => "\xff\xfc\x01";
 use constant TELNET_ECHO_DO   => "\xff\xfd\x01";
 use constant TELNET_ECHO_DONT => "\xff\xfe\x01";
 
-use constant MATCH_GAME_START => 0;
-use constant MATCH_ROLL_OR_DOUBLE => 1;
-use constant MATCH_ROLL => 2;
-use constant MATCH_MOVE => 3;
-use constant MATCH_TAKE_OR_DROP => 4;
-use constant MATCH_ACCEPT_OR_REJECT => 5;
+use constant MATCH_START => 0;
+use constant MATCH_GAME_START => 1;
+use constant MATCH_ROLL_OR_DOUBLE => 2;
+use constant MATCH_ROLL => 3;
+use constant MATCH_MOVE => 4;
+use constant MATCH_TAKE_OR_DROP => 5;
+use constant MATCH_ACCEPT_OR_REJECT => 6;
 
 1;
 

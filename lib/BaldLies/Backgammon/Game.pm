@@ -21,14 +21,29 @@ package BaldLies::Backgammon::Game;
 use strict;
 
 use BaldLies::Backgammon::Board;
+use BaldLies::Const qw (:colors);
+
+# States.
+use constant OPENING_ROLL => 0;
+use constant ROLL_OR_DOUBLE => 1;
+use constant MOVE => 2;
+use constant TAKE_OR_DROP => 3;
+use constant ACCEPT_OR_REJECT => 4;
 
 sub new {
     my ($class, %args) = @_;
 
     my $self = {
+        __player1 => $args{player1} || 'WHITE',
+        __player2 => $args{player2} || 'BLACK',
         __crawford => $args{crawford},
+        __cube => 1,
         __score => 0,
-        __board => BaldLies::Backgammon::Board->new->init, 
+        __board => BaldLies::Backgammon::Board->new->init,
+        __actions => [],
+        __turn => 0,
+        __state => OPENING_ROLL,
+        __roll => [],
     };
 
     bless $self, $class;
@@ -46,8 +61,63 @@ sub generateMoves {
     my ($self, $die1, $die2, $color) = @_;
 
     return [] if $self->over;
-
+    return [] if $self->{__state} != MOVE;
     return $self->{__board}->generateMoves ($die1, $die2, $color);
+}
+
+sub roll {
+    my ($self, $color, $die1, $die2) = @_;
+
+    if ($die1 < 1 || $die1 > 6 || $die2 < 1 || $die2 > 6) {
+        die "Dice must be in range 1-6";
+    }
+    my $state = $self->{__state};
+    if ($color) {
+        die "It's not your turn to roll the dice.\n" if $color != $self->{__turn};
+        if ($state != ROLL_OR_DOUBLE) {
+            my $opponent = $self->{__turn} < 0 
+                ? $self->{__player1} : $self->{__player2};
+            die "You did already roll the dice.\n" if $state == MOVE;
+            die "$opponent hasn't responded to your double yet.\n"
+                if $state == ACCEPT_OR_REJECT;
+            die "$opponent hasn't accepted or rejected your resign yet.\n"
+                if $state == ACCEPT_OR_REJECT;
+            die "The opening roll must be done by both players.\n"
+                if $state == OPENING_ROLL;
+            die "unknown error in state $state";
+        }
+    } elsif ($state == OPENING_ROLL) {
+        # Opening roll.
+        if ($die1 > $die2) {
+            $self->{__turn} = WHITE;
+            $self->{__state} = MOVE;
+        } elsif ($die1 < $die2) {
+            $self->{__turn} = BLACK;
+            $self->{__state} = MOVE;
+        } elsif ($self->{__autodouble}) {
+            $self->{__cube} <<= 1;
+        }
+    } else {
+            die "Usage: roll COLOR, die1, die2";
+    }
+
+    push @{$self->{__actions}}, roll => $color, $die1, $die2;
+    if ($state) {
+        # Calculate legal moves.
+        $self->{__moves} = [$self->{__board}->generateMoves ($die1, $die2, 
+                                                             $color)];
+    }
+    
+    return $self;
+}
+
+sub move {
+    my ($self, $color, @pairs) = @_;
+
+    die "Odd number of points in move" if @pairs % 2;
+    die "No color given in move" if !$color;
+    
+    return $self;
 }
 
 1;
