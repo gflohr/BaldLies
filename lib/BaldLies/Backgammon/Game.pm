@@ -139,10 +139,10 @@ sub move {
     my $move = BaldLies::Backgammon::Move->new (@{$self->{__roll}}, @pairs);
     if ($self->{__board}->move ($move, $color, $legal)) {
         push @{$self->{__actions}}, move => $color, @pairs;
-        $self->{__turn} = -$self->{__turn};
+        $self->{__turn} = -$color;
         $self->{__state} = ROLL_OR_DOUBLE;
         my $borne_off = $self->{__board}->borneOff ($color);
-        if (!$borne_off) {
+        if ($borne_off >= 15) {
             if ($color < 0) {
                 $self->{__score} = -$self->{__cube};
             } else {
