@@ -183,9 +183,9 @@ sub generateMoves {
 }
 
 sub move {
-    my ($self, $move, $color) = @_;
+    my ($self, $move, $color, $moves) = @_;
 
-    my $moves = $self->generateMoves ($move->[0], $move->[1], $color);
+    $moves ||= $self->generateMoves ($move->[0], $move->[1], $color);
     if (!@$moves) {
         return if 2 != @$move;
         return $self;

@@ -101,11 +101,12 @@ sub roll {
             die "Usage: roll COLOR, die1, die2";
     }
 
+    $self->{__roll} = [$die1, $die2];
     push @{$self->{__actions}}, roll => $color, $die1, $die2;
-    if ($state) {
+    if ($self->{__state}) {
         # Calculate legal moves.
-        $self->{__moves} = [$self->{__board}->generateMoves ($die1, $die2, 
-                                                             $color)];
+        $self->{__moves} = $self->{__board}->generateMoves ($die1, $die2, 
+                                                            $color);
     }
     
     return $self;
@@ -116,6 +117,45 @@ sub move {
 
     die "Odd number of points in move" if @pairs % 2;
     die "No color given in move" if !$color;
+
+    if ($self->{__state} != MOVE) {
+        my $state = $self->{__state};
+        my $opponent = $self->{__turn} < 0 
+            ? $self->{__player1} : $self->{__player2};
+        die "You have to roll the dice before moving.\n" 
+            if $state == ROLL_OR_DOUBLE;
+        die "$opponent hasn't responded to your double yet.\n"
+            if $state == ACCEPT_OR_REJECT;
+        die "$opponent hasn't accepted or rejected your resign yet.\n"
+            if $state == ACCEPT_OR_REJECT;
+        die "The opening roll must be done by both players.\n"
+            if $state == OPENING_ROLL;
+        die "unknown error in state $state";
+    } elsif ($self->{__turn} != $color) {
+        die "It's not your turn to move.\n";
+    }
+
+    my $legal = $self->{__moves};
+    my $move = BaldLies::Backgammon::Move->new (@{$self->{__roll}}, @pairs);
+    if ($self->{__board}->move ($move, $color, $legal)) {
+        push @{$self->{__actions}}, move => $color, @pairs;
+        $self->{__turn} = -$self->{__turn};
+        $self->{__state} = ROLL_OR_DOUBLE;
+        my $borne_off = $self->{__board}->borneOff ($color);
+        if (!$borne_off) {
+            if ($color < 0) {
+                $self->{__score} = -$self->{__cube};
+            } else {
+                $self->{__score} = $self->{__cube};
+            }
+        }
+        return $self;
+    }
+    
+    # Illegal move.  Find exact error according to FIBS.
+    
+    # Last resort.
+    die "Illegal move (unknown error, this should not happen)";
     
     return $self;
 }
