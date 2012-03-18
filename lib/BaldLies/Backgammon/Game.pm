@@ -86,6 +86,7 @@ sub roll {
                 if $state == OPENING_ROLL;
             die "unknown error in state $state";
         }
+        $self->{__state} = MOVE;
     } elsif ($state == OPENING_ROLL) {
         # Opening roll.
         if ($die1 > $die2) {
