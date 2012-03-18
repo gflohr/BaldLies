@@ -69,6 +69,22 @@ sub getBoard {
     shift->{__board};
 }
 
+sub cube {
+    shift->{__cube};
+}
+
+sub cubeOwner {
+    shift->{__cubeOwner};
+}
+
+sub getRoll {
+    shift->{__roll};
+}
+
+sub getTurn {
+    shift->{__turn};
+}
+
 sub roll {
     my ($self, $color, $die1, $die2) = @_;
 
@@ -144,6 +160,7 @@ sub move {
     my $move = BaldLies::Backgammon::Move->new (@{$self->{__roll}}, @pairs);
     if ($self->{__board}->move ($move, $color, $legal)) {
         push @{$self->{__actions}}, move => $color, @pairs;
+        $self->{__roll} = [];
         $self->{__turn} = -$color;
         $self->{__state} = ROLL_OR_DOUBLE;
         my $borne_off = $self->{__board}->borneOff ($color);

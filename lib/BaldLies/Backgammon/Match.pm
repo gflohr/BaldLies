@@ -202,9 +202,34 @@ EOF
 
     my $white_off = $board->borneOff (WHITE);
     my $black_off = $board->borneOff (BLACK);
-    my $cube = 1;
-    my $turn = '';
+    my $cube = $game->cube;
+    if ($game->cubeOwner) {
+        if ($game->cubeOwner < 0) {
+            $cube .= " (owned by $self->{__player2}";
+        } else {
+            $cube .= " (owned by $self->{__player1}";
+        }
+    }
 
+    my $roll = $game->getRoll;
+    my $turn = '';
+    if (@$roll) {
+        if ($game->getTurn < 0) {
+            $turn = "$self->{__player2} rolled";
+        } elsif ($game->getTurn > 0) {
+            $turn = "$self->{__player1} rolled";
+        } else {
+            $turn = "Opening roll";
+        }
+        $turn .= " $roll->[0] $roll->[1]";
+    } elsif ($game->getTurn) {
+        if ($game->getTurn < 0) {
+            $turn = "turn: $self->{__player2}";
+        } else {
+            $turn = "turn: $self->{__player1}";
+        }
+    }
+    
     if ($extra) {
         $output .= <<EOF;
    +------------------------------------------+ X: $self->{__player2}
@@ -217,7 +242,7 @@ EOF
     }
     $output .= <<EOF;
 
-   BAR: O-$board->[25] X-$board->[0]   OFF: O-$white_off X-$black_off   Cube: $cube  turn: $turn
+   BAR: O-$board->[25] X-$board->[0]   OFF: O-$white_off X-$black_off   Cube: $cube  $turn
 EOF
 
     return $output;    
