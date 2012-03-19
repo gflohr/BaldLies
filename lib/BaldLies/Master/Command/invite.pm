@@ -57,7 +57,7 @@ sub execute {
     $master->queueResponseForUser ($inviter->{name}, 'reply',
                                    "** You invited $who to $match_spec match.");
     $master->queueResponseForUser ($who, 'echo_e',
-                                   "$inviter->{name} wants to  play"
+                                   "$inviter->{name} wants to play"
                                    . " $match_spec match with you.\\n"
                                    . "Type join '$inviter->{name}' to accept.");
     
