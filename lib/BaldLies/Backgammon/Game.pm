@@ -444,6 +444,22 @@ sub reject {
     die "$opponent didn't double or resign.\n";
 }
 
+sub forcedMove {
+    my ($self) = @_;
+    
+    return if $self->{__score};
+
+    return if $self->{__state} != MOVE;
+    
+    my $moves = $self->{__moves};
+    return if @$moves > 1;
+    
+    my @move = @{$self->{__roll}};
+    push @move, @{$moves->[0]} if @$moves;
+    
+    return BaldLies::Backgammon::Move->new (@move);
+}
+
 1;
 
 =head1 NAME

@@ -20,7 +20,7 @@ package BaldLies::Backgammon::Match;
 
 use strict;
 
-use BaldLies::Const qw (:match :colors);
+use BaldLies::Const qw (:colors);
 use BaldLies::Util qw (empty);
 use BaldLies::Backgammon::Game;
 
@@ -91,6 +91,14 @@ sub score {
 
 sub getCurrentGame {
     shift->{__game};
+}
+
+sub forcedMove {
+    my ($self) = @_;
+    
+    return if $self->{__over};
+
+    return $self->{__game}->forcedMove;    
 }
 
 sub __graphicalBoard {
