@@ -81,13 +81,15 @@ sub __applyMovement {
     my ($self, $from, $to) = @_;
 
     --$self->[$from];
-    if ($self->[$to] == -1) {
-        $self->[$to] = 1;
-        --$self->[0];
-    } else {
-        ++$self->[$to];
+    if ($to > 0) {
+        if ($self->[$to] == -1) {
+            $self->[$to] = 1;
+            --$self->[0];
+        } else {
+            ++$self->[$to];
+        }
     }
-
+    
     return $self;
 }
 
@@ -98,20 +100,30 @@ sub applyMove {
         my $from = $move->[$i];
         my $to = $move->[$i + 1];
         if ($color < 0) {
+            return if $self->[$from] >= 0;
             ++$self->[$from];
-            if ($self->[$to] == 1) {
-                $self->[$to] = -1;
-                ++$self->[25];
-            } else {
-                --$self->[$to];
+            if ($to < 25) {
+                if ($self->[$to] == 1) {
+                    $self->[$to] = -1;
+                    ++$self->[25];
+                } elsif ($self->[$to] > 1) {
+                    return;
+                } else {
+                    --$self->[$to];
+                }
             }
         } else {
+            return if $self->[$from] <= 0;
             --$self->[$from];
-            if ($self->[$to] == -1) {
-                $self->[$to] = 1;
-                --$self->[0];
-            } else {
-                ++$self->[$to];
+            if ($to > 0) {
+                if ($self->[$to] == -1) {
+                    $self->[$to] = 1;
+                    --$self->[0];
+                } elsif ($self->[$to] < -1) {
+                    return;
+                } else {
+                    ++$self->[$to];
+                }
             }
         }
     }
@@ -198,7 +210,7 @@ sub move {
         $use_move = $move->copy->swap;
     }
     my $copy = $target->copy;
-    $target->applyMove ($use_move, WHITE);
+    return if !$target->applyMove ($use_move, WHITE);
     my $wanted = pack 'c26', @$target;
 
     my $legal;
@@ -229,13 +241,15 @@ sub __generateNMoves {
     my $die = shift @dice;
 
     # On the bar?
+    my $min_from;
     if ($self->[25] > 0) {
-        my $to = 25 - $die;
-        return [] if $self->[$to] < -1;
+        $min_from = 24;
+    } else {
+        $min_from = $die;
     }
 
     my $may_bear_off = 1;
-    for (my $from = 25; $from > $die; --$from) {
+    for (my $from = 25; $from > $min_from; --$from) {
         # Checker?
         next if $self->[$from] <= 0;
 
@@ -483,10 +497,12 @@ Returns the object itself if B<OTHER> is identical, a false value otherwise.
 =item B<applyMove MOVE, COLOR>
 
 Applies B<MOVE> (see BaldLies::Backgammon::Move(3pm)) for B<COLOR> to the
-position.  Returns the object itself.
+position.  Returns the object itself in case of success or false in case
+of failure.
 
-The method cannot fail.  If B<MOVE> is not legal for B<COLOR> the resulting
-position is undefined.
+The method will fail if the move implies moving non-existing checkers or
+landing on occupied fields.  However, B<MOVE> is not completely checked
+for legality.
 
 =item B<swap>
 
