@@ -20,7 +20,7 @@ use strict;
 
 use Test;
 
-BEGIN { plan tests => 92 }
+BEGIN { plan tests => 102 }
 
 use BaldLies::Backgammon::Match;
 use BaldLies::Const qw (:colors);
@@ -32,8 +32,14 @@ my $match = BaldLies::Backgammon::Match->new (player1 => 'Snow White',
                                               autodouble => 1);
 
 ok $match;
+ok !$match->over;
+my @score = $match->score;
+ok $score[0], 0;
+ok $score[1], 0;
 
+ok $match->getCurrentGame->cube, 1;
 ok $match->do (roll => 0, 3, 3);
+ok $match->getCurrentGame->cube, 2;
 ok $match->do (roll => 0, 2, 5);
 ok $match->do (move => BLACK, 12, 14, 12, 17);
 ok $match->do (roll => WHITE, 4, 4);
@@ -45,7 +51,9 @@ ok $match->do (move => WHITE, 8, 5, 6, 5);
 ok $match->do (roll => BLACK, 4, 2);
 ok $match->do (move => BLACK, 0, 4, 19, 21);
 ok $match->do (double => WHITE);
+ok $match->getCurrentGame->cube, 2;
 ok $match->do (accept => BLACK);
+ok $match->getCurrentGame->cube, 4;
 ok $match->do (roll => WHITE, 3, 2);
 ok $match->do (move => WHITE, 6, 4, 4, 1);
 ok $match->do (roll => BLACK, 6, 3);
@@ -124,3 +132,7 @@ ok $match->do (roll => BLACK, 2, 2);
 ok $match->do (move => BLACK, 3, 5, 5, 7, 0, 2, 2, 4);
 ok $match->do (roll => WHITE, 1, 2);
 ok $match->do (move => WHITE, 1, 0, 1, 0);
+ok $match->over;
+@score = $match->score;
+ok $score[0], 12;
+ok $score[1], 0;

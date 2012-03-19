@@ -83,6 +83,16 @@ sub board {
     die "Unsupported board style $style";
 }
 
+sub score {
+    my ($self) = @_;
+    
+    return $self->{__score1}, $self->{__score2};
+}
+
+sub getCurrentGame {
+    shift->{__game};
+}
+
 sub __graphicalBoard {
     my ($self, $extra) = @_;
 
@@ -287,6 +297,11 @@ sub __newGame {
                    undef $is_crawford;
             }
         }
+    }
+
+    if ($self->{__over}) {
+        delete $self->{__game};
+        return $self;
     }
     
     my %options = (
