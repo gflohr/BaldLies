@@ -240,9 +240,13 @@ EOF
    +24-23-22-21-20-19-------18-17-16-15-14-13-+ X: $self->{__player2}
 EOF
     }
+    
+    my $bar_o = $board->[25];
+    my $bar_x = -$board->[0];
+    
     $output .= <<EOF;
 
-   BAR: O-$board->[25] X-$board->[0]   OFF: O-$white_off X-$black_off   Cube: $cube  $turn
+   BAR: O-$bar_o X-$bar_x   OFF: O-$white_off X-$black_off   Cube: $cube  $turn
 EOF
 
     return $output;    
@@ -287,6 +291,9 @@ sub __newGame {
     
     my %options = (
         crawford => $is_crawford,
+        player1 => $self->{__player1},
+        player2 => $self->{__player2},
+        autodouble => $self->{__autodouble},
     );
     $self->{__game} = BaldLies::Backgammon::Game->new (%options);
     

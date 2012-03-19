@@ -28,7 +28,6 @@ use constant OPENING_ROLL => 0;
 use constant ROLL_OR_DOUBLE => 1;
 use constant MOVE => 2;
 use constant TAKE_OR_DROP => 3;
-use constant ACCEPT_OR_REJECT => 4;
 
 sub new {
     my ($class, %args) = @_;
@@ -38,12 +37,15 @@ sub new {
         __player2 => $args{player2} || 'BLACK',
         __crawford => $args{crawford},
         __cube => 1,
+        __cube_owner => 0,
         __score => 0,
         __board => BaldLies::Backgammon::Board->new->init,
         __actions => [],
         __turn => 0,
         __state => OPENING_ROLL,
         __roll => [],
+        __autodouble => $args{autodouble},
+        __resignation => 0,
     };
 
     bless $self, $class;
@@ -88,20 +90,24 @@ sub getTurn {
 sub roll {
     my ($self, $color, $die1, $die2) = @_;
 
+    die "game over" if $self->{__score};
+    
     if ($die1 < 1 || $die1 > 6 || $die2 < 1 || $die2 > 6) {
         die "Dice must be in range 1-6";
     }
     my $state = $self->{__state};
+    
     if ($color) {
         die "It's not your turn to roll the dice.\n" if $color != $self->{__turn};
+        
         if ($state != ROLL_OR_DOUBLE) {
             my $opponent = $self->{__turn} < 0 
                 ? $self->{__player1} : $self->{__player2};
             die "You did already roll the dice.\n" if $state == MOVE;
             die "$opponent hasn't responded to your double yet.\n"
-                if $state == ACCEPT_OR_REJECT;
+                if $state == TAKE_OR_DROP;
             die "$opponent hasn't accepted or rejected your resign yet.\n"
-                if $state == ACCEPT_OR_REJECT;
+                if $self->{__resignation} * $color > 0;
             die "The opening roll must be done by both players.\n"
                 if $state == OPENING_ROLL;
             die "unknown error in state $state";
@@ -136,6 +142,8 @@ sub roll {
 sub move {
     my ($self, $color, @pairs) = @_;
 
+    die "game over" if $self->{__score};
+    
     die "Odd number of points in move" if @pairs % 2;
     die "No color given in move" if !$color;
 
@@ -146,10 +154,10 @@ sub move {
         die "You have to roll the dice before moving.\n" 
             if $state == ROLL_OR_DOUBLE;
         die "$opponent hasn't responded to your double yet.\n"
-            if $state == ACCEPT_OR_REJECT;
+            if $state == TAKE_OR_DROP;
         die "$opponent hasn't accepted or rejected your resign yet.\n"
-            if $state == ACCEPT_OR_REJECT;
-        die "The opening roll must be done by both players.\n"
+            if $color * $self->{__resignation} > 0;
+        die "You have to roll the dice before moving.\n"
             if $state == OPENING_ROLL;
         die "unknown error in state $state";
     } elsif ($self->{__turn} != $color) {
@@ -159,22 +167,60 @@ sub move {
     my $legal = $self->{__moves};
     my $move = BaldLies::Backgammon::Move->new (@{$self->{__roll}}, @pairs);
     if ($self->{__board}->move ($move, $color, $legal)) {
+        #if ($color < 0) {
+        #   print "   $self->{__player2} moves";
+        #} else {
+        #    print "   $self->{__player1} moves";
+        #}
+        #for (my $i = 0; $i < @pairs; $i += 2) {
+        #    my $from = $pairs[$i];
+        #    my $to = $pairs[$i + 1];
+        #    $from = 'bar' if $from == 0 || $from == 25;
+        #    $to = 'off' if $to == 0 || $to == 25;
+        #    print " $from/$to";
+        #}
+        #print ":\n";
         push @{$self->{__actions}}, move => $color, @pairs;
         $self->{__roll} = [];
         $self->{__turn} = -$color;
         $self->{__state} = ROLL_OR_DOUBLE;
         my $borne_off = $self->{__board}->borneOff ($color);
         if ($borne_off >= 15) {
+            my $board = $self->{__board};
+            my $other_borne_off = $board->borneOff (-$color);
             if ($color < 0) {
-                $self->{__score} = -$self->{__cube};
+                my $score = $self->{__cube};
+                if (!$other_borne_off) {
+                    my $value = 2;
+                    foreach my $i (19 .. 25) {
+                        if ($board->[$i]) {
+                            $value = 3;
+                            last;
+                        }
+                    }
+                    $score *= $value;
+                }
+                $self->{__score} = $score;;
             } else {
-                $self->{__score} = $self->{__cube};
+                my $score = $self->{__cube};
+                if (!$other_borne_off) {
+                    my $value = 2;
+                    foreach my $i (0 .. 6) {
+                        if ($board->[$i]) {
+                            $value = 3;
+                            last;
+                        }
+                    }
+                    $score *= $value;
+                }
+                $self->{__score} = $score;;
             }
+            
         }
         return $self;
     }
     
-    # Illegal move.  Find exact error according to FIBS.
+    # Illegal move.  Find the exact error in the same manner as FIBS.
     
     # The first check should be, whether there is any legal move.  FIBS will
     # not even try to move you, so this check is merely academical.  We
@@ -209,7 +255,7 @@ sub move {
     my @move_names = qw (first second third fourth);
     
     # Determine correct move direction.
-    if ($first->[2] < $first->[3]) {
+    if ($first->[0] < $first->[1]) {
         for (my $i = 0; $i < @pairs; $i += 2) {
             if ($pairs[$i] > $pairs[$i + 1]) {
                 my $move_name = $move_names[$i / 2];
@@ -235,12 +281,12 @@ sub move {
     if ($bar_movements) {
         my $max_non_bar_movements = (@pairs / 2) - $bar_movements;
         my $non_bar_movements = 0;
-        for (my $i = 0; $i < @pairs; ++$i) {
+        for (my $i = 0; $i < @pairs; $i += 2) {
             ++$non_bar_movements if $pairs[$i] != $bar;
             if ($non_bar_movements > $max_non_bar_movements) {
                 my $move_name = $move_names[$i / 2];
                 die "You have to remove pieces from the bar in your"
-                    . " move_name move.\n";
+                    . " $move_name move.\n";
             }
         }
     }
@@ -306,6 +352,95 @@ sub move {
     die "Illegal move (unknown error, this should not happen)";
     
     return $self;
+}
+
+sub double {
+    my ($self, $color) = @_;
+
+    die "game over" if $self->{__score};
+    
+    my $opponent = $self->{__turn} < 0 
+        ? $self->{__player1} : $self->{__player2};
+        
+    my $state = $self->{__state};
+        
+    if ($self->{__turn} && $self->{__turn} != $color) {
+        die "Please wait until GibbonTestA has moved.\n";
+    } elsif ($self->{__state} != ROLL_OR_DOUBLE) {
+        die "You can only double before you roll the dice.\n" if $state == MOVE;
+        die "It's not your turn to double.\n"
+            if $state == TAKE_OR_DROP;
+        die "You can't double now. You want to resign.\n"
+            if $color * $self->{__resignation} > 0;
+        die "You cannot double in the first move.\n"
+            if $state == OPENING_ROLL;
+        die "unknown error in state $state";
+    } elsif ($self->{__cube_owner} * $color > 0) {
+        die "It's not your turn to double.\n";
+    }
+    
+    $self->{__state} = TAKE_OR_DROP;
+    
+    return $self;
+}
+
+sub resign {
+    my ($self, $color, $points) = @_;
+    
+    die "game over" if $self->{__score};
+    
+    if ($self->{__resignation}) {
+        if ($self->{__resignation} * $color > 0) {
+            die "You already did that.\n";
+        } else {
+            die "give 'accept' or 'reject'";
+        }
+    }
+    
+    $self->{__resignation} = $points * $color;
+    
+    return $self;
+}
+
+sub accept {
+    my ($self, $color) = @_;
+    
+    die "game over" if $self->{__score};
+    
+    if ($self->{__resignation} * $color < 0) {
+        $self->{__score} = $self->{__resignation};
+        $self->{__resignation} = 0;
+        return $self;
+    } elsif ($self->{__state} == TAKE_OR_DROP && $self->{__turn} * $color < 0) {
+        $self->{__cube} <<= 1;
+        $self->{__cube_owner} = -$color;
+        $self->{__state} = ROLL_OR_DOUBLE;
+        return $self;
+    }
+    
+    my $opponent = $color < 0 
+        ? $self->{__player1} : $self->{__player2};
+        
+    die "$opponent didn't double or resign.\n";
+}
+
+sub reject {
+    my ($self, $color) = @_;
+    
+    die "game over" if $self->{__score};
+    
+    if ($self->{__resignation} * $color < 0) {
+        $self->{__resignation} = 0;
+        return $self;
+    } elsif ($self->{__state} == TAKE_OR_DROP && $self->{__turn} * $color < 0) {
+        $self->{__score} = $color < 0 ? $self->{__cube} : -$self->{__cube};
+        return $self;
+    }
+    
+    my $opponent = $color < 0 
+        ? $self->{__player1} : $self->{__player2};
+        
+    die "$opponent didn't double or resign.\n";
 }
 
 1;
