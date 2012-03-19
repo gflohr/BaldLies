@@ -21,6 +21,7 @@ package BaldLies::Backgammon::Game;
 use strict;
 
 use BaldLies::Backgammon::Board;
+use BaldLies::Backgammon::Move;
 use BaldLies::Const qw (:colors);
 
 # States.
