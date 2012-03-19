@@ -455,8 +455,11 @@ sub forcedMove {
     return if @$moves > 1;
     
     my @move = @{$self->{__roll}};
-    push @move, @{$moves->[0]} if @$moves;
-    
+    if ($self->{__turn} < 0) {
+        push @move, map { 25 - $_ } @{$moves->[0]} if @$moves;
+    } else {
+        push @move, @{$moves->[0]} if @$moves;
+    }
     return BaldLies::Backgammon::Move->new (@move);
 }
 

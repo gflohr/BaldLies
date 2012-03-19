@@ -20,7 +20,7 @@ use strict;
 
 use Test;
 
-BEGIN { plan tests => 109 }
+BEGIN { plan tests => 116 }
 
 use BaldLies::Backgammon::Match;
 use BaldLies::Const qw (:colors);
@@ -81,6 +81,14 @@ ok $match->do (move => BLACK);
 ok $match->do (roll => WHITE, 4, 4);
 ok $match->do (move => WHITE, 13, 9, 13, 9, 9, 5, 5, 1);
 ok $match->do (roll => BLACK, 3, 2);
+$forced_move = $match->forcedMove;
+ok $forced_move;
+ok $forced_move->isa ('BaldLies::Backgammon::Move');
+ok $forced_move->[0], 3;
+ok $forced_move->[1], 2;
+ok $forced_move->[2], 0;
+ok $forced_move->[3], 2;
+ok ((scalar @$forced_move), 4);
 ok $match->do (move => BLACK, 0, 2);
 ok $match->do (roll => WHITE, 4, 1);
 ok $match->do (move => WHITE, 6, 2, 2, 1);
