@@ -27,16 +27,11 @@ our %EXPORT_TAGS = (colors => [qw (BLACK WHITE)],
                                        LOG_INFO LOG_DEBUG)],
                     telnet => [qw (TELNET_ECHO_DO   TELNET_ECHO_DONT
                                    TELNET_ECHO_WILL TELNET_ECHO_WONT)],
-                    match => [qw (MATCH_START MATCH_GAME_START 
-                                  MATCH_ROLL_OR_DOUBLE MATCH_ROLL MATCH_MOVE
-                                  MATCH_TAKE_OR_DROP MATCH_REJECT_OR_ACCEPT
-                              )],
                     );
 our @EXPORT_OK = (
     @{$EXPORT_TAGS{colors}},
     @{$EXPORT_TAGS{log_levels}},
     @{$EXPORT_TAGS{telnet}},
-    @{$EXPORT_TAGS{match}},
 );
 
 use constant BLACK => -1;
