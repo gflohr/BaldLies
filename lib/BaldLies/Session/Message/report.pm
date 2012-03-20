@@ -49,11 +49,11 @@ sub __handleJoined {
     
     my $user = $session->getUser;
     $user->{playing} = $opponent;
-    $user->{watching} = '-';
+    delete $user->{watching};
     
     my $other = $session->getUsers->{$opponent};
     $other->{playing} = $user->{name};
-    $other->{watching} = '-';
+    delete $other->{watching};
     
     if ($session->getClip) {
         my $rawwho = $user->rawwho;
@@ -98,13 +98,11 @@ sub __handleInvited {
     
     my $user = $session->getUser;
     $user->{playing} = $opponent;
-    $user->{watching} = '-';
+    delete $user->{watching};
     
     my $other = $session->getUsers->{$opponent};
     $other->{playing} = $user->{name};
-    $other->{watching} = '-';
-    
-    $user->{match} = 'TODO';
+    delete $other->{watching};
     
     if ($session->getClip) {
         my $rawwho = $user->rawwho;
@@ -152,7 +150,7 @@ sub __handleStart {
     
     my $player = $session->getUsers->{$player1};
     $player->{playing} = $player2;
-    $player->{watching} = '-';
+    delete $player->{watching};
     
     if ($session->getClip) {
         my $rawwho = $player->rawwho;
@@ -161,7 +159,7 @@ sub __handleStart {
     
     $player = $session->getUsers->{$player2};
     $player->{playing} = $player1;
-    $player->{watching} = '-';
+    delete $player->{watching};
     
     if ($session->getClip) {
         my $rawwho = $player->rawwho;

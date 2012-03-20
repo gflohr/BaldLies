@@ -293,9 +293,9 @@ sub removeUser {
     
     delete $self->{__users}->{$name};
     if ($name = $self->{__user}->{playing}) {
-        $self->{__user}->{playing} = '-';
+        delete $self->{__user}->{playing};
     } elsif ($name = $self->{__user}->{watching}) {
-        $self->{__user}->{watching} = '-';
+        delete $self->{__user}->{watching};
     }
     
     return $self;
