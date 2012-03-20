@@ -24,10 +24,9 @@ use DBI;
 use Digest::SHA qw (sha512_base64);
 use BaldLies::Const qw (:log_levels);
 
-my $versions = [
-    'users',
-    'matches'
-];
+my $versions = [qw (
+    users matches redoubles
+)];
 
 my $schema_version = $#$versions;
 
@@ -93,7 +92,7 @@ sub _initBackend {
 
 sub check {
     my ($self) = @_;
-    
+
     my $logger = $self->{__logger};
     
     $logger->info ("Checking database schema version.");
@@ -108,6 +107,7 @@ sub check {
     
     my ($wanted) = $schema_version;
     my ($got) = $sth->fetchrow_array;
+    $self->{__schema_version} = $got;
     $logger->debug ("Need version $wanted, have version $got.");
     if ($wanted < $got) {
         $logger->fatal ("Cannot downgrade database schema from version "
@@ -313,8 +313,8 @@ EOF
 
     $statements->{CREATE_MATCH} = <<EOF;
 INSERT INTO matches (player1, player2, match_length, last_action,
-                     crawford, autodouble)
-    VALUES (?, ?, ?, ?, ?, ?)
+                     crawford, autodouble, redoubles)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
 EOF
     $sths->{CREATE_MATCH} = 
         $dbh->prepare ($statements->{CREATE_MATCH});
@@ -405,6 +405,20 @@ CREATE TABLE matches (
     autodouble BOOLEAN NOT NULL DEFAULT 0,
     UNIQUE (player1, player2)
 )
+EOF
+
+    $self->{_dbh}->do (<<EOF, {}, $version);
+UPDATE version SET schema_version = ?
+EOF
+
+    return $self;
+}
+
+sub _upgradeStepRedoubles {
+    my ($self, $version) = @_;
+    
+    $self->{_dbh}->do (<<EOF);
+ALTER TABLE matches ADD COLUMN redoubles INTEGER
 EOF
 
     $self->{_dbh}->do (<<EOF, {}, $version);
@@ -761,9 +775,10 @@ sub createMatch {
     
     my $crawford = $args{crawford} ? 1 : 0;
     my $autodouble = $args{autodouble} ? 1 : 0;
+    my $redoubles = $args{redoubles} || 0;
     
     return if !$self->_doStatement (CREATE_MATCH => $player1, $player2,
-                                    time, $crawford, $autodouble);
+                                    time, $crawford, $autodouble, $redoubles);
     return if !$self->_commit;
     
     return $self;
