@@ -289,6 +289,10 @@ sub dropConnection {
     my $user = $rec->{user};
     if ($user) {
         my $name = $user->{name};
+        my $opponent = $self->getUser ($user->{playing});
+        if ($opponent && $name eq $opponent->{name}) {
+            $opponent->{playing} = '-';
+        }
         delete $self->{__users}->{$name};
         delete $self->{__inviters}->{$name};
         delete $self->{__invitees}->{$name};

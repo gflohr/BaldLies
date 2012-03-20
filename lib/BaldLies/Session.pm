@@ -292,6 +292,11 @@ sub removeUser {
     my ($self, $name) = @_;
     
     delete $self->{__users}->{$name};
+    if ($name = $self->{__user}->{playing}) {
+        $self->{__user}->{playing} = '-';
+    } elsif ($name = $self->{__user}->{watching}) {
+        $self->{__user}->{watching} = '-';
+    }
     
     return $self;
 }
