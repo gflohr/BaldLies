@@ -16,28 +16,24 @@
 # You should have received a copy of the GNU General Public License
 # along with BaldLies.  If not, see <http://www.gnu.org/licenses/>.
 
-package BaldLies::Session::Command::leave;
+package BaldLies::Session::Message::leave;
 
 use strict;
 
-use base qw (BaldLies::Session::Command);
+use base qw (BaldLies::Session::Message);
+
+use BaldLies::User;
 
 sub execute {
-    my ($self, $payload) = @_;
-    
-    my $session = $self->{_session};
+    my ($self, $session, $quitter, $victim) = @_;    
 
     my $user = $session->getUser;
-    
-    if (!$user->{match}) {
-        $session->reply ("** Error: No one to leave.\n");
-        return $self;
+    if ($victim eq $user->{name}) {
+        $session->reply ("** Player $quitter has left the game. The game was"
+                         . " saved.\n");
+    } elsif ($user->{notify}) {
+        $session->reply ("$quitter has left the game with $victim.\n");
     }
-    
-    delete $user->{match};
-    
-    $session->reply ("** You terminated the game. The game was saved.\n");
-    $session->sendMaster ('leave');
     
     return $self;
 }
@@ -46,16 +42,16 @@ sub execute {
 
 =head1 NAME
 
-BaldLies::Session::Command::leave - BaldLies Command `leave'
+BaldLies::Session::Message::leave - BaldLies Message `leave'
 
 =head1 SYNOPSIS
 
-  use BaldLies::Session::Command::leave->new (leave => $session, $call);
+  use BaldLies::Session::Message::leave->new;
   
 =head1 DESCRIPTION
 
-This plug-in handles the ommand `leave'.
+This plug-in handles the master message `leave'.
 
 =head1 SEE ALSO
 
-BaldLies::Session::Command(3pm), baldlies(1), perl(1)
+BaldLies::Session::Message(3pm), baldlies(1), perl(1)

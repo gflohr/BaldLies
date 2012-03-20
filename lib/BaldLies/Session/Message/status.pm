@@ -55,7 +55,13 @@ sub execute {
     if ($session->getClip) {
         $session->reply ("5 $payload\n6\n");
     }
-        
+     
+    my $me = $session->getUser;
+    if ($me->{playing} && $name eq $me->{playing}) {
+        # We will always get a message with the exact reason.
+        delete $me->{match};
+    }
+    
     return $self;
 }
 
