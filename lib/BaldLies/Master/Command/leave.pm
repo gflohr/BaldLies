@@ -35,9 +35,8 @@ sub execute {
         return $self;
     }
     $logger->debug ("Leave message from `$user->{name}'.");
-    delete $user->{playing};
     
-    my $opponent = $master->getUser ($user->{playing});
+    my $opponent = $master->getUser (delete $user->{playing});
     if (!$opponent) {
         $logger->info ("Opponent `$user->{playing}' has vanished before leave.");
         return $self;

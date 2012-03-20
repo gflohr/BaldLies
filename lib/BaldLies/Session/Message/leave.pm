@@ -25,14 +25,28 @@ use base qw (BaldLies::Session::Message);
 use BaldLies::User;
 
 sub execute {
-    my ($self, $session, $quitter, $victim) = @_;    
+    my ($self, $session, $payload) = @_;    
 
+    my ($quitter, $victim) = split / /, $payload;
+    
     my $user = $session->getUser;
     if ($victim eq $user->{name}) {
-        $session->reply ("** Player $quitter has left the game. The game was"
+        $session->reply ("\n** Player $quitter has left the game. The game was"
                          . " saved.\n");
+        delete $user->{playing} 
+            if exists $user->{playing} && $quitter eq $user->{playing};
     } elsif ($user->{notify}) {
         $session->reply ("$quitter has left the game with $victim.\n");
+    }
+
+    my $users = $session->getUsers;
+    $user = $users->{$quitter};
+    if ($user && $user->{playing} && $victim eq $user->{playing}) {
+        delete $user->{playing};
+    }
+    $user = $users->{$victim};
+    if ($user && $user->{playing} && $quitter eq $user->{playing}) {
+        delete $user->{playing};
     }
     
     return $self;
