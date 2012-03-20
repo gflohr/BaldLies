@@ -101,6 +101,28 @@ sub forcedMove {
     return $self->{__game}->forcedMove;    
 }
 
+sub getState {
+    my ($self) = @_;
+    
+    if ($self->{__over}) {
+        return 'over';
+    } else {
+        return $self->{__game}->getState;
+    }
+}
+
+sub getAutodouble {
+    shift->{__autodouble};
+}
+
+sub player1 {
+    shift->{__player1};
+}
+
+sub player2 {
+    shift->{__player2};
+}
+
 sub __graphicalBoard {
     my ($self, $extra) = @_;
 

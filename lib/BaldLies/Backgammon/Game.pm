@@ -463,6 +463,18 @@ sub forcedMove {
     return BaldLies::Backgammon::Move->new (@move);
 }
 
+sub getState {
+    my ($self) = @_;
+    
+    my $state = $self->{__state};
+    
+    if ($state == OPENING_ROLL) {
+        return 'opening';
+    }
+    
+    die "cannot encode state $state";
+}
+
 1;
 
 =head1 NAME

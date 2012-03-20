@@ -28,6 +28,7 @@ sub execute {
     my ($self, $session, $payload) = @_;
     
     my $logger = $session->getLogger;
+
     my ($player1, $player2, $action, @data) = split / /, $payload;
     
     $self->{__session} = $session;
@@ -37,10 +38,13 @@ sub execute {
     my $method;
     if ($player1 eq $name) {
         $method = '__handleMy' . ucfirst $action;
+        $self->{__role} = 'inviter';
     } elsif ($player2 eq $name) {
         $method = '__handleHer' . ucfirst $action;
+        $self->{__role} = 'invitee';
     } else {
         $method = '__handleTheir' . ucfirst $action;
+        $self->{__role} = 'watcher';
     }
     
     return $self->$method (@data);
@@ -56,11 +60,12 @@ sub __handleMyTell {
     
     if ('start' eq $what && 'game' eq $data[0]) {
         my $opponent = $match->player2;
-        $session->reply ("\nStarting a new game with $opponent.\n");
-        return $self;
-    } 
+        $session->reply ("Starting a new game with $opponent.\n");
+    } else {
+        $logger->fatal ("Unknown play message $what.");
+    }
     
-    $logger->fatal ("Unknown play message $what.");
+    while ($self->__checkMatch) {}
     
     return $self;
 }
@@ -75,13 +80,40 @@ sub __handleHerTell {
     
     if ('start' eq $what && 'game' eq $data[0]) {
         my $opponent = $match->player1;
-        $session->reply ("\nStarting a new game with $opponent.\n");
+        $session->reply ("Starting a new game with $opponent.\n");
+        # The inviter is responsible for the opening roll.
         return $self;
-    } 
+    } else {
+        $logger->fatal ("Unknown play message $what.");
+    }
     
-    $logger->fatal ("Unknown play message $what.");
-    
+    while ($self->__checkMatch) {}
+
     return $self;
+}
+
+sub __checkMatch {
+    my ($self) = @_;
+    
+    my $session = $self->{__session};
+    my $logger = $session->getLogger;
+    my $user = $session->getUser;
+    my $match = $user->{match};
+    
+    my $state = $match->getState;
+    if ('opening' eq $state) {
+        if ('inviter' eq $self->{__role}) {
+            while (1) {
+                my $die1 = 1 + int rand 6;
+                my $die2 = 1 + int rand 6;
+                next if $die1 == $die2 && !$match->getAutodouble;
+                $session->sendMaster (play => "opening $die1 $die2");
+                return;
+            }
+        }
+    }
+    
+    die "cannot handle state `$state'";
 }
 
 1;
