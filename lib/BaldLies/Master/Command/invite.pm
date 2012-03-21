@@ -42,6 +42,12 @@ sub execute {
         return $self;
     }
     
+    if (!$length) {
+        $master->queueResponseForUser ($inviter->{name}, 'reply',
+                                       "** Resuming is not yet implemented.");
+        return $self;
+    }
+    
     # TODO: Additional checks!
     
     # Record this invitation both ways.  This is necessary for cleaning up,
