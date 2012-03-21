@@ -22,6 +22,8 @@ use strict;
 
 use base qw (BaldLies::Master::Command);
 
+use BaldLies::Util qw (empty);
+
 sub execute {
     my ($self, $fd, $payload) = @_;
     
@@ -34,9 +36,20 @@ sub execute {
         $logger->info ("Match play action from unknown descriptor $fd.");
         return $self;
     }
+    
     $logger->debug ("Match play action from `$user->{name}': $payload.");
 
-    return $self;    
+    my $opponent = $user->{playing};
+    if (empty $opponent) {
+        $logger->info ("$user->{name}'s opponent has vanished.");
+        return $self;
+    }
+
+    $master->queueResponse ($fd, play => $user->{name}, $opponent, $payload);
+    $master->queueResponseForUser ($opponent, play => $user->{name}, 
+                                   $opponent, $payload);
+
+    return $self;
 }
 
 1;

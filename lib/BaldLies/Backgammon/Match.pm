@@ -115,6 +115,10 @@ sub getAutodouble {
     shift->{__autodouble};
 }
 
+sub getCube {
+    shift->{__game}->cube;
+}
+
 sub player1 {
     shift->{__player1};
 }

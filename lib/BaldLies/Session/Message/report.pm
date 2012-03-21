@@ -75,7 +75,7 @@ sub __handleJoined {
     
     $user->{match} = BaldLies::Backgammon::Match->new (%args);
     
-    my $action = "$user->{name} $other->{name} tell start game";
+    my $action = "$user->{name} $other->{name} start";
 
     my $msg_dispatcher = $session->getMessageDispatcher;
     $msg_dispatcher->execute ($session, play => $action);
@@ -124,7 +124,7 @@ sub __handleInvited {
     
     $user->{match} = BaldLies::Backgammon::Match->new (%args);
     
-    my $action = "$other->{name} $user->{name} tell start game";
+    my $action = "$other->{name} $user->{name} start";
 
     my $msg_dispatcher = $session->getMessageDispatcher;
     $msg_dispatcher->execute ($session, play => $action);

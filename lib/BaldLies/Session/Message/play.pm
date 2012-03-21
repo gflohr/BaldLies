@@ -34,6 +34,20 @@ sub execute {
     $self->{__session} = $session;
     my $user = $session->getUser;
     $self->{__user} = $user;
+    
+    my $users = $session->getUsers;
+    
+    $self->{__player1} = $users->{$player1};
+    if (!$self->{__player1}) {
+        $logger->error ("Player `$player1' has vanished.");
+        return $self;
+    }
+    $self->{__player2} = $users->{$player2};
+    if (!$self->{__player2}) {
+        $logger->error ("Player `$player2' has vanished.");
+        return $self;
+    }
+    
     my $name = $user->{name};
     my $method;
     if ($player1 eq $name) {
@@ -50,45 +64,62 @@ sub execute {
     return $self->$method (@data);
 }
 
-sub __handleMyTell {
-    my ($self, $what, @data) = @_;
+sub __handleMyStart {
+    my ($self) = @_;
     
     my $session = $self->{__session};
     my $logger = $session->getLogger;
     my $user = $session->getUser;
     my $match = $user->{match};
     
-    if ('start' eq $what && 'game' eq $data[0]) {
-        my $opponent = $match->player2;
-        $session->reply ("Starting a new game with $opponent.\n");
-    } else {
-        $logger->fatal ("Unknown play message $what.");
-    }
+    my $opponent = $match->player2;
+    $session->reply ("Starting a new game with $opponent.\n");
     
-    while ($self->__checkMatch) {}
+    $self->__checkMatch;
     
     return $self;
 }
 
-sub __handleHerTell {
-    my ($self, $what, @data) = @_;
+sub __handleMyOpening {
+    my ($self, $die1, $die2) = @_;
+    
+    my $session = $self->{__session};
+    my $logger = $session->getLogger;
+    my $user = $session->getUser;
+    my $match = $user->{match};
+
+    $match->do (roll => 0, $die1, $die2);
+    
+    my $opponent = $self->{__player2}->{name};
+    $session->reply ("You rolled $die1, $opponent rolled $die2\n", 1);
+
+    if ($die1 > $die2) {
+        $session->reply ("It's your turn to move.\n");
+    } elsif ($die1 < $die2) {
+        $session->reply ("$opponent makes the first move.\n");
+    } else {
+        if ($match->getAutodouble) {
+            my $cube = $match->getCube;
+            $session->reply ("The number on the doubling cube is now $cube", 1);
+        }
+        $self->__checkMatch;
+    }
+   
+    return $self;
+}
+
+sub __handleHerStart {
+    my ($self) = @_;
     
     my $session = $self->{__session};
     my $logger = $session->getLogger;
     my $user = $session->getUser;
     my $match = $user->{match};
     
-    if ('start' eq $what && 'game' eq $data[0]) {
-        my $opponent = $match->player1;
-        $session->reply ("Starting a new game with $opponent.\n");
-        # The inviter is responsible for the opening roll.
-        return $self;
-    } else {
-        $logger->fatal ("Unknown play message $what.");
-    }
-    
-    while ($self->__checkMatch) {}
+    my $opponent = $match->player1;
+    $session->reply ("Starting a new game with $opponent.\n");
 
+    # The inviter is responsible for the opening roll.
     return $self;
 }
 
