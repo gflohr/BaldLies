@@ -47,7 +47,7 @@ sub __showClipWho {
     
     my $output = '';
     while (my ($name, $user) = each %$users) {
-        $output .= '5 ' . $user->rawwho;
+        $output .= '5 ' . $user->rawwho . "\n";
     }
     
     $session->reply ($output);

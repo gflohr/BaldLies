@@ -59,7 +59,7 @@ sub rawwho {
     
     return "$self->{name} $opponent $watching $self->{ready}"
            . " $away $rating $self->{experience} 0 $self->{login} $self->{ip}"
-           . " $self->{client} $address\n";
+           . " $self->{client} $address";
 }
 
 1;
