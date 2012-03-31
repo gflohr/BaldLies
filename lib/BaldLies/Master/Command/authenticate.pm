@@ -74,6 +74,7 @@ sub execute {
     $master->queueResponse ($fd, authenticated => 1, $payload);
     
     $master->broadcast (login => $name, @$data, $client, $ip, $user->{login});
+    $master->broadcastUserStatus ($name);
     
     return $self;    
 }
