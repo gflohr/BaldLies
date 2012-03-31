@@ -81,7 +81,7 @@ sub __handleStart {
     my $match = $user->{match};
     
     my $opponent = $self->{__other}->{name};
-    $session->reply ("Starting a new game with $opponent.\n");
+    $session->reply ("Starting a new game with $opponent.\n", 1);
     
     $self->__checkMatch if $self->{__role} > 2;
     
@@ -96,7 +96,7 @@ sub __handleOpening {
     my $user = $session->getUser;
     my $match = $user->{match};
 
-    if ($self->{__role} > 2) {
+    if ($self->{__role} > 1) {
         $match->do (roll => 0, $die1, $die2);
     }
     
@@ -104,20 +104,11 @@ sub __handleOpening {
     my $opponent = $self->{__other}->{name};
 
     if ($self->{__role} != 2) {
-        $session->reply ("$me rolled $die1, $opponent rolled $die2.\n", 1);
-    } else {
-        $session->reply ("$me rolled $die2, $opponent rolled $die1.\n", 1);
+        ($die1, $die2) = ($die2, $die1);
     }
+    $session->reply ("$me rolled $die1, $opponent rolled $die2.\n", 1);
     
-    if ($die1 > $die2) {
-        if ($self->{__role} > 1) {
-            $session->reply ("It's your turn to move.\n");
-        } else {
-            $session->reply ("$me makes the first move.\n");
-        }
-    } elsif ($die1 < $die2) {
-        $session->reply ("$opponent makes the first move.\n");
-    } else {
+    if ($die1 == $die2) {
         if ($match->getAutodouble) {
             my $cube = $match->getCube;
             $session->reply ("The number on the doubling cube is now $cube", 1);
@@ -125,6 +116,14 @@ sub __handleOpening {
         if ($self->{__role} > 1) {
             $self->__checkMatch;
         }
+    } elsif ($die1 > $die2) {
+        if ($self->{__role} > 1) {
+            $session->reply ("It's your turn to move.\n");
+        } else {
+            $session->reply ("$me makes the first move.\n");
+        }
+    } elsif ($die1 < $die2) {
+        $session->reply ("$opponent makes the first move.\n");
     }
    
     return $self;
