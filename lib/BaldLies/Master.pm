@@ -286,7 +286,6 @@ sub __loadDispatcher {
 sub dropConnection {
     my ($self, $fd, $msg) = @_;
 
-$DB::single = 1;
     my $logger = $self->{__logger};
 
     my $rec = $self->{__sockets}->{$fd};
