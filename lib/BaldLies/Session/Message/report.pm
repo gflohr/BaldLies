@@ -61,7 +61,7 @@ sub __handleJoined {
         $session->reply ("\n** $opponent has joined you for an unlimited"
                          . " match.\n", 1);
     }
-    
+
     my %args = (
         player1 => $user->{name},
         player2 => $other->{name},
@@ -70,7 +70,7 @@ sub __handleJoined {
     );
 
     $args{crawford} = 1 
-        if $length > 0 && $user->{crawford} && $other->{crawford};
+        if $length > 0 && ($user->{crawford} || $other->{crawford});
     $args{autodouble} = 1 if $user->{autodouble} && $other->{autodouble};
     
     $user->{match} = BaldLies::Backgammon::Match->new (%args);
@@ -119,7 +119,7 @@ sub __handleInvited {
     );
 
     $args{crawford} = 1 
-        if $length > 0 && $user->{crawford} && $other->{crawford};
+        if $length > 0 && ($user->{crawford} || $other->{crawford});
     $args{autodouble} = 1 if $user->{autodouble} && $other->{autodouble};
     
     $user->{match} = BaldLies::Backgammon::Match->new (%args);
