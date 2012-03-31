@@ -22,6 +22,78 @@ use strict;
 
 use base qw (BaldLies::Session::Command);
 
+use BaldLies::Util qw (empty);
+use BaldLies::Const qw (:colors);
+
+sub execute {
+    my ($self, $payload) = @_;
+    
+    my $session = $self->{_session};
+    my $user = $session->getUser;
+    
+    if (!empty $user->{watching} || !$user->{match}) {
+        $session->reply ("** You're not playing.\n");
+        return $self;
+    }
+    
+    my $match = $user->{match};
+    my $color;
+    if ($user->{name} eq $match->player2) {
+        $color = BLACK;
+    } else {
+        $color = WHITE;
+    }    
+    
+    my $home = $color > 0 ? 0 : 25;
+    my $bar = 25 - $home;
+    
+    my @pairs = split /[ \t]+/, $payload;
+    my @points;
+    foreach my $pair (@pairs) {
+        my ($from, $to) = split /-/, $pair;
+        return $self->__invalidMove if !defined $to;
+
+        if ('bar' eq $from) {
+            $from = $bar;
+        } elsif ('home' eq $from) {
+            $from = $home;
+        } elsif ('off' eq $from) {
+            $from = $home;
+        } elsif ($from !~ /^(?:[1-9]|1[0-9]|2[0-4])$/) {
+            return $self->__invalidMove;
+        }
+        if ('bar' eq $to) {
+            $to = $bar;
+        } elsif ('home' eq $to) {
+            $to = $home;
+        } elsif ('off' eq $to) {
+            $to = $home;
+        } elsif ($to !~ /^(?:[1-9]|1[0-9]|2[0-4])$/) {
+            return $self->__invalidMove;
+        }
+        push @points, $from, $to;
+    }
+    
+    eval { $match->do (move => $color, @points) };
+    if ($@) {
+        chomp $@;
+        $session->reply ("** $@\n");
+    }
+    
+    $session->sendMaster (play => 'move', @points);
+    
+    return $self;
+}
+
+sub __invalidMove {
+    my ($self) = @_;
+    
+    $self->{_session}->reply ("** first move: legal words are 'bar', 'home',"
+                              . " 'off', 'b', 'h' and 'o'.\n");
+    
+    return $self;
+}
+
 1;
 
 =head1 NAME

@@ -116,15 +116,19 @@ sub __handleOpening {
         if ($self->{__role} > 1) {
             $self->__checkMatch;
         }
-    } elsif ($die1 > $die2) {
+        return $self;
+    }
+    
+    if ($die1 > $die2) {
         if ($self->{__role} > 1) {
-            $session->reply ("It's your turn to move.\n");
+            $session->reply ("It's your turn to move.\n", 1);
         } else {
-            $session->reply ("$me makes the first move.\n");
+            $session->reply ("$me makes the first move.\n", 1);
         }
     } elsif ($die1 < $die2) {
-        $session->reply ("$opponent makes the first move.\n");
+        $session->reply ("$opponent makes the first move.\n", 1);
     }
+    $session->reply ($user->{match}->board ($user->{boardstyle}));
    
     return $self;
 }

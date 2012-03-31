@@ -22,6 +22,27 @@ use strict;
 
 use base qw (BaldLies::Session::Command);
 
+use BaldLies::Util qw (empty);
+
+sub execute {
+    my ($self, $payload) = @_;
+    
+    my $session = $self->{_session};
+    my $user = $session->getUser;
+    
+    if (!empty $user->{watching}) {
+        if (!$user->{match}) {
+            $session->reply ("$user->{watching} is not playing.\n");
+            return $self;
+        }
+    } elsif (empty $user->{playing}) {
+        $session->reply ("You are not playing.");
+        return $self;
+    }
+
+    $session->reply ($user->{match}->board ($user->{boardstyle}));
+}
+
 1;
 
 =head1 NAME
