@@ -27,7 +27,7 @@ sub execute {
     
     my $master = $self->{_master};
     
-    my ($name, $opponent, $watching, $ready, $away, $rating, $experience,
+    my ($name, $playing, $watching, $ready, $away, $rating, $experience,
         $idle, $login, $hostname, $client, $email) = split / /, $payload;
     
     my $logger = $master->getLogger;
@@ -37,10 +37,10 @@ sub execute {
         return $self;
     }
     
-    if ('-' ne $opponent) {
-        $user->{opponent} = $opponent;
+    if ('-' ne $playing) {
+        $user->{playing} = $playing;
     } else {
-        delete $user->{opponent};
+        delete $user->{playing};
     }
     if ('-' ne $watching) {
         $user->{watching} = $watching;
@@ -50,9 +50,8 @@ sub execute {
     $user->{ready} = $ready;
     $user->{rating} = $rating;
     $user->{experience} = $experience;
-    foreach my $login ($master->getLoggedIn) {
-        $master->queueResponseForUser ($login, status => $payload);
-    }
+    
+    $master->broadcastUserStatus ($name);
     
     return $self;
 }

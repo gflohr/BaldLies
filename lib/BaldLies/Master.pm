@@ -345,6 +345,19 @@ sub queueResponseForUser {
     return $self->queueResponse ($fd, $opcode, @msg);
 }
 
+sub broadcastUserStatus {
+    my ($self, $name) = @_;
+    
+    my $user = $self->getUser ($name) or return;
+    my $rawwho = $user->rawwho;
+    
+    foreach my $login ($self->getLoggedIn) {
+        $self->queueResponseForUser ($login, status => $rawwho);
+    }
+    
+    return $self;
+}
+
 1;
 
 =head1 NAME

@@ -22,12 +22,14 @@ use strict;
 
 use base qw (BaldLies::Session::Message);
 
+use BaldLies::Util qw (empty);
+
 sub execute {
     my ($self, $session, $payload) = @_;
 
     my $logger = $session->getLogger;
     
-    my ($name, $opponent, $watching, $ready, $away, $rating, $experience,
+    my ($name, $playing, $watching, $ready, $away, $rating, $experience,
         $idle, $login, $hostname, $client, $email) = split / /, $payload;
     $logger->debug ("Got status change for user `$name'\n");
 
@@ -38,10 +40,10 @@ sub execute {
     }
 
     my $user = $users->{$name};
-    if ('-' ne $opponent) {
-        $user->{opponent} = $opponent;
+    if ('-' ne $playing) {
+        $user->{playing} = $playing;
     } else {
-        delete $user->{opponent};
+        delete $user->{playing};
     }
     if ('-' ne $watching) {
         $user->{watching} = $watching;
@@ -57,9 +59,11 @@ sub execute {
     }
      
     my $me = $session->getUser;
-    if ($me->{playing} && $name eq $me->{playing}) {
+    if ($me->{playing} && $name eq $me->{playing}
+        && (empty $user->{playing} || $user->{playing} ne $me->{name})) {
         # We will always get a message with the exact reason.
         delete $me->{match};
+        delete $me->{playing};
     }
     
     return $self;

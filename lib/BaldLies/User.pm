@@ -51,13 +51,13 @@ sub copy {
 sub rawwho {
     my ($self) = @_;
     
-    my $opponent = $self->{opponent} || '-';
+    my $playing = $self->{playing} || '-';
     my $watching = $self->{watching} || '-';
     my $away = $self->{away} || 0;
     my $rating = sprintf '%.2f', $self->{rating};
     my $address = $self->{address} || '-';
     
-    return "$self->{name} $opponent $watching $self->{ready}"
+    return "$self->{name} $playing $watching $self->{ready}"
            . " $away $rating $self->{experience} 0 $self->{login} $self->{ip}"
            . " $self->{client} $address";
 }
