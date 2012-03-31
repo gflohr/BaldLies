@@ -40,16 +40,35 @@ sub execute {
     }
 
     my $user = $users->{$name};
+    my $myself = $session->getUser;
+    
+    my $is_about_me = $user == $myself;
+
+    my $start_playing;
+    my $stop_playing;
     if ('-' ne $playing) {
+        if (empty $user->{playing}
+            || $user->{playing} ne $playing) {
+            $start_playing = $playing;
+        }
         $user->{playing} = $playing;
     } else {
-        delete $user->{playing};
+        $stop_playing = delete $user->{playing};
+        delete $user->{match};
     }
+
+    my $start_watching;
+    my $stop_watching;
     if ('-' ne $watching) {
+        if (empty $user->{watching}
+            || $user->{watching} ne $watching) {
+            $start_watching = $watching;
+        }
         $user->{watching} = $watching;
     } else {
-        delete $user->{watching};
+        $stop_watching = delete $user->{watching};
     }
+    
     $user->{ready} = $ready;
     $user->{rating} = $rating;
     $user->{experience} = $experience;
@@ -58,12 +77,30 @@ sub execute {
         $session->reply ("5 $payload\n6\n");
     }
      
-    my $me = $session->getUser;
-    if ($me->{playing} && $name eq $me->{playing}
-        && (empty $user->{playing} || $user->{playing} ne $me->{name})) {
-        # We will always get a message with the exact reason.
-        delete $me->{match};
-        delete $me->{playing};
+    if ($is_about_me && !empty $stop_watching) {
+        $session->reply ("You stop watching $stop_watching.\n");
+    } elsif ($is_about_me && !empty $start_watching) {
+        my $message = "You are now watching $start_watching.\n";
+        my $other = $session->getUser ($watching);
+        if (empty $other->{playing}) {
+            $message .= "$watching is not doing anything interesting.\n";
+        }
+        $session->reply ($message);
+    }
+    
+    if (!empty $start_watching && $start_watching eq $myself->{name}) {
+        $session->reply ("$name is watching you.\n");
+    }
+    if (!empty $stop_watching && $stop_watching eq $myself->{name}) {
+        $session->reply ("$name stops watching you.\n");
+    }
+    if (!empty $start_watching && !empty $myself->{playing}
+             && $start_watching eq $myself->{playing}) {
+        $session->reply ("$name starts watching $watching.\n");
+    }
+    if (!empty $stop_watching && !empty $myself->{playing}
+             && $stop_watching eq $myself->{playing}) {
+        $session->reply ("$name stops watching $stop_watching.\n");
     }
     
     return $self;

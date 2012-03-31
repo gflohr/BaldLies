@@ -45,6 +45,7 @@ sub new {
         __users       => {},
         __inviters    => {},
         __invitees    => {},
+        __watched     => {},
     };
 
     bless $self, $class;
@@ -230,6 +231,8 @@ sub getLoggedIn {
 sub getUser {
     my ($self, $name) = @_;
     
+    return if empty $name;
+    
     my $fd = $self->{__users}->{$name} or return;
     my $rec = $self->{__sockets}->{$fd} or return;
     
@@ -283,19 +286,30 @@ sub __loadDispatcher {
 sub dropConnection {
     my ($self, $fd, $msg) = @_;
 
+$DB::single = 1;
     my $logger = $self->{__logger};
 
     my $rec = $self->{__sockets}->{$fd};
-    my $user = $rec->{user};
-    if ($user) {
-        my $name = $user->{name};
-        my $opponent = $self->getUser ($user->{playing});
+    my $dropper = $rec->{user};
+    if ($dropper) {
+        my $name = $dropper->{name};
+        my $opponent = $self->getUser ($dropper->{playing});
         if ($opponent && $name eq $opponent->{name}) {
+            $self->broadcastUserStatus ($opponent->{name});
             delete $opponent->{playing};
         }
+        if (exists $self->{__watched}->{$name}) {
+            my @names = keys %{$self->{__watched}->{$name}};
+            foreach my $n (@names) {
+                my $watcher = $self->getUser ($n) or next;
+                $self->removeWatching ($watcher, $name);
+            }
+        }
+        
         delete $self->{__users}->{$name};
         delete $self->{__inviters}->{$name};
         delete $self->{__invitees}->{$name};
+        delete $self->{__watched}->{$name};
         $self->broadcast (logout => $name, $name);    
     }
         
@@ -350,11 +364,43 @@ sub broadcastUserStatus {
     
     my $user = $self->getUser ($name) or return;
     my $rawwho = $user->rawwho;
-    
+
     foreach my $login ($self->getLoggedIn) {
         $self->queueResponseForUser ($login, status => $rawwho);
     }
     
+    return $self;
+}
+
+sub addWatching {
+    my ($self, $user, $who) = @_;
+    
+    $user->{watching} = $who;
+    
+    my $name = $user->{name};
+    
+    $self->{__watched}->{$who}->{$name} = 1;
+    
+    $self->{__logger}->debug ("$who starts watching $name.");
+    
+    $self->broadcastUserStatus ($user->{name});
+
+    return $self;
+}
+
+sub removeWatching {
+    my ($self, $user, $who) = @_;
+    
+    delete $user->{watching};
+    
+    my $name = $user->{name};
+    
+    delete $self->{__watched}->{$who}->{$name};
+    
+    $self->{__logger}->debug ("$who stops watching $name.");
+    
+    $self->broadcastUserStatus ($user->{name});
+
     return $self;
 }
 

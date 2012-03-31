@@ -22,6 +22,37 @@ use strict;
 
 use base qw (BaldLies::Session::Command);
 
+use BaldLies::Util qw (empty);
+
+sub execute {
+    my ($self, $who) = @_;
+    
+    my $session = $self->{_session};
+    my $user = $session->getUser;
+    
+    # FIBS unconditionally resets the watching state, even if an invalid
+    # argument was given to the watch command.
+    if (!empty $user->{watching}) {
+        $session->reply ("** You stop watching $user->{watching}.\n", 1);
+        delete $user->{watching};
+    }
+    
+    if (empty $who) {
+        $session->reply ("** Watch who?\n");
+        return $self;
+    }
+    
+    if ($who eq $user->{name}) {
+        $session->reply ("** Use a mirror to do that.");
+        return $self;
+    }
+    
+    # The rest has to be handled by the master process.
+    $session->sendMaster (watch => $who);
+    
+    return $self;
+}
+
 1;
 
 =head1 NAME
