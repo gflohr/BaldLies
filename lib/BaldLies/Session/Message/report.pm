@@ -39,14 +39,6 @@ sub __handleJoined {
 
     my ($opponent, $length) = split / /, $payload;
     
-    if ($length > 0) {
-        $session->reply ("\n** $opponent has joined you for a $length"
-                         . " point match.\n", 1);
-    } else {
-        $session->reply ("\n** $opponent has joined you for an unlimited"
-                         . " match.\n", 1);
-    }
-    
     my $user = $session->getUser;
     $user->{playing} = $opponent;
     delete $user->{watching};
@@ -62,6 +54,14 @@ sub __handleJoined {
         $session->reply ("5 $rawwho\n6\n");
     }
 
+    if ($length > 0) {
+        $session->reply ("\n** $opponent has joined you for a $length"
+                         . " point match.\n", 1);
+    } else {
+        $session->reply ("\n** $opponent has joined you for an unlimited"
+                         . " match.\n", 1);
+    }
+    
     my %args = (
         player1 => $user->{name},
         player2 => $other->{name},
