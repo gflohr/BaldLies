@@ -39,8 +39,6 @@ sub execute {
     $session->clipReply (7, "$new_user->{name} $new_user->{name} logs in.\n")
         if $user->{notify};
 
-    $session->sendMaster (status => $new_user->rawwho);
-    
     return $session;    
 }
 
@@ -48,15 +46,15 @@ sub execute {
 
 =head1 NAME
 
-BaldLies::Session::Message::authenticate - BaldLies Message `authenticate'
+BaldLies::Session::Message::login - BaldLies Message `login'
 
 =head1 SYNOPSIS
 
-  use BaldLies::Session::Message::authenticate->new;
+  use BaldLies::Session::Message::login->new;
   
 =head1 DESCRIPTION
 
-This plug-in handles the master message `authenticate'.
+This plug-in handles the master message `login'.
 
 =head1 SEE ALSO
 
