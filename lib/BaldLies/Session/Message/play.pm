@@ -24,6 +24,10 @@ use base qw (BaldLies::Session::Message);
 
 use BaldLies::User;
 
+# Everybody has one of three possible roles.
+# 3 is the currently active player, the one responsible for forwarding the
+# state machine.  2 is the opponent, and 1 is a watcher.
+
 sub execute {
     my ($self, $session, $payload) = @_;
     
@@ -49,22 +53,26 @@ sub execute {
     }
     
     my $name = $user->{name};
-    my $method;
+    my $method = '__handle' . ucfirst $action;
+
     if ($player1 eq $name) {
-        $method = '__handleMy' . ucfirst $action;
-        $self->{__role} = 'inviter';
+        $self->{__role} = 3;
+        $self->{__me} = $self->{__player1};
+        $self->{__other} = $self->{__player2};
     } elsif ($player2 eq $name) {
-        $method = '__handleHer' . ucfirst $action;
-        $self->{__role} = 'invitee';
+        $self->{__role} = 2;
+        $self->{__me} = $self->{__player2};
+        $self->{__other} = $self->{__player1};
     } else {
-        $method = '__handleTheir' . ucfirst $action;
-        $self->{__role} = 'watcher';
+        $self->{__role} = 1;
+        $self->{__me} = $self->{__player1};
+        $self->{__other} = $self->{__player2};
     }
     
     return $self->$method (@data);
 }
 
-sub __handleMyStart {
+sub __handleStart {
     my ($self) = @_;
     
     my $session = $self->{__session};
@@ -72,15 +80,15 @@ sub __handleMyStart {
     my $user = $session->getUser;
     my $match = $user->{match};
     
-    my $opponent = $match->player2;
+    my $opponent = $self->{__other}->{name};
     $session->reply ("Starting a new game with $opponent.\n");
     
-    $self->__checkMatch;
+    $self->__checkMatch if $self->{__role} > 2;
     
     return $self;
 }
 
-sub __handleMyOpening {
+sub __handleOpening {
     my ($self, $die1, $die2) = @_;
     
     my $session = $self->{__session};
@@ -88,13 +96,25 @@ sub __handleMyOpening {
     my $user = $session->getUser;
     my $match = $user->{match};
 
-    $match->do (roll => 0, $die1, $die2);
+    if ($self->{__role} > 2) {
+        $match->do (roll => 0, $die1, $die2);
+    }
     
-    my $opponent = $self->{__player2}->{name};
-    $session->reply ("You rolled $die1, $opponent rolled $die2\n", 1);
+    my $me = $self->{__role} > 1 ? 'You' : $self->{__me}->{name};
+    my $opponent = $self->{__other}->{name};
 
+    if ($self->{__role} != 2) {
+        $session->reply ("$me rolled $die1, $opponent rolled $die2.\n", 1);
+    } else {
+        $session->reply ("$me rolled $die2, $opponent rolled $die1.\n", 1);
+    }
+    
     if ($die1 > $die2) {
-        $session->reply ("It's your turn to move.\n");
+        if ($self->{__role} > 1) {
+            $session->reply ("It's your turn to move.\n");
+        } else {
+            $session->reply ("$me makes the first move.\n");
+        }
     } elsif ($die1 < $die2) {
         $session->reply ("$opponent makes the first move.\n");
     } else {
@@ -102,24 +122,11 @@ sub __handleMyOpening {
             my $cube = $match->getCube;
             $session->reply ("The number on the doubling cube is now $cube", 1);
         }
-        $self->__checkMatch;
+        if ($self->{__role} > 1) {
+            $self->__checkMatch;
+        }
     }
    
-    return $self;
-}
-
-sub __handleHerStart {
-    my ($self) = @_;
-    
-    my $session = $self->{__session};
-    my $logger = $session->getLogger;
-    my $user = $session->getUser;
-    my $match = $user->{match};
-    
-    my $opponent = $match->player1;
-    $session->reply ("Starting a new game with $opponent.\n");
-
-    # The inviter is responsible for the opening roll.
     return $self;
 }
 
@@ -133,14 +140,11 @@ sub __checkMatch {
     
     my $state = $match->getState;
     if ('opening' eq $state) {
-        if ('inviter' eq $self->{__role}) {
-            while (1) {
-                my $die1 = 1 + int rand 6;
-                my $die2 = 1 + int rand 6;
-                next if $die1 == $die2 && !$match->getAutodouble;
-                $session->sendMaster (play => "opening $die1 $die2");
-                return;
-            }
+        if ($self->{__role} > 2) {
+            my $die1 = 1 + int rand 6;
+            my $die2 = 1 + int rand 6;
+            $session->sendMaster (play => "opening $die1 $die2");
+            return $self;
         }
     }
     
