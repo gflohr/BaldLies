@@ -51,7 +51,7 @@ sub execute {
     # correctly.
     my $users = thaw decode_base64 $packed;
     $session->setUsers ($users);
-    my $user = $users->{$session->getLogin}->copy;
+    my $user = $users->{$session->getLogin};
     $session->setUser ($user);
     
     my $ip = $session->getIP;
