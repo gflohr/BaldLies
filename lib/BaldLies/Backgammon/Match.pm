@@ -75,10 +75,10 @@ sub over {
 }
 
 sub board {
-    my ($self, $style) = @_;
+    my ($self, $style, $turn) = @_;
     
     if ($style == 1 || $style == 2) {
-        return $self->__graphicalBoard ($style - 1);
+        return $self->__graphicalBoard ($style - 1, $turn);
     }
     die "Unsupported board style $style";
 }
@@ -128,28 +128,46 @@ sub player2 {
 }
 
 sub __graphicalBoard {
-    my ($self, $extra) = @_;
+    my ($self, $extra, $x) = @_;
 
     my $game = $self->{__game};
     my $board = $game->getBoard;
 
-    my $white = 'O';
-    my $black = 'X';
+    my $white = $x ? 'X' : 'O';
+    my $black = $x ? 'O' : 'X';
+    my ($player1, $player2) = $x ? ($self->{__player2}, $self->{__player1})
+                                 : ($self->{__player1}, $self->{__player2});
     
-    my $output;
+    my $output = '';
     if ($extra) {
-        $output = <<EOF;
+        if ($x) {
+            $output .= <<EOF;
      1  2  3  4  5  6        7  8  9 10 11 12
-   +------------------------------------------+ O: $self->{__player1}
+   +------------------------------------------+ $black: $player2
 EOF
+        } else {
+            $output .= <<EOF;
+    13 14 15 16 17 18       19 20 21 22 23 24
+   +------------------------------------------+ $black: $player2
+EOF
+        }
     } else {
-        $output = <<EOF;
-   +-1--2--3--4--5--6--------7--8--9-10-11-12-+ O: $self->{__player1}
+        if ($x) {
+            $output .= <<EOF;
+   +-1--2--3--4--5--6--------7--8--9-10-11-12-+ $black: $player2
 EOF
+        } else {
+            $output .= <<EOF;
+   +13-14-15-16-17-18-------19-20-21-22-23-24-+ $black: $player2
+EOF
+        }
     }
     
+    my @points;
+    
+    @points = (13 .. 18, 0, 19 .. 24);
     $output .= '   |';
-    foreach my $p (1, 2, 3, 4, 5, 6, 25, 7, 8, 9, 10, 11, 12) {
+    foreach my $p (@points) {
         if ($board->[$p] <= -10) {
             $output .= -$board->[$p];
         } elsif ($board->[$p] < -5) {
@@ -166,9 +184,9 @@ EOF
             $output .= '  ';
         }
         $output .= ' ';
-        if ($p == 6) {
+        if ($p == $points[5]) {
             $output .= '|';
-        } elsif ($p == 25) {
+        } elsif ($p == $points[6]) {
             $output .= '| ';
         }
     }
@@ -176,7 +194,7 @@ EOF
 
     foreach my $i (2, 3, 4, 5) {
         $output .= '   |';
-        foreach my $p (1, 2, 3, 4, 5, 6, 25, 7, 8, 9, 10, 11, 12) {
+        foreach my $p (@points) {
             if ($board->[$p] <= -$i) {
                 $output .= ' ' . $black;
             } elsif ($board->[$p] >= $i) {
@@ -185,22 +203,25 @@ EOF
                 $output .= '  ';
             }
             $output .= ' ';
-            if ($p == 6) {
+            if ($p == $points[5]) {
                 $output .= '|';
-            } elsif ($p == 25) {
+            } elsif ($p == $points[6]) {
                 $output .= '| ';
             }
         }
         $output .= "|\n";
     }
-            
+
+    my $lv = $x ? ' ' : 'v';
+    my $rv = $x ? 'v' : ' ';
     $output .= <<EOF;
-   |                  |BAR|                   |
+  $lv|                  |BAR|                   |$rv
 EOF
 
+    @points = (12, 11, 10, 9, 8, 7, 25, 6, 5, 4, 3, 2, 1);
     foreach my $i (5, 4, 3, 2) {
         $output .= '   |';
-        foreach my $p (24, 23, 22, 21, 20, 19, 0, 18, 17, 16, 15, 14, 13) {
+        foreach my $p (@points) {
             if ($board->[$p] <= -$i) {
                 $output .= ' ' . $black;
             } elsif ($board->[$p] >= $i) {
@@ -209,9 +230,9 @@ EOF
                 $output .= '  ';
             }
             $output .= ' ';
-            if ($p == 19) {
+            if ($p == $points[5]) {
                 $output .= '|';
-            } elsif ($p == 0) {
+            } elsif ($p == $points[6]) {
                 $output .= '| ';
             }
         }
@@ -219,7 +240,7 @@ EOF
     }
 
     $output .= '   |';
-    foreach my $p (24, 23, 22, 21, 20, 19, 0, 18, 17, 16, 15, 14, 13) {
+    foreach my $p (@points) {
         if ($board->[$p] <= -10) {
             $output .= -$board->[$p];
         } elsif ($board->[$p] < -5) {
@@ -236,9 +257,9 @@ EOF
             $output .= '  ';
         }
         $output .= ' ';
-        if ($p == 19) {
+        if ($p == $points[5]) {
             $output .= '|';
-        } elsif ($p == 0) {
+        } elsif ($p == $points[6]) {
             $output .= '| ';
         }
     }
@@ -275,14 +296,27 @@ EOF
     }
     
     if ($extra) {
-        $output .= <<EOF;
-   +------------------------------------------+ X: $self->{__player2}
+        if ($x) {
+            $output .= <<EOF;
+   +------------------------------------------+ $white: $player1
     24 23 22 21 20 19       18 17 16 15 14 13
 EOF
-    } else {
-        $output .= <<EOF;
-   +24-23-22-21-20-19-------18-17-16-15-14-13-+ X: $self->{__player2}
+        } else {
+            $output .= <<EOF;
+   +------------------------------------------+ $white: $player1
+    12 11 10  9  8  7        6  5  4  3  2  1
 EOF
+        }
+    } else {
+        if ($x) {
+            $output .= <<EOF;
+   +24-23-22-21-20-19-------18-17-16-15-14-13-+ $white: $player1
+EOF
+        } else {
+            $output .= <<EOF;
+   +12-11-10--9--8--7--------6--5--4--3--2--1-+ $white: $player1
+EOF
+        }
     }
     
     my $bar_o = $board->[25];
