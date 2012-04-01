@@ -80,7 +80,7 @@ sub execute {
         $session->reply ("** $@\n");
     }
     
-    $session->sendMaster (play => 'move', @points);
+    $session->sendMaster (play => 'move', $color, @points);
     
     return $self;
 }

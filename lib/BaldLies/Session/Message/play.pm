@@ -130,6 +130,43 @@ sub __handleOpening {
     } elsif ($die1 < $die2) {
         $session->reply ("$opponent makes the first move.\n", 1);
     }
+    
+    $session->reply ($user->{match}->board ($user->{boardstyle}, 
+                                            $self->{__color} == BLACK));
+   
+    return $self;
+}
+
+sub __handleMove {
+    my ($self, $color, @points) = @_;
+    
+    my $session = $self->{__session};
+    my $logger = $session->getLogger;
+    my $user = $session->getUser;
+    my $match = $user->{match};
+
+    if ($self->{__color} == $color) {
+        # This is our own move which is already applied to the match.
+    } else {
+        $match->do (move => @points);
+        my $who = $color == BLACK ? $self->{__player2} : $self->{__player1};
+        my $msg = "$who->{name} moves";
+        my ($home, $bar);
+        if ($color == BLACK) {
+            ($home, $bar) = (25, 0);
+        } else {
+            ($home, $bar) = (0, 25);
+        }
+        while (@points) {
+            my $from = shift @points;
+            my $to = shift @points;
+            $from = 'bar' if $from == $bar;
+            $to = 'home' if $to == $home;
+            $msg .= " $from-$to";
+        }
+        $session->reply ($msg . "\n", 1);
+    }
+    
     $session->reply ($user->{match}->board ($user->{boardstyle}, 
                                             $self->{__color} == BLACK));
    
