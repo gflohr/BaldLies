@@ -219,9 +219,20 @@ EOF
     }
 
     my $lv = $x ? ' ' : 'v';
-    my $rv = $x ? 'v' : ' ';
+    my $rv = $x ? 'v' : '';
+    my $match;
+    my $redoubles;
+    if ($self->{__length} < 0) {
+        $match = 'unlimited match';
+        $redoubles ||= 'No';
+        $redoubles .= ' redoubles'
+    } else {
+        $match = "$self->{__length}-point match";
+        $redoubles = '';
+    }
+    
     $output .= <<EOF;
-  $lv|                  |BAR|                   |$rv
+  $lv|                  |BAR|                   |$rv    $match
 EOF
 
     if ($x) {
@@ -246,7 +257,11 @@ EOF
                 $output .= '| ';
             }
         }
-        $output .= "|\n";
+        if ($i == 5) {
+            $output .= "|     $redoubles\n";
+        } else {
+            $output .= "|\n";
+        }
     }
 
     $output .= '   |';
