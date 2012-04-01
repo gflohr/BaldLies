@@ -1,0 +1,5 @@
+- The master process must determine whether the Crawford rule respectively 
+  automatic redoubles applies because the client processes do not know the
+  respective settings of their peers.
+- The master process should pick the player who plays with white randomly.
+- Only one client should check the legality of moves.
