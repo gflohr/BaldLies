@@ -22,6 +22,8 @@ use strict;
 
 use base qw (BaldLies::Session::Message);
 
+use BaldLies::Const qw (:colors);
+
 use BaldLies::User;
 
 # Everybody has one of three possible roles.
@@ -56,15 +58,15 @@ sub execute {
     my $method = '__handle' . ucfirst $action;
 
     if ($player1 eq $name) {
-        $self->{__role} = 3;
+        $self->{__color} = WHITE;
         $self->{__me} = $self->{__player1};
         $self->{__other} = $self->{__player2};
     } elsif ($player2 eq $name) {
-        $self->{__role} = 2;
+        $self->{__color} = BLACK;
         $self->{__me} = $self->{__player2};
         $self->{__other} = $self->{__player1};
     } else {
-        $self->{__role} = 1;
+        $self->{__color} = 0;
         $self->{__me} = $self->{__player1};
         $self->{__other} = $self->{__player2};
     }
@@ -83,7 +85,7 @@ sub __handleStart {
     my $opponent = $self->{__other}->{name};
     $session->reply ("Starting a new game with $opponent.\n", 1);
     
-    $self->__checkMatch if $self->{__role} > 2;
+    $self->__checkMatch if $self->{__color} == WHITE;
     
     return $self;
 }
@@ -96,14 +98,14 @@ sub __handleOpening {
     my $user = $session->getUser;
     my $match = $user->{match};
 
-    if ($self->{__role} > 1) {
+    if ($self->{__color}) {
         $match->do (roll => 0, $die1, $die2);
     }
     
-    my $me = $self->{__role} > 1 ? 'You' : $self->{__me}->{name};
+    my $me = $self->{__color} > 1 ? 'You' : $self->{__me}->{name};
     my $opponent = $self->{__other}->{name};
 
-    if ($self->{__role} != 2) {
+    if ($self->{__color} == BLACK) {
         ($die1, $die2) = ($die2, $die1);
     }
     $session->reply ("$me rolled $die1, $opponent rolled $die2.\n", 1);
@@ -113,14 +115,14 @@ sub __handleOpening {
             my $cube = $match->getCube;
             $session->reply ("The number on the doubling cube is now $cube", 1);
         }
-        if ($self->{__role} > 1) {
+        if ($self->{__color} == WHITE) {
             $self->__checkMatch;
         }
         return $self;
     }
     
     if ($die1 > $die2) {
-        if ($self->{__role} > 1) {
+        if ($self->{__color}) {
             $session->reply ("It's your turn to move.\n", 1);
         } else {
             $session->reply ("$me makes the first move.\n", 1);
@@ -128,7 +130,8 @@ sub __handleOpening {
     } elsif ($die1 < $die2) {
         $session->reply ("$opponent makes the first move.\n", 1);
     }
-    $session->reply ($user->{match}->board ($user->{boardstyle}));
+    $session->reply ($user->{match}->board ($user->{boardstyle}, 
+                                            $self->{__color} == BLACK));
    
     return $self;
 }
@@ -143,12 +146,10 @@ sub __checkMatch {
     
     my $state = $match->getState;
     if ('opening' eq $state) {
-        if ($self->{__role} > 2) {
-            my $die1 = 1 + int rand 6;
-            my $die2 = 1 + int rand 6;
-            $session->sendMaster (play => "opening $die1 $die2");
-            return $self;
-        }
+        my $die1 = 1 + int rand 6;
+        my $die2 = 1 + int rand 6;
+        $session->sendMaster (play => "opening $die1 $die2");
+        return $self;
     }
     
     die "cannot handle state `$state'";
