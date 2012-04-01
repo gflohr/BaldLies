@@ -133,8 +133,10 @@ sub __graphicalBoard {
     my $game = $self->{__game};
     my $board = $game->getBoard;
 
-    my $white = $x ? 'X' : 'O';
-    my $black = $x ? 'O' : 'X';
+    my $white = 'O';
+    my $black = 'X';
+    my $upper = $x ? 'O' : 'X';
+    my $lower = $x ? 'X' : 'O';
     my ($player1, $player2) = $x ? ($self->{__player2}, $self->{__player1})
                                  : ($self->{__player1}, $self->{__player2});
     
@@ -143,29 +145,33 @@ sub __graphicalBoard {
         if ($x) {
             $output .= <<EOF;
      1  2  3  4  5  6        7  8  9 10 11 12
-   +------------------------------------------+ $black: $player2
+   +------------------------------------------+ $upper: $player2
 EOF
         } else {
             $output .= <<EOF;
     13 14 15 16 17 18       19 20 21 22 23 24
-   +------------------------------------------+ $black: $player2
+   +------------------------------------------+ $upper: $player2
 EOF
         }
     } else {
         if ($x) {
             $output .= <<EOF;
-   +-1--2--3--4--5--6--------7--8--9-10-11-12-+ $black: $player2
+   +-1--2--3--4--5--6--------7--8--9-10-11-12-+ $upper: $player2
 EOF
         } else {
             $output .= <<EOF;
-   +13-14-15-16-17-18-------19-20-21-22-23-24-+ $black: $player2
+   +13-14-15-16-17-18-------19-20-21-22-23-24-+ $upper: $player2
 EOF
         }
     }
     
     my @points;
-    
-    @points = (13 .. 18, 0, 19 .. 24);
+
+    if ($x) {
+        @points = (12, 11, 10, 9, 8, 7, 25, 6, 5, 4, 3, 2, 1);
+    } else {
+        @points = (13 .. 18, 0, 19 .. 24);
+    }
     $output .= '   |';
     foreach my $p (@points) {
         if ($board->[$p] <= -10) {
@@ -218,7 +224,11 @@ EOF
   $lv|                  |BAR|                   |$rv
 EOF
 
-    @points = (12, 11, 10, 9, 8, 7, 25, 6, 5, 4, 3, 2, 1);
+    if ($x) {
+        @points = (13 .. 18, 0, 19 .. 24);
+    } else {
+        @points = (12, 11, 10, 9, 8, 7, 25, 6, 5, 4, 3, 2, 1);
+    }
     foreach my $i (5, 4, 3, 2) {
         $output .= '   |';
         foreach my $p (@points) {
@@ -298,23 +308,23 @@ EOF
     if ($extra) {
         if ($x) {
             $output .= <<EOF;
-   +------------------------------------------+ $white: $player1
+   +------------------------------------------+ $lower: $player1
     24 23 22 21 20 19       18 17 16 15 14 13
 EOF
         } else {
             $output .= <<EOF;
-   +------------------------------------------+ $white: $player1
+   +------------------------------------------+ $lower: $player1
     12 11 10  9  8  7        6  5  4  3  2  1
 EOF
         }
     } else {
         if ($x) {
             $output .= <<EOF;
-   +24-23-22-21-20-19-------18-17-16-15-14-13-+ $white: $player1
+   +24-23-22-21-20-19-------18-17-16-15-14-13-+ $lower: $player1
 EOF
         } else {
             $output .= <<EOF;
-   +12-11-10--9--8--7--------6--5--4--3--2--1-+ $white: $player1
+   +12-11-10--9--8--7--------6--5--4--3--2--1-+ $lower: $player1
 EOF
         }
     }
