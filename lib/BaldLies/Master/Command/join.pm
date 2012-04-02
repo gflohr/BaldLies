@@ -86,8 +86,8 @@ sub execute {
         redoubles => 0,
         
     );
-    $options{crawford} = 0
-        if $length > 0 && $inviter->{crawford} && $invitee->{crawford};
+    $options{crawford} = 1
+        if $length > 0 && ($inviter->{crawford} || $invitee->{crawford});
     $options{autodouble} = 1
         if $inviter->{autodouble} && $invitee->{autodouble};
     my $redoubles = 100;
