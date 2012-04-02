@@ -26,15 +26,12 @@ use BaldLies::Const qw (:colors);
 
 use BaldLies::User;
 
-# Everybody has one of three possible roles.
-# 3 is the currently active player, the one responsible for forwarding the
-# state machine.  2 is the opponent, and 1 is a watcher.
-
 sub execute {
     my ($self, $session, $payload) = @_;
     
     my $logger = $session->getLogger;
 
+    $logger->debug ("Match play action: $payload");
     my ($player1, $player2, $action, @data) = split / /, $payload;
     
     $self->{__session} = $session;

@@ -37,7 +37,8 @@ sub execute {
 sub __handleJoined {
     my ($self, $session, $payload) = @_;
 
-    my ($opponent, $length) = split / /, $payload;
+    my ($opponent, $length, $crawford, $autodouble, $redoubles) 
+        = split / /, $payload;
     
     my $user = $session->getUser;
     $user->{playing} = $opponent;
@@ -65,15 +66,11 @@ sub __handleJoined {
     my %args = (
         player1 => $user->{name},
         player2 => $other->{name},
-        crawford => 0,
-        autodouble => 0,
+        crawford => $crawford,
+        autodouble => $redoubles,
         length => $length,
     );
 
-    $args{crawford} = 1 
-        if $length > 0 && ($user->{crawford} || $other->{crawford});
-    $args{autodouble} = 1 if $user->{autodouble} && $other->{autodouble};
-    
     my $logger = $session->getLogger;
     my $debug_msg = "New match:\n";
     foreach my $key (sort keys %args) {
@@ -93,8 +90,9 @@ sub __handleJoined {
 sub __handleInvited {
     my ($self, $session, $payload) = @_;
 
-    my ($opponent, $length) = split / /, $payload;
-    
+    my ($opponent, $length, $crawford, $autodouble, $redoubles) 
+        = split / /, $payload;
+        
     if ($length > 0) {
         $session->reply ("** You are now playing a $length"
                          . " point match with $opponent\n", 1);
@@ -121,14 +119,10 @@ sub __handleInvited {
     my %args = (
         player1 => $other->{name},
         player2 => $user->{name},
-        crawford => 0,
-        autodouble => 0,
+        crawford => $crawford,
+        autodouble => $redoubles,
         length => $length,
     );
-
-    $args{crawford} = 1 
-        if $length > 0 && ($user->{crawford} || $other->{crawford});
-    $args{autodouble} = 1 if $user->{autodouble} && $other->{autodouble};
     
     my $logger = $session->getLogger;
     my $debug_msg = "New match:\n";
