@@ -132,10 +132,8 @@ sub __handleInvited {
     $logger->debug ($debug_msg);
     $user->{match} = BaldLies::Backgammon::Match->new (%args);
     
-    my $action = "$other->{name} $user->{name} start";
-
     my $msg_dispatcher = $session->getMessageDispatcher;
-    $msg_dispatcher->execute ($session, play => $action);
+    $msg_dispatcher->execute ($session, play => 'start');
     
     return $self;
 }

@@ -26,46 +26,42 @@ use BaldLies::Const qw (:colors);
 
 use BaldLies::User;
 
+use BaldLies::Util qw (equals);
+
 sub execute {
     my ($self, $session, $payload) = @_;
     
     my $logger = $session->getLogger;
 
     $logger->debug ("Match play action: $payload");
-    my ($player1, $player2, $action, @data) = split / /, $payload;
+    my ($action, data) = split / /, $payload;
     
     $self->{__session} = $session;
     my $user = $session->getUser;
-    $self->{__user} = $user;
     
-    my $users = $session->getUsers;
-    
-    $self->{__player1} = $users->{$player1};
-    if (!$self->{__player1}) {
-        $logger->error ("Player `$player1' has vanished.");
-        return $self;
-    }
-    $self->{__player2} = $users->{$player2};
-    if (!$self->{__player2}) {
-        $logger->error ("Player `$player2' has vanished.");
-        return $self;
-    }
-    
-    my $name = $user->{name};
     my $method = '__handle' . ucfirst $action;
-
-    if ($player1 eq $name) {
+    
+    my $match = $self->{__match} = $user->{match};
+    die "No match!\n" unless $match;
+    
+    if (equals $user->{name}, $match->player1) {
         $self->{__color} = WHITE;
-        $self->{__me} = $self->{__player1};
-        $self->{__other} = $self->{__player2};
-    } elsif ($player2 eq $name) {
+        $self->{__me} = $user->{name};
+        $self->{__other} = $user->{playing};
+    } elsif (equals $user->{name}, $match->player2) {
         $self->{__color} = BLACK;
-        $self->{__me} = $self->{__player2};
-        $self->{__other} = $self->{__player1};
+        $self->{__me} = $user->{name};
+        $self->{__other} = $match->player1;
     } else {
         $self->{__color} = 0;
-        $self->{__me} = $self->{__player1};
-        $self->{__other} = $self->{__player2};
+        $self->{__me} = $user->{watching};
+        if (equals $user->{watching}, $match->player1) {
+            $self->{__other} = $match->{player2};
+        } elsif (equals $user->{watching}, $match->player2) {
+            $self->{__other} = $match->{player1};
+        } else {
+            die "Orphaned play message";
+        }
     }
     
     return $self->$method (@data);
@@ -152,7 +148,7 @@ sub __handleMove {
         $logger->debug ("Match action ($self->{__me}->{name}:"
                         . " move $color @points");
         $match->do (move => $color, @points);
-        my $who = $color == BLACK ? $self->{__player2} : $self->{__player1};
+        my $who = $color == BLACK ? $match->player2 : $match->player1;
         $msg .= "$who->{name} moves";
         my ($home, $bar);
         if ($color == BLACK) {
