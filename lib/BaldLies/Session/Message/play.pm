@@ -99,7 +99,8 @@ sub __handleOpening {
     my $match = $user->{match};
 
     if ($self->{__color}) {
-        $logger->debug ("Match action ($self->{__me}->{name}: roll 0 $die1 $die2");
+        $logger->debug ("Match action ($self->{__me}->{name}):"
+                        . " roll 0 $die1 $die2");
         $match->do (roll => 0, $die1, $die2);
     }
     
@@ -151,7 +152,8 @@ sub __handleMove {
     if ($self->{__color} == $color) {
         # This is our own move which is already applied to the match.
     } else {
-        $logger->debug ("Match action ($self->{__me}->{name}: move $color @points");
+        $logger->debug ("Match action ($self->{__me}->{name}:"
+                        . " move $color @points");
         $match->do (move => $color, @points);
         my $who = $color == BLACK ? $self->{__player2} : $self->{__player1};
         $msg .= "$who->{name} moves";

@@ -75,7 +75,7 @@ sub execute {
     }
     
     my $logger = $session->getLogger;
-    $logger->debug ("Match action ($user->{name}: move $color @points");
+    $logger->debug ("Match action ($user->{name}): move $color @points");
     eval { $match->do (move => $color, @points) };
     if ($@) {
         chomp $@;

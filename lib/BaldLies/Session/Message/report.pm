@@ -74,6 +74,12 @@ sub __handleJoined {
         if $length > 0 && ($user->{crawford} || $other->{crawford});
     $args{autodouble} = 1 if $user->{autodouble} && $other->{autodouble};
     
+    my $logger = $session->getLogger;
+    my $debug_msg = "New match:\n";
+    foreach my $key (sort keys %args) {
+        $debug_msg .= "  $key: $args{$key}\n";
+    }
+    $logger->debug ($debug_msg);
     $user->{match} = BaldLies::Backgammon::Match->new (%args);
     
     my $action = "$user->{name} $other->{name} start";
@@ -124,6 +130,12 @@ sub __handleInvited {
         if $length > 0 && ($user->{crawford} || $other->{crawford});
     $args{autodouble} = 1 if $user->{autodouble} && $other->{autodouble};
     
+    my $logger = $session->getLogger;
+    my $debug_msg = "New match:\n";
+    foreach my $key (sort keys %args) {
+        $debug_msg .= "  $key: $args{$key}\n";
+    }
+    $logger->debug ($debug_msg);
     $user->{match} = BaldLies::Backgammon::Match->new (%args);
     
     my $action = "$other->{name} $user->{name} start";
