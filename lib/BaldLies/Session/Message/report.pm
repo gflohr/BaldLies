@@ -67,6 +67,7 @@ sub __handleJoined {
         player2 => $other->{name},
         crawford => 0,
         autodouble => 0,
+        length => $length,
     );
 
     $args{crawford} = 1 
@@ -116,6 +117,7 @@ sub __handleInvited {
         player2 => $user->{name},
         crawford => 0,
         autodouble => 0,
+        length => $length,
     );
 
     $args{crawford} = 1 
