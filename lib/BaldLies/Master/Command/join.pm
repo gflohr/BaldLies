@@ -97,11 +97,15 @@ sub execute {
         if ($name eq $inviter->{name}) {
             $master->queueResponseForUser ($name, report =>
                                            'joined', $invitee->{name},
-                                           $length);
+                                           $length,
+                                           $options{crawford},
+                                           $options{redoubles});
         } elsif ($name eq $invitee->{name}) {
             $master->queueResponseForUser ($name, report =>
                                            'invited', $inviter->{name},
-                                           $length);
+                                           $length,
+                                           $options{crawford},
+                                           $options{redoubles});
         } else {
             $master->queueResponseForUser ($name, report =>
                                            'start', $inviter->{name},
