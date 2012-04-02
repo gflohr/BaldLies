@@ -22,7 +22,7 @@ use strict;
 
 use base qw (Exporter);
 
-our @EXPORT_OK = qw (empty untaint format_time serialize deserialize);
+our @EXPORT_OK = qw (empty equals untaint format_time serialize deserialize);
 
 use POSIX qw (strftime);
 use MIME::Base64 qw (decode_base64);
@@ -34,6 +34,15 @@ sub untaint ($);
 sub empty ($) {
     return if defined $_[0] && length $_[0];
     return 1;
+}
+
+sub equals($$) {
+    my ($left, $right) = @_;
+
+    $left  ||= defined $left  ? $left  : '';
+    $right ||= defined $right ? $right : '';
+
+    return $left eq $right;
 }
 
 sub untaint ($) {
