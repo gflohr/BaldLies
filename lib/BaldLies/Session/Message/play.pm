@@ -99,6 +99,7 @@ sub __handleOpening {
     my $match = $user->{match};
 
     if ($self->{__color}) {
+        $logger->debug ("Match action ($self->{__me}->{name}: roll 0 $die1 $die2");
         $match->do (roll => 0, $die1, $die2);
     }
     
@@ -145,12 +146,15 @@ sub __handleMove {
     my $user = $session->getUser;
     my $match = $user->{match};
 
+    my $msg = '';
+    
     if ($self->{__color} == $color) {
         # This is our own move which is already applied to the match.
     } else {
-        $match->do (move => @points);
+        $logger->debug ("Match action ($self->{__me}->{name}: move $color @points");
+        $match->do (move => $color, @points);
         my $who = $color == BLACK ? $self->{__player2} : $self->{__player1};
-        my $msg = "$who->{name} moves";
+        $msg .= "$who->{name} moves";
         my ($home, $bar);
         if ($color == BLACK) {
             ($home, $bar) = (25, 0);
@@ -164,12 +168,17 @@ sub __handleMove {
             $to = 'home' if $to == $home;
             $msg .= " $from-$to";
         }
-        $session->reply ($msg . "\n", 1);
     }
     
-    $session->reply ($user->{match}->board ($user->{boardstyle}, 
-                                            $self->{__color} == BLACK));
-   
+    $msg .= $user->{match}->board ($user->{boardstyle}, 
+                                   $self->{__color} == BLACK);
+    
+    if ($color == -$self->{__color}) {
+        $msg .= "It's your turn. Please roll or double.\n";
+    }
+    
+    $session->reply ($msg);
+    
     return $self;
 }
 
