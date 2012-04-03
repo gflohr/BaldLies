@@ -22,6 +22,45 @@ use strict;
 
 use base qw (BaldLies::Session::Command);
 
+use BaldLies::Const qw (:colors);
+use BaldLies::Util qw (empty);
+
+sub execute {
+    my ($self, $payload) = @_;
+    
+    my $session = $self->{_session};
+    my $user = $session->getUser;
+
+    if (!empty $user->{watching} || !$user->{match}) {
+        $session->reply ("** You're not playing.\n");
+        return $self;
+    }
+
+    my $die1 = 1 + int rand 6;
+    my $die2 = 1 + int rand 6;
+    
+    my $match = $user->{match};
+    my $color;
+    if ($user->{name} eq $match->player2) {
+        $color = BLACK;
+    } else {
+        $color = WHITE;
+    }    
+    
+    my $logger = $session->getLogger;
+    $logger->debug ("Match action ($user->{name}): move $color $die1 $die2");
+    eval { $match->do (roll => $color, $die1, $die2) };
+    if ($@) {
+        chomp $@;
+        $session->reply ("** $@\n");
+        return $self;
+    }
+    
+    $session->sendMaster (play => 'roll', $color, $die1, $die2);
+    
+    return $self;
+}
+
 1;
 
 =head1 NAME
