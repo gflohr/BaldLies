@@ -88,6 +88,10 @@ sub getTurn {
     shift->{__turn};
 }
 
+sub legalMoves {
+    shift->{__moves};
+}
+
 sub roll {
     my ($self, $color, $die1, $die2) = @_;
 
