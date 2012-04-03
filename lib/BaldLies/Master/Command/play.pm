@@ -45,9 +45,8 @@ sub execute {
         return $self;
     }
 
-    $master->queueResponse ($fd, play => $user->{name}, $opponent, $payload);
-    $master->queueResponseForUser ($opponent, play => $user->{name}, 
-                                   $opponent, $payload);
+    $master->queueResponse ($fd, play => $payload);
+    $master->queueResponseForUser ($opponent, play => $payload);
 
     return $self;
 }

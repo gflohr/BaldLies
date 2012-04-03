@@ -21,11 +21,8 @@ package BaldLies::Session::Message::play;
 use strict;
 
 use base qw (BaldLies::Session::Message);
-
 use BaldLies::Const qw (:colors);
-
 use BaldLies::User;
-
 use BaldLies::Util qw (equals);
 
 sub execute {
@@ -34,7 +31,7 @@ sub execute {
     my $logger = $session->getLogger;
 
     $logger->debug ("Match play action: $payload");
-    my ($action, data) = split / /, $payload;
+    my ($action, @data) = split / /, $payload;
     
     $self->{__session} = $session;
     my $user = $session->getUser;
@@ -75,7 +72,7 @@ sub __handleStart {
     my $user = $session->getUser;
     my $match = $user->{match};
     
-    my $opponent = $self->{__other}->{name};
+    my $opponent = $self->{__other};
     $session->reply ("Starting a new game with $opponent.\n", 1);
     
     $self->__checkMatch if $self->{__color} == WHITE;
@@ -92,13 +89,13 @@ sub __handleOpening {
     my $match = $user->{match};
 
     if ($self->{__color}) {
-        $logger->debug ("Match action ($self->{__me}->{name}):"
+        $logger->debug ("Match action ($self->{name}):"
                         . " roll 0 $die1 $die2");
         $match->do (roll => 0, $die1, $die2);
     }
     
-    my $me = $self->{__color} > 1 ? 'You' : $self->{__me}->{name};
-    my $opponent = $self->{__other}->{name};
+    my $me = $self->{__color} > 1 ? 'You' : $self->{__me};
+    my $opponent = $self->{__other};
 
     if ($self->{__color} == BLACK) {
         ($die1, $die2) = ($die2, $die1);
@@ -145,11 +142,11 @@ sub __handleMove {
     if ($self->{__color} == $color) {
         # This is our own move which is already applied to the match.
     } else {
-        $logger->debug ("Match action ($self->{__me}->{name}:"
+        $logger->debug ("Match action ($self->{__me}:"
                         . " move $color @points");
         $match->do (move => $color, @points);
         my $who = $color == BLACK ? $match->player2 : $match->player1;
-        $msg .= "$who->{name} moves";
+        $msg .= "$who moves";
         my ($home, $bar);
         if ($color == BLACK) {
             ($home, $bar) = (25, 0);
