@@ -93,6 +93,10 @@ sub getCurrentGame {
     shift->{__game};
 }
 
+sub legalMoves {
+    shift->{__game}->legalMoves;
+}
+
 sub forcedMove {
     my ($self) = @_;
     
@@ -168,9 +172,9 @@ EOF
     my @points;
 
     if ($x) {
-        @points = (1 .. 6, 0, 7 .. 12);
+        @points = (1 .. 6, 25, 7 .. 12);
     } else {
-        @points = (13 .. 18, 25, 19 .. 24);
+        @points = (13 .. 18, 0, 19 .. 24);
     }
     $output .= '   |';
     foreach my $p (@points) {
