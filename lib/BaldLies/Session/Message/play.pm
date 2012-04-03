@@ -89,8 +89,7 @@ sub __handleOpening {
     my $match = $user->{match};
 
     if ($self->{__color}) {
-        $logger->debug ("Match action ($self->{name}):"
-                        . " roll 0 $die1 $die2");
+        $logger->debug ("Match action ($user->{name}): roll 0 $die1 $die2");
         $match->do (roll => 0, $die1, $die2);
     }
     
