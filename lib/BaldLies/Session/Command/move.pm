@@ -80,6 +80,7 @@ sub execute {
     if ($@) {
         chomp $@;
         $session->reply ("** $@\n");
+        return $self;
     }
     
     $session->sendMaster (play => 'move', $color, @points);
