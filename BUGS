@@ -1,5 +1,45 @@
-- The master process must determine whether the Crawford rule respectively 
-  automatic redoubles applies because the client processes do not know the
-  respective settings of their peers.
 - The master process should pick the player who plays with white randomly.
 - Only one client should check the legality of moves.
+- If opponent cannot move, you see "user moves  .".
+- The current score is not displayed in the graphical board.
+============================================================================
+You roll 2 and 2.
+   +-1--2--3--4--5--6--------7--8--9-10-11-12-+ O: foobar
+   | X           O  O |   |  O  O  O        X |
+   |             O  O |   |  O  O           X |
+   |                O |   |                 X |
+   |                  |   |                 X |
+   |                  |   |                   |
+   |                  |BAR|                   |v    1-point match
+   |                X |   |                   |     
+   |                X |   |                   |
+   |                X |   |     X           O |
+   |                X |   |     X           O |
+   | O              X | X |  O  X     X     O |
+   +24-23-22-21-20-19-------18-17-16-15-14-13-+ X: guido
+
+   BAR: O-0 X-1   OFF: O-0 X-0   Cube: 1  guido rolled 2 2
+Please move 4 pieces.
+move bar-2 16-18 14-16 12-14
+** Illegal move (unknown error, this should not happen) at lib/BaldLies/Backgammon/Game.pm line 357.
+============================================================================
+You roll 2 and 1.
+   +-1--2--3--4--5--6--------7--8--9-10-11-12-+ O: foobar
+   | X  O  O  O  O  O |   |  O              X |
+   |    O     O  O  O |   |  O              X |
+   |                  |   |                   |
+   |                  |   |                   |
+   |                  |   |                   |
+   |                  |BAR|                   |v    1-point match
+   |                  |   |                   |     
+   |                  |   |                   |
+   |                X | X |                   |
+   |          X  X  X | X |     X     O       |
+   |          X  X  X | X |  O  X     O  O    |
+   +24-23-22-21-20-19-------18-17-16-15-14-13-+ X: guido
+
+   BAR: O-0 X-3   OFF: O-0 X-0   Cube: 1  guido rolled 2 1
+The only possible move is 25-24 .
+** You can't move home in your first move.
+============================================================================
+
