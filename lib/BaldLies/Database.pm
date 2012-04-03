@@ -25,7 +25,7 @@ use Digest::SHA qw (sha512_base64);
 use BaldLies::Const qw (:log_levels);
 
 my $versions = [qw (
-    users matches redoubles
+    users matches redoubles rating_change
 )];
 
 my $schema_version = $#$versions;
@@ -126,7 +126,9 @@ sub upgrade {
     $logger->debug ("Upgrade database schema from version"
                     . " $self->{__schema_version} to $schema_version.");
     for (my $i = $self->{__schema_version} + 1; $i <= $schema_version; ++$i) {
-        my $method = '_upgradeStep' . ucfirst $versions->[$i];
+        my $version = ucfirst $versions->[$i];
+        $version =~ s/_(.)/uc $1/ge;
+        my $method = '_upgradeStep' . $version;
         $self->$method ($i);
     }
     
@@ -419,6 +421,24 @@ sub _upgradeStepRedoubles {
     
     $self->{_dbh}->do (<<EOF);
 ALTER TABLE matches ADD COLUMN redoubles INTEGER
+EOF
+
+    $self->{_dbh}->do (<<EOF, {}, $version);
+UPDATE version SET schema_version = ?
+EOF
+
+    return $self;
+}
+
+sub _upgradeStepRatingChange {
+    my ($self, $version) = @_;
+    
+    $self->{_dbh}->do (<<EOF);
+ALTER TABLE matches ADD COLUMN change1 DOUBLE NOT NULL DEFAULT 0.0
+EOF
+
+    $self->{_dbh}->do (<<EOF);
+ALTER TABLE matches ADD COLUMN change2 DOUBLE NOT NULL DEFAULT 0.0
 EOF
 
     $self->{_dbh}->do (<<EOF, {}, $version);
