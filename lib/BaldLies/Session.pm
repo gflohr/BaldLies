@@ -81,6 +81,9 @@ EOF
     $self->{__master_sock} = IO::Socket::UNIX->new (Type => SOCK_STREAM,
                                                     Peer => $socket_name)
         or $logger->fatal ("Cannot connect to master socket `$socket_name'.");
+
+    # Make sure all children use a different random seed.
+    srand;
         
     bless $self, $class;
 }
