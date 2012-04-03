@@ -56,6 +56,8 @@ sub execute {
         return $self;
     }
     
+    $session->reply ("You roll $die1 and $die2.\n");
+    
     $session->sendMaster (play => 'roll', $color, $die1, $die2);
     
     return $self;
