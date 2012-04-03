@@ -145,20 +145,8 @@ sub __handleMove {
                         . " move $color @points");
         $match->do (move => $color, @points);
         my $who = $color == BLACK ? $match->player2 : $match->player1;
-        $msg .= "$who moves";
-        my ($home, $bar);
-        if ($color == BLACK) {
-            ($home, $bar) = (25, 0);
-        } else {
-            ($home, $bar) = (0, 25);
-        }
-        while (@points) {
-            my $from = shift @points;
-            my $to = shift @points;
-            $from = 'bar' if $from == $bar;
-            $to = 'home' if $to == $home;
-            $msg .= " $from-$to";
-        }
+        my $formatted = $self->__formatMove ($color, @points);
+        $msg .= "$who moves $formatted .\n";
     }
     
     $msg .= $user->{match}->board ($user->{boardstyle}, 
@@ -166,6 +154,64 @@ sub __handleMove {
     
     if ($color == -$self->{__color}) {
         $msg .= "It's your turn. Please roll or double.\n";
+    }
+    
+    $session->reply ($msg);
+    
+    return $self;
+}
+
+sub __handleRoll {
+    my ($self, $color, $die1, $die2) = @_;
+    
+    my $session = $self->{__session};
+    my $logger = $session->getLogger;
+    my $user = $session->getUser;
+    my $match = $user->{match};
+
+    my $msg = '';
+    
+    if ($self->{__color} == $color) {
+        # This is our own roll which is already applied to the match.
+    } else {
+        $logger->debug ("Match action ($self->{__me}:"
+                        . " roll $color $die1 $die2");
+        $match->do (roll => $color, $die1, $die2);
+        my $who = $color == BLACK ? $match->player2 : $match->player1;
+        $msg .= "$who rolled $die1 and $die2.\n";
+    }
+    
+    $msg .= $match->board ($user->{boardstyle}, $self->{__color} == BLACK);
+    
+    if ($color == $self->{__color}) {
+        my $moves = $match->legalMoves;
+        my $num_moves = @$moves;
+        if ($num_moves) {
+            if (1 == $num_moves && $user->{automove}) {
+                my @points = @{$moves->[0]};
+                my $formatted = $self->__formatMove ($color, @points);
+                $msg .= "The only possible move is$formatted .\n";
+                eval { $match->do (move => $color, @points) };
+                if ($@) {
+                    chomp $@;
+                    $session->reply ("$msg** $@\n");
+                    return $self;
+                }
+                $session->sendMaster (play => 'move', $color, @points);
+            } else {
+                my $num_pieces = @{$moves->[0]} >> 1;
+                $msg .= "Please move $num_pieces pieces.\n";
+            }
+        } else {
+            $msg .= "You can't move.\n";
+            eval { $match->do (move => $color) };
+            if ($@) {
+                chomp $@;
+                $session->reply ("$msg** $@\n");
+                return $self;
+            }
+            $session->sendMaster (play => 'move', $color);
+        }
     }
     
     $session->reply ($msg);
@@ -190,6 +236,28 @@ sub __checkMatch {
     }
     
     die "cannot handle state `$state'";
+}
+
+sub __formatMove {
+    my ($self, $color, @points) = @_;
+    
+    my $move = '';
+    
+    my ($home, $bar);
+    if ($color == BLACK) {
+        ($home, $bar) = (25, 0);
+    } else {
+        ($home, $bar) = (0, 25);
+    }
+    while (@points) {
+        my $from = shift @points;
+        my $to = shift @points;
+        $from = 'bar' if $from == $bar;
+        $to = 'home' if $to == $home;
+        $move .= " $from-$to";
+    }
+
+    return $move;
 }
 
 1;
