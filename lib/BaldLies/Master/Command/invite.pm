@@ -41,14 +41,11 @@ sub execute {
         $logger->warning ("Inviter has vanished.");
         return $self;
     }
-    
-    if (!$length) {
-        $master->queueResponseForUser ($inviter->{name}, 'reply',
-                                       "** Resuming is not yet implemented.");
-        return $self;
-    }
-    
-    # TODO: Additional checks!
+
+    # Add more checks here for example if the user in question has too many
+    # saved games.
+
+    $length ||= 0;
     
     # Record this invitation both ways.  This is necessary for cleaning up,
     # when one of the two parties drops connection.
@@ -58,14 +55,47 @@ sub execute {
     my $invitees = $master->getInvitees;
     $invitees->{$who}->{$inviter->{name}} = 1;
 
-    my $match_spec = $length > 0 ? "a $length point" : "an unlimited";
-    
-    $master->queueResponseForUser ($inviter->{name}, 'reply',
-                                   "** You invited $who to $match_spec match.");
-    $master->queueResponseForUser ($who, 'echo_e',
-                                   "$inviter->{name} wants to play"
-                                   . " $match_spec match with you.\\n"
-                                   . "Type join '$inviter->{name}' to accept.");
+    my $db = $master->getDatabase;
+    my $saved = $db->loadMatch ($inviter->{id}, $invitee->{id});
+
+    if ($length > 0) {
+        # FIXME! Return an error, when these users already have a saved match.
+        $master->queueResponseForUser ($inviter->{name}, 'reply',
+                                       "** You invited $who to a $length"
+                                       . " point match.");
+        $master->queueResponseForUser ($who, 'echo_e',
+                                       "$inviter->{name} wants to play a"
+                                       . " $length point match with you.\\n"
+                                       . "Type join '$inviter->{name}'"
+                                       . " to accept.");
+    } elsif ($length < 0) {
+        $master->queueResponseForUser ($inviter->{name}, 'reply',
+                                       "** You invited $who to an unlimited"
+                                       . " match.");
+        $master->queueResponseForUser ($who, 'echo_e',
+                                       "$inviter->{name} wants to play an"
+                                       . " unlimited match with you.\\n"
+                                       . "Type join '$inviter->{name}'"
+                                       . " to accept.");
+        # FIXME! If there is a saved match with that user, warn that it will
+        # be deleted.
+    } else {
+        if (!$saved) {
+            $master->queueResponseForUser ($inviter->{name}, 'reply',
+                                           "** There is no saved match with"
+                                           . " $invitee->{name}. Please give"
+                                           . " a match length.");
+            return;
+        }
+        $master->queueResponseForUser ($inviter->{name}, 'reply',
+                                       "** You invited $who to resume a saved"
+                                       . " match.");
+        $master->queueResponseForUser ($who, 'echo_e',
+                                       "$inviter->{name} wants to resume a"
+                                       . " saved match with you.\\n"
+                                       . "Type join '$inviter->{name}'"
+                                       . " to accept.");
+    }
     
     # FIXME! Will we get the rawwho before or after the confirmations?
     if (!$inviter->{ready}) {

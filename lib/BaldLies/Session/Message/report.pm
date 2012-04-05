@@ -71,12 +71,6 @@ sub __handleJoined {
         length => $length,
     );
 
-    my $logger = $session->getLogger;
-    my $debug_msg = "New match:\n";
-    foreach my $key (sort keys %args) {
-        $debug_msg .= "  $key: $args{$key}\n";
-    }
-    $logger->debug ($debug_msg);
     $user->{match} = BaldLies::Backgammon::Match->new (%args);
     
     my $msg_dispatcher = $session->getMessageDispatcher;
@@ -122,12 +116,6 @@ sub __handleInvited {
         length => $length,
     );
     
-    my $logger = $session->getLogger;
-    my $debug_msg = "New match:\n";
-    foreach my $key (sort keys %args) {
-        $debug_msg .= "  $key: $args{$key}\n";
-    }
-    $logger->debug ($debug_msg);
     $user->{match} = BaldLies::Backgammon::Match->new (%args);
     
     my $msg_dispatcher = $session->getMessageDispatcher;

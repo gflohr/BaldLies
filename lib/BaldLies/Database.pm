@@ -25,7 +25,7 @@ use Digest::SHA qw (sha512_base64);
 use BaldLies::Const qw (:log_levels);
 
 my $versions = [qw (
-    users matches redoubles rating_change
+    users matches redoubles rating_change rating_change2
 )];
 
 my $schema_version = $#$versions;
@@ -315,11 +315,39 @@ EOF
 
     $statements->{CREATE_MATCH} = <<EOF;
 INSERT INTO matches (player1, player2, match_length, last_action,
-                     crawford, autodouble, redoubles)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+                     crawford, autodouble, redoubles, r1, e1, r2, e2)
+    VALUES (?, ?, ?, ?,
+            (SELECT MAX (
+                (SELECT (CASE WHEN crawford THEN 1 ELSE 0 END) 
+                    FROM users WHERE id = ?), 
+                (SELECT (CASE WHEN crawford THEN 1 ELSE 0 END) 
+                    FROM users WHERE id = ?))), 
+            (SELECT MIN (
+                (SELECT (CASE WHEN autodouble THEN 1 ELSE 0 END) 
+                    FROM users WHERE id = ?), 
+                (SELECT (CASE WHEN autodouble THEN 1 ELSE 0 END) 
+                    FROM users WHERE id = ?))), 
+            (SELECT MAX (
+                (SELECT redoubles FROM users WHERE id = ?), 
+                (SELECT redoubles FROM users WHERE id = ?))), 
+            (SELECT rating FROM users WHERE id = ?),
+            (SELECT rating FROM users WHERE id = ?),
+            (SELECT experience FROM users WHERE id = ?),
+            (SELECT experience FROM users WHERE id = ?))
 EOF
     $sths->{CREATE_MATCH} = 
         $dbh->prepare ($statements->{CREATE_MATCH});
+
+    $statements->{SELECT_MATCH} = <<EOF;
+SELECT u1.name, u2.name, m.match_length, m.points1, m.points2,
+       m.crawford, m.post_crawford, m.autodouble, m.redoubles,
+       m.r1, m.r2, m.e1, m.e2
+    FROM matches m, USERS u1, USERS u2 
+    WHERE m.player1 == ? AND m.player2 == ?
+      AND u1.id = m.player1 AND u2.id = m.player2
+EOF
+    $sths->{SELECT_MATCH} = 
+        $dbh->prepare ($statements->{SELECT_MATCH});
 
     return $self;
 }
@@ -420,7 +448,7 @@ sub _upgradeStepRedoubles {
     my ($self, $version) = @_;
     
     $self->{_dbh}->do (<<EOF);
-ALTER TABLE matches ADD COLUMN redoubles INTEGER
+ALTER TABLE matches ADD COLUMN redoubles INTEGER NOT NULL
 EOF
 
     $self->{_dbh}->do (<<EOF, {}, $version);
@@ -439,6 +467,46 @@ EOF
 
     $self->{_dbh}->do (<<EOF);
 ALTER TABLE matches ADD COLUMN change2 DOUBLE NOT NULL DEFAULT 0.0
+EOF
+
+    $self->{_dbh}->do (<<EOF, {}, $version);
+UPDATE version SET schema_version = ?
+EOF
+
+    return $self;
+}
+
+sub _upgradeStepRatingChange2 {
+    my ($self, $version) = @_;
+
+    my $auto_increment = $self->_getAutoIncrement;
+    
+    $self->{_dbh}->do (<<EOF);
+DROP TABLE IF EXISTS matches
+EOF
+
+    $self->{_dbh}->do (<<EOF);
+CREATE TABLE matches (
+    id $auto_increment,
+    player1 INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    player2 INTEGER NOT NULL CHECK (player1 < player2)
+        REFERENCES users (id) ON DELETE CASCADE,
+    match_length INTEGER NOT NULL CHECK (match_length != 0),
+    points1 INTEGER NOT NULL DEFAULT 0 
+        CHECK (match_length < 0 OR points1 < match_length),
+    points2 INTEGER NOT NULL DEFAULT 0 
+        CHECK (match_length < 0 OR points2 < match_length),
+    last_action BIGINT NOT NULL,
+    crawford BOOLEAN NOT NULL DEFAULT 1,
+    post_crawford BOOLEAN NOT NULL DEFAULT 0,
+    autodouble BOOLEAN NOT NULL DEFAULT 0,
+    redoubles INTEGER NOT NULL,
+    r1 DOUBLE NOT NULL,
+    r2 DOUBLE NOT NULL,
+    e1 INTEGER NOT NULL,
+    e2 INTEGER NOT NULL,
+    UNIQUE (player1, player2)
+)
 EOF
 
     $self->{_dbh}->do (<<EOF, {}, $version);
@@ -791,17 +859,45 @@ sub toggleWrap {
 }
 
 sub createMatch {
-    my ($self, $player1, $player2, $length, %args) = @_;
+    my ($self, $player1, $player2, $length) = @_;
     
-    my $crawford = $args{crawford} ? 1 : 0;
-    my $autodouble = $args{autodouble} ? 1 : 0;
-    my $redoubles = $args{redoubles} || 0;
+    ($player1, $player2) = ($player2, $player1) if $player2 < $player1;
     
     return if !$self->_doStatement (CREATE_MATCH => $player1, $player2,
-                                    time, $crawford, $autodouble, $redoubles);
+                                    $length, time,
+                                    $player1, $player2,
+                                    $player1, $player2,
+                                    $player1, $player2,
+                                    $player1, $player2,
+                                    $player1, $player2);
+                                    
     return if !$self->_commit;
     
     return $self;
+}
+
+sub loadMatch {
+    my ($self, $id1, $id2) = @_;
+
+    ($id1, $id2) = ($id2, $id1) if $id2 < $id1;
+
+    my $logger = $self->{__logger};
+
+    my $rows = $self->_doStatement (SELECT_MATCH => $id1, $id2);
+    unless ($rows && @$rows) {
+        $logger->info ("No match between user ids $id1 and $id2.");
+        return;
+    }
+
+    my $row = $rows->[0];
+    # The keys in the hash slice must match the properties of 
+    # BaldLies::Backgammon::Match.
+    my %retval;
+    @retval{qw (player1 player2 length score1 score2
+                crawford post_crawford autodouble redoubles
+                rating1 rating2 experience1 experience2)} = @$row;
+    
+    return \%retval;
 }
 
 1;

@@ -76,33 +76,18 @@ sub execute {
 
     my $invitees = $master->getInvitees;
     delete $invitees->{$invitee->{name}};
-    
-    my %options = (
-        player1 => $who, 
-        player2 => $invitee->{name},
-        length => $length,
-        crawford => 0,
-        autodouble => 0,
-        redoubles => 0,
-        
-    );
-    $options{crawford} = 1
-        if $length > 0 && ($inviter->{crawford} || $invitee->{crawford});
-    $options{autodouble} = 1
-        if $inviter->{autodouble} && $invitee->{autodouble};
-    my $redoubles = 100;
-    if ($inviter->{redoubles} >= 0 && $inviter->{redoubles} < $redoubles) {
-        $redoubles = $inviter->{redoubles};
-    }
-    if ($invitee->{redoubles} >= 0 && $invitee->{redoubles} < $redoubles) {
-        $redoubles = $invitee->{redoubles};
-    }
-    $redoubles = -1 if $redoubles > 99;
-    $options{redoubles} = $redoubles;
 
     my $database = $master->getDatabase;
-# TODO! Create match in database, but after rest is done.
-#    $database->createMatch ($who, $invitee->{name}, $length, %options);
+
+    if ($length) {
+        $database->createMatch ($inviter->{id}, $invitee->{id}, $length)
+            or return;
+    }
+    my $options = $database->loadMatch ($inviter->{id},
+                                      $invitee->{id});
+    unless ($options) {
+        $logger->error ("Freshly created match vanished!");
+    }
     
     $inviter->{playing} = $invitee->{name};
     $invitee->{playing} = $inviter->{name};
@@ -111,22 +96,22 @@ sub execute {
         if ($name eq $inviter->{name}) {
             $master->queueResponseForUser ($name, report =>
                                            'joined', $invitee->{name},
-                                           $length,
-                                           $options{crawford},
-                                           $options{autodouble},
-                                           $options{redoubles});
+                                           $options->{length},
+                                           $options->{crawford},
+                                           $options->{autodouble},
+                                           $options->{redoubles});
         } elsif ($name eq $invitee->{name}) {
             $master->queueResponseForUser ($name, report =>
                                            'invited', $inviter->{name},
-                                           $length,
-                                           $options{crawford},
-                                           $options{autodouble},
-                                           $options{redoubles});
+                                           $options->{length},
+                                           $options->{crawford},
+                                           $options->{autodouble},
+                                           $options->{redoubles});
         } else {
             $master->queueResponseForUser ($name, report =>
                                            'start', $inviter->{name},
                                            $invitee->{name},
-                                           $length);
+                                           $options->{length});
         }
     }
     
