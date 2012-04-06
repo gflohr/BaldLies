@@ -45,6 +45,21 @@ sub execute {
         return $self;
     }
 
+    my $user2 = $master->getUser ($opponent);
+    if (!$user2) {
+        $logger->error ("$user->{name}'s opponent $opponent has vanished.");
+        return $self;
+    }
+
+    my ($color, $action, @arguments) = split / /, $payload;
+    
+    my $db = $master->getDatabase;
+    unless ($db->addMove ($user->{id}, $user2->{id},
+                          $color, $action, @arguments)) {
+        $logger->error ("Error adding move $color $action @arguments");
+        return $self;
+    }
+    
     $master->queueResponse ($fd, play => $payload);
     $master->queueResponseForUser ($opponent, play => $payload);
 

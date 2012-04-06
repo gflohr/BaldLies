@@ -23,6 +23,7 @@ use strict;
 use DBI;
 use Digest::SHA qw (sha512_base64);
 use BaldLies::Const qw (:log_levels);
+use BaldLies::Util qw (empty);
 
 my $versions = [qw (
     users matches redoubles rating_change rating_change2
@@ -316,7 +317,7 @@ EOF
 
     $statements->{CREATE_MATCH} = <<EOF;
 INSERT INTO matches (player1, player2, match_length, last_action,
-                     crawford, autodouble, redoubles, r1, e1, r2, e2)
+                     crawford, autodouble, redoubles, r1, e1, r2, e2, swap)
     VALUES (?, ?, ?, ?,
             (SELECT MAX (
                 (SELECT (CASE WHEN crawford THEN 1 ELSE 0 END) 
@@ -334,7 +335,7 @@ INSERT INTO matches (player1, player2, match_length, last_action,
             (SELECT rating FROM users WHERE id = ?),
             (SELECT rating FROM users WHERE id = ?),
             (SELECT experience FROM users WHERE id = ?),
-            (SELECT experience FROM users WHERE id = ?))
+            (SELECT experience FROM users WHERE id = ?), ?)
 EOF
     $sths->{CREATE_MATCH} = 
         $dbh->prepare ($statements->{CREATE_MATCH});
@@ -342,13 +343,61 @@ EOF
     $statements->{SELECT_MATCH} = <<EOF;
 SELECT u1.name, u2.name, m.match_length, m.points1, m.points2,
        m.crawford, m.post_crawford, m.autodouble, m.redoubles,
-       m.r1, m.r2, m.e1, m.e2
+       m.r1, m.r2, m.e1, m.e2, swap
     FROM matches m, USERS u1, USERS u2 
     WHERE m.player1 == ? AND m.player2 == ?
       AND u1.id = m.player1 AND u2.id = m.player2
 EOF
     $sths->{SELECT_MATCH} = 
         $dbh->prepare ($statements->{SELECT_MATCH});
+
+    $statements->{TOUCH_MATCH} = <<EOF;
+UPDATE matches SET last_action = ? WHERE player1 = ? AND player2 = ?
+EOF
+    $sths->{TOUCH_MATCH} = 
+        $dbh->prepare ($statements->{TOUCH_MATCH});
+
+    $statements->{ADD_MOVE} = <<EOF;
+INSERT INTO moves (match_id, action_id, color, arguments)
+    VALUES ((SELECT id FROM matches WHERE player1 = ? AND player2 = ?), 
+            (SELECT id FROM actions WHERE name = ?), 
+            ?, ?)
+EOF
+    $sths->{ADD_MOVE} = 
+        $dbh->prepare ($statements->{ADD_MOVE});
+
+    $statements->{SELECT_MOVES} = <<EOF;
+SELECT a.name, m.color, m.arguments
+    FROM moves m, actions a
+    WHERE m.match_id = (SELECT id FROM matches 
+                            WHERE player1 = ? and player2 = ?)
+        AND m.action_id = a.id
+    ORDER BY m.id
+EOF
+    $sths->{SELECT_MOVES} = 
+        $dbh->prepare ($statements->{SELECT_MOVES});
+
+    $statements->{NEXT_GAME} = <<EOF;
+UPDATE matches 
+    SET swap = NOT swap AND points1 = ? AND points2 = ?
+        AND post_crawford = ? AND last_action = ?
+    WHERE player1 = ? AND player2 = ?
+EOF
+    $sths->{NEXT_GAME} = 
+        $dbh->prepare ($statements->{NEXT_GAME});
+
+    $statements->{CLEAR_MOVES} = <<EOF;
+DELETE FROM moves WHERE match_id = 
+    (SELECT id FROM matches WHERE player1 = ? AND player2 = ?)
+EOF
+    $sths->{CLEAR_MOVES} = 
+        $dbh->prepare ($statements->{CLEAR_MOVES});
+
+    $statements->{DELETE_MATCH} = <<EOF;
+DELETE FROM matches WHERE player1 = ? AND player2 = ?
+EOF
+    $sths->{DELETE_MATCH} = 
+        $dbh->prepare ($statements->{DELETE_MATCH});
 
     return $self;
 }
@@ -523,7 +572,7 @@ sub _upgradeStepMoves {
     my $auto_increment = $self->_getAutoIncrement;
     
     $self->{_dbh}->do (<<EOF);
-ALTER TABLE matches ADD COLUMN game_number INTEGER NOT NULL DEFAULT 0
+ALTER TABLE matches ADD COLUMN swap BOOLEAN NOT NULL DEFAULT 0
 EOF
 
     $self->{_dbh}->do (<<EOF);
@@ -566,8 +615,8 @@ EOF
 CREATE TABLE moves (
     id $auto_increment,
     match_id INTEGER NOT NULL REFERENCES matches (id) ON DELETE CASCADE,
-    action INTEGER NOT NULL REFERENCES actions (id),
-    color INTEGER NOT NULL CHECK (color = 1 OR color = 0 OR color = 1),
+    action_id INTEGER NOT NULL REFERENCES actions (id),
+    color INTEGER NOT NULL CHECK (color IN (-1, 0, 1)),
     -- Colon-separated list of arguments.
     arguments TEXT NOT NULL
 )
@@ -681,6 +730,7 @@ sub existsUser {
     my ($self, $name) = @_;
     
     my $records = $self->_doStatement (SELECT_EXISTS_USER => $name);
+    $self->_commit;
     
     return unless $records && @$records;
     
@@ -923,17 +973,20 @@ sub toggleWrap {
 }
 
 sub createMatch {
-    my ($self, $player1, $player2, $length) = @_;
+    my ($self, $id1, $id2, $length) = @_;
     
-    ($player1, $player2) = ($player2, $player1) if $player2 < $player1;
+    ($id1, $id2) = ($id2, $id1) if $id2 < $id1;
     
-    return if !$self->_doStatement (CREATE_MATCH => $player1, $player2,
+    my $swap = 1 + int rand 1;
+    
+    return if !$self->_doStatement (CREATE_MATCH => $id1, $id2,
                                     $length, time,
-                                    $player1, $player2,
-                                    $player1, $player2,
-                                    $player1, $player2,
-                                    $player1, $player2,
-                                    $player1, $player2);
+                                    $id1, $id2,
+                                    $id1, $id2,
+                                    $id1, $id2,
+                                    $id1, $id2,
+                                    $id1, $id2,
+                                    $swap);
                                     
     return if !$self->_commit;
     
@@ -948,6 +1001,7 @@ sub loadMatch {
     my $logger = $self->{__logger};
 
     my $rows = $self->_doStatement (SELECT_MATCH => $id1, $id2);
+    $self->_commit;
     unless ($rows && @$rows) {
         $logger->info ("No match between user ids $id1 and $id2.");
         return;
@@ -959,9 +1013,78 @@ sub loadMatch {
     my %retval;
     @retval{qw (player1 player2 length score1 score2
                 crawford post_crawford autodouble redoubles
-                rating1 rating2 experience1 experience2)} = @$row;
+                rating1 rating2 experience1 experience2 swap)} = @$row;
     
     return \%retval;
+}
+
+sub addMove {
+    my ($self, $id1, $id2, $color, $action, @arguments) = @_;
+    
+    ($id1, $id2) = ($id2, $id1) if $id2 < $id1;
+    
+    my $arguments = join ':', @arguments;
+    
+    return if !$self->_doStatement (ADD_MOVE => $id1, $id2, $color, 
+                                    $action, $arguments);
+                                    
+    return if !$self->_doStatement (TOUCH_MATCH => time, $id1, $id2);
+    
+    return if !$self->_commit;
+    
+    return $self;
+}
+
+sub loadMoves {
+    my ($self, $id1, $id2) = @_;
+
+    ($id1, $id2) = ($id2, $id1) if $id2 < $id1;
+
+    my $logger = $self->{__logger};
+
+    my $rows = $self->_doStatement (SELECT_MOVES => $id1, $id2);
+    $self->_commit;
+    unless ($rows && @$rows) {
+        $logger->info ("No match between user ids $id1 and $id2.");
+        return;
+    }
+
+    foreach my $row (@$rows) {
+        if (!empty $row->[2]) {
+            splice @$row, 2, 1, split /:/, $row->[2];
+        }
+    }
+    
+    return $rows;
+}
+
+sub nextGame {
+    my ($self, $id1, $id2, $score1, $score2, $post_crawford) = @_;
+    
+    ($id1, $id2) = ($id2, $id1) if $id2 < $id1;
+    
+    $post_crawford ||= 0;
+    
+    return if !$self->_doStatement (CLEAR_MOVES => $id1);
+    return if !$self->_doStatement (NEXT_GAME => $score1, $score2,
+                                    $post_crawford, time, 
+                                    $id1, $id2);
+               
+    return if !$self->_commit;
+    
+    return $self;    
+}
+
+sub deleteMatch {
+    my ($self, $id1, $id2) = @_;
+    
+    ($id1, $id2) = ($id2, $id1) if $id2 < $id1;
+    
+    return if !$self->_doStatement (DELETE_MATCH => $id1, $id2);
+                                    
+    return if !$self->_commit;
+    
+    return $self;
 }
 
 1;

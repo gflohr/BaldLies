@@ -31,10 +31,14 @@ sub execute {
     my $logger = $session->getLogger;
 
     $logger->debug ("Match play action: $payload");
-    my ($action, @data) = split / /, $payload;
+    my ($action, $color, @data) = split / /, $payload;
     
     $self->{__session} = $session;
     my $user = $session->getUser;
+    
+    if (defined $color && $color == 0 && 'roll' eq $action) {
+        $action = 'opening';
+    }
     
     my $method = '__handle' . ucfirst $action;
     
@@ -61,11 +65,11 @@ sub execute {
         }
     }
     
-    return $self->$method (@data);
+    return $self->$method ($color, @data);
 }
 
 sub __handleStart {
-    my ($self) = @_;
+    my ($self, $color) = @_;
     
     my $session = $self->{__session};
     my $logger = $session->getLogger;
@@ -73,15 +77,54 @@ sub __handleStart {
     my $match = $user->{match};
     
     my $opponent = $self->{__other};
-    $session->reply ("Starting a new game with $opponent.\n", 1);
     
-    $self->__checkMatch if $self->{__color} == WHITE;
+    $session->reply ("Starting a new game with $opponent.\n", 1);
+    $self->__checkMatch (WHITE) if $self->{__color} == WHITE;
     
     return $self;
 }
 
+sub __handleResume {
+    my ($self, $color) = @_;
+    
+    my $session = $self->{__session};
+    my $logger = $session->getLogger;
+    my $user = $session->getUser;
+    my $match = $user->{match};
+    
+    my ($player1, $player2) = ($match->player1, $match->player2);    
+    my ($score1, $score2) = $match->score;    
+
+    my $turn = $match->getTurn;
+    
+    my $reply = '';
+    if ($color == WHITE) {
+        $reply .= "turn: $player1\n";
+    } elsif ($color == BLACK) {
+        $reply .= "turn: $player2\n";
+    } else {
+        die;
+    }
+    
+    my $length = $match->getLength;
+    if ($length < 0) {
+        $reply .= "unlimited matchlength\n";
+    } else {
+        $reply .= "match length: $length\n";
+    }
+    
+    $reply .= <<EOF;
+points for user $player1: $score1
+points for user $player2: $score2
+EOF
+
+    $session->reply ($reply);
+    
+    die "todo";    
+}
+
 sub __handleOpening {
-    my ($self, $die1, $die2) = @_;
+    my ($self, $color, $die1, $die2) = @_;
     
     my $session = $self->{__session};
     my $logger = $session->getLogger;
@@ -107,7 +150,7 @@ sub __handleOpening {
             $session->reply ("The number on the doubling cube is now $cube", 1);
         }
         if ($self->{__color} == WHITE) {
-            $self->__checkMatch;
+            $self->__checkMatch ($color);
         }
         return $self;
     }
@@ -220,7 +263,7 @@ sub __handleRoll {
 }
 
 sub __checkMatch {
-    my ($self) = @_;
+    my ($self, $color) = @_;
     
     my $session = $self->{__session};
     my $logger = $session->getLogger;
@@ -231,7 +274,7 @@ sub __checkMatch {
     if ('opening' eq $state) {
         my $die1 = 1 + int rand 6;
         my $die2 = 1 + int rand 6;
-        $session->sendMaster (play => "opening $die1 $die2");
+        $session->sendMaster (play => "roll 0 $die1 $die2");
         return $self;
     }
     

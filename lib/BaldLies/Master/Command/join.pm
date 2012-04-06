@@ -22,6 +22,9 @@ use strict;
 
 use base qw (BaldLies::Master::Command);
 
+use MIME::Base64 qw (encode_base64);
+use Storable qw (nfreeze);
+
 sub execute {
     my ($self, $fd, $who) = @_;
     
@@ -84,32 +87,37 @@ sub execute {
             or return;
     }
     my $options = $database->loadMatch ($inviter->{id},
-                                      $invitee->{id});
+                                        $invitee->{id});
     unless ($options) {
         $logger->error ("Freshly created match vanished!");
     }
     
+    my $old_moves = $database->loadMoves ($inviter->{id}, $invitee->{id});
+    $options->{old_moves} = $old_moves;
+
+    my $data = encode_base64 nfreeze $options;
+    $data =~ s/[^A-Za-z0-9\/+=]//g;
+    
     $inviter->{playing} = $invitee->{name};
     $invitee->{playing} = $inviter->{name};
+
+    my $report = 'start';
+    if (@$old_moves || $options->{score1} || $options->{score2}) {
+        $report = 'resume';
+    }
     
     foreach my $name ($master->getLoggedIn) {
         if ($name eq $inviter->{name}) {
+            $logger->debug ("report joined $invitee->{name}");
             $master->queueResponseForUser ($name, report =>
-                                           'joined', $invitee->{name},
-                                           $options->{length},
-                                           $options->{crawford},
-                                           $options->{autodouble},
-                                           $options->{redoubles});
+                                           'joined', $invitee->{name}, $data);
         } elsif ($name eq $invitee->{name}) {
+            $logger->debug ("report invited $inviter->{name}");
             $master->queueResponseForUser ($name, report =>
-                                           'invited', $inviter->{name},
-                                           $options->{length},
-                                           $options->{crawford},
-                                           $options->{autodouble},
-                                           $options->{redoubles});
+                                           'invited', $inviter->{name}, $data);
         } else {
             $master->queueResponseForUser ($name, report =>
-                                           'start', $inviter->{name},
+                                           $report, $inviter->{name},
                                            $invitee->{name},
                                            $options->{length});
         }

@@ -472,8 +472,14 @@ sub getState {
     
     my $state = $self->{__state};
     
-    if ($state == OPENING_ROLL) {
+    if (OPENING_ROLL == $state) {
         return 'opening';
+    } elsif (ROLL_OR_DOUBLE == $state) {
+        return 'roll_or_double';
+    } elsif (MOVE == $state) {
+        return 'roll_or_double';
+    } elsif (TAKE_OR_DROP == $state) {
+        return 'roll_or_double';
     }
     
     die "cannot encode state $state";

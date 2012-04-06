@@ -66,7 +66,7 @@ sub execute {
         $master->queueResponseForUser ($who, 'echo_e',
                                        "$inviter->{name} wants to play a"
                                        . " $length point match with you.\\n"
-                                       . "Type join '$inviter->{name}'"
+                                       . "Type 'join $inviter->{name}'"
                                        . " to accept.");
     } elsif ($length < 0) {
         $master->queueResponseForUser ($inviter->{name}, 'reply',
@@ -75,7 +75,7 @@ sub execute {
         $master->queueResponseForUser ($who, 'echo_e',
                                        "$inviter->{name} wants to play an"
                                        . " unlimited match with you.\\n"
-                                       . "Type join '$inviter->{name}'"
+                                       . "Type 'join $inviter->{name}'"
                                        . " to accept.");
         # FIXME! If there is a saved match with that user, warn that it will
         # be deleted.
@@ -93,7 +93,7 @@ sub execute {
         $master->queueResponseForUser ($who, 'echo_e',
                                        "$inviter->{name} wants to resume a"
                                        . " saved match with you.\\n"
-                                       . "Type join '$inviter->{name}'"
+                                       . "Type 'join $inviter->{name}'"
                                        . " to accept.");
     }
     

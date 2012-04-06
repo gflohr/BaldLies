@@ -22,8 +22,12 @@ use strict;
 
 use base qw (BaldLies::Session::Message);
 
+use MIME::Base64 qw (decode_base64);
+use Storable qw (thaw);
+
 use BaldLies::User;
 use BaldLies::Backgammon::Match;
+use BaldLies::Const qw (:colors);
 
 sub execute {
     my ($self, $session, $payload) = @_;
@@ -37,9 +41,8 @@ sub execute {
 sub __handleJoined {
     my ($self, $session, $payload) = @_;
 
-    my ($opponent, $length, $crawford, $autodouble, $redoubles) 
-        = split / /, $payload;
-    
+    my ($opponent, $data) = split / /, $payload;
+
     my $user = $session->getUser;
     $user->{playing} = $opponent;
     delete $user->{watching};
@@ -55,26 +58,41 @@ sub __handleJoined {
         $session->reply ("5 $rawwho\n6\n");
     }
 
-    if ($length > 0) {
+    my $options = thaw decode_base64 $data;
+    my $old_moves = delete $options->{old_moves};
+    
+    my $length = $options->{length};
+    my $resumed = @$old_moves || $options->{score1} || $options->{score2};
+    
+    if ($resumed) {
+        $session->reply ("$opponent has joined you."
+                         . " Your running match was loaded.\n", 1);
+    } elsif ($length > 0) {
         $session->reply ("\n** $opponent has joined you for a $length"
                          . " point match.\n", 1);
     } else {
-        $session->reply ("\n** $opponent has joined you for an unlimited"
+        $session->reply ("\nPlayer $opponent has joined you for an unlimited"
                          . " match.\n", 1);
     }
 
-    my %args = (
-        player1 => $user->{name},
-        player2 => $other->{name},
-        crawford => $crawford,
-        autodouble => $redoubles,
-        length => $length,
-    );
-
-    $user->{match} = BaldLies::Backgammon::Match->new (%args);
+    my $match = $user->{match} = BaldLies::Backgammon::Match->new (%$options);
+    $self->__replayMoves ($user->{match}, $old_moves);
+    
+    my $color = 0;
+    if ($user->{name} eq $match->player1) {
+        $color = WHITE;
+    } elsif ($opponent eq $match->player1) {
+        $color = BLACK;
+    } else {
+        $color = BLACK;
+    }
     
     my $msg_dispatcher = $session->getMessageDispatcher;
-    $msg_dispatcher->execute ($session, play => 'start');
+    if ($resumed) {
+        $msg_dispatcher->execute ($session, play => "resume $color");
+    } else {
+        $msg_dispatcher->execute ($session, play => "start $color");
+    }
     
     return $self;
 }
@@ -82,10 +100,19 @@ sub __handleJoined {
 sub __handleInvited {
     my ($self, $session, $payload) = @_;
 
-    my ($opponent, $length, $crawford, $autodouble, $redoubles) 
-        = split / /, $payload;
-        
-    if ($length > 0) {
+    my ($opponent, $data) = split / /, $payload;
+
+    my $options = thaw decode_base64 $data;
+    my $old_moves = delete $options->{old_moves};
+    
+    my $length = $options->{length};
+    
+    my $resumed = @$old_moves || $options->{score1} || $options->{score2};
+    
+    if ($resumed) {
+        $session->reply ("You are now playing with $opponent."
+                         . " Your running match was loaded.\n", 1);
+    } elsif ($length > 0) {
         $session->reply ("** You are now playing a $length"
                          . " point match with $opponent\n", 1);
     } else {
@@ -108,18 +135,24 @@ sub __handleInvited {
         $session->reply ("5 $rawwho\n6\n");
     }
     
-    my %args = (
-        player1 => $other->{name},
-        player2 => $user->{name},
-        crawford => $crawford,
-        autodouble => $redoubles,
-        length => $length,
-    );
+    my $match = $user->{match} = BaldLies::Backgammon::Match->new (%$options);
+    $self->__replayMoves ($user->{match}, $old_moves);
     
-    $user->{match} = BaldLies::Backgammon::Match->new (%args);
+    my $color = 0;
+    if ($user->{name} eq $match->player1) {
+        $color = WHITE;
+    } elsif ($opponent eq $match->player1) {
+        $color = BLACK;
+    } else {
+        $color = BLACK;
+    }
     
     my $msg_dispatcher = $session->getMessageDispatcher;
-    $msg_dispatcher->execute ($session, play => 'start');
+    if ($resumed) {
+        $msg_dispatcher->execute ($session, play => "resume $color");
+    } else {
+        $msg_dispatcher->execute ($session, play => "start $color");
+    }
     
     return $self;
 }
@@ -158,6 +191,16 @@ sub __handleStart {
         $session->reply ("5 $rawwho\n6\n");
     }
     
+    return $self;
+}
+
+sub __replayMoves {
+    my ($self, $match, $moves) = @_;
+
+    foreach my $move (@$moves) {
+        $match->do (@$move);
+    }
+        
     return $self;
 }
 

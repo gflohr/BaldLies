@@ -123,6 +123,14 @@ sub getCube {
     shift->{__game}->cube;
 }
 
+sub getTurn {
+    shift->{__game}->getTurn;
+}
+
+sub getLength {
+    shift->{__length};
+}
+
 sub player1 {
     shift->{__player1};
 }
