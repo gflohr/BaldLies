@@ -26,6 +26,7 @@ use BaldLies::Const qw (:log_levels);
 
 my $versions = [qw (
     users matches redoubles rating_change rating_change2
+    moves
 )];
 
 my $schema_version = $#$versions;
@@ -506,6 +507,69 @@ CREATE TABLE matches (
     e1 INTEGER NOT NULL,
     e2 INTEGER NOT NULL,
     UNIQUE (player1, player2)
+)
+EOF
+
+    $self->{_dbh}->do (<<EOF, {}, $version);
+UPDATE version SET schema_version = ?
+EOF
+
+    return $self;
+}
+
+sub _upgradeStepMoves {
+    my ($self, $version) = @_;
+    
+    my $auto_increment = $self->_getAutoIncrement;
+    
+    $self->{_dbh}->do (<<EOF);
+ALTER TABLE matches ADD COLUMN game_number INTEGER NOT NULL DEFAULT 0
+EOF
+
+    $self->{_dbh}->do (<<EOF);
+CREATE TABLE actions (
+    id $auto_increment,
+    name TEXT,
+    UNIQUE (name)
+)
+EOF
+
+    $self->{_dbh}->do (<<EOF);
+INSERT INTO actions (name) VALUES ('roll')
+EOF
+
+    $self->{_dbh}->do (<<EOF);
+INSERT INTO actions (name) VALUES ('move')
+EOF
+
+    $self->{_dbh}->do (<<EOF);
+INSERT INTO actions (name) VALUES ('double')
+EOF
+
+    $self->{_dbh}->do (<<EOF);
+INSERT INTO actions (name) VALUES ('resign')
+EOF
+
+    $self->{_dbh}->do (<<EOF);
+INSERT INTO actions (name) VALUES ('accept')
+EOF
+
+    $self->{_dbh}->do (<<EOF);
+INSERT INTO actions (name) VALUES ('reject')
+EOF
+
+    $self->{_dbh}->do (<<EOF, {}, $version);
+UPDATE version SET schema_version = ?
+EOF
+
+    $self->{_dbh}->do (<<EOF);
+CREATE TABLE moves (
+    id $auto_increment,
+    match_id INTEGER NOT NULL REFERENCES matches (id) ON DELETE CASCADE,
+    action INTEGER NOT NULL REFERENCES actions (id),
+    color INTEGER NOT NULL CHECK (color = 1 OR color = 0 OR color = 1),
+    -- Colon-separated list of arguments.
+    arguments TEXT NOT NULL
 )
 EOF
 
