@@ -98,9 +98,9 @@ sub __handleResume {
     my $turn = $match->getTurn;
     
     my $reply = '';
-    if ($color == WHITE) {
+    if ($turn == WHITE) {
         $reply .= "turn: $player1\n";
-    } elsif ($color == BLACK) {
+    } elsif ($turn == BLACK) {
         $reply .= "turn: $player2\n";
     } else {
         die;
@@ -118,9 +118,11 @@ points for user $player1: $score1
 points for user $player2: $score2
 EOF
 
+    $reply .= $user->{match}->board ($user->{boardstyle}, 
+                                     $self->{__color} == BLACK);
     $session->reply ($reply);
     
-    die "todo";    
+    return $self;
 }
 
 sub __handleOpening {
