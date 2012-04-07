@@ -105,16 +105,6 @@ sub forcedMove {
     return $self->{__game}->forcedMove;    
 }
 
-sub getState {
-    my ($self) = @_;
-    
-    if ($self->{__over}) {
-        return 'over';
-    } else {
-        return $self->{__game}->getState;
-    }
-}
-
 sub getAutodouble {
     shift->{__autodouble};
 }

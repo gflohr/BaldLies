@@ -79,7 +79,13 @@ sub __handleStart {
     my $opponent = $self->{__other};
     
     $session->reply ("Starting a new game with $opponent.\n", 1);
-    $self->__checkMatch (WHITE) if $self->{__color} == WHITE;
+    
+    if ($self->{__color} == WHITE) {
+        my $die1 = 1 + int rand 6;
+        my $die2 = 1 + int rand 6;
+        $session->sendMaster (play => "roll 0 $die1 $die2");
+        return $self;
+    }
     
     return $self;
 }
@@ -152,7 +158,10 @@ sub __handleOpening {
             $session->reply ("The number on the doubling cube is now $cube", 1);
         }
         if ($self->{__color} == WHITE) {
-            $self->__checkMatch ($color);
+            $die1 = 1 + int rand 6;
+            $die2 = 1 + int rand 6;
+            $session->sendMaster (play => "roll 0 $die1 $die2");
+            return $self;
         }
         return $self;
     }
@@ -262,25 +271,6 @@ sub __handleRoll {
     $session->reply ($msg);
     
     return $self;
-}
-
-sub __checkMatch {
-    my ($self, $color) = @_;
-    
-    my $session = $self->{__session};
-    my $logger = $session->getLogger;
-    my $user = $session->getUser;
-    my $match = $user->{match};
-    
-    my $state = $match->getState;
-    if ('opening' eq $state) {
-        my $die1 = 1 + int rand 6;
-        my $die2 = 1 + int rand 6;
-        $session->sendMaster (play => "roll 0 $die1 $die2");
-        return $self;
-    }
-    
-    die "cannot handle state `$state'";
 }
 
 sub __formatMove {
