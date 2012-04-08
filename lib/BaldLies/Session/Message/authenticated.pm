@@ -63,8 +63,15 @@ sub execute {
     
     if ($session->getClip) {
         $session->reply ("1 $user->{name} $last_login $user->{last_host}\n");
+        my @keys =   qw (name allowpip autoboard autodouble automove away bell crawford 
+                double experience greedy moreboards moves notify rating ratings 
+                ready redoubles report silent timezone);
+        foreach my $key (@keys) {
+            use BaldLies::Util qw (empty);
+            die "Undefined key $key" if empty $user->{$key};
+        }
         my $own_info = join ' ', @{$user}{
-            qw (allowpip autoboard autodouble automove away bell crawford 
+            qw (name allowpip autoboard autodouble automove away bell crawford 
                 double experience greedy moreboards moves notify rating ratings 
                 ready redoubles report silent timezone)
         };
