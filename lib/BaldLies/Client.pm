@@ -157,7 +157,6 @@ sub __runSession {
         $wsel->add ($socket) if !empty $self->{__server_out};
         $wsel->add ($backend->stdin) if !empty $self->{__backend_out};
         
-        
         my ($rout, $wout, undef) = IO::Select->select ($rsel, $wsel, undef,
                                                        $config->{ping});
         foreach my $fd (@$rout) {
@@ -237,7 +236,7 @@ sub __runSession {
             } else {
                 $logger->debug ("Client ready for receiving input");
                 $out_ref = \$self->{__backend_out};
-                $out_target = 'client';
+                $out_target = 'backend';
             }
             
             my $bytes_written = syswrite $fd, $$out_ref;
@@ -252,7 +251,8 @@ sub __runSession {
             }
             my $out = $$out_ref;
             
-            substr $$out_ref, 0, $bytes_written, '';
+            my $written = substr $$out_ref, 0, $bytes_written, '';
+            $logger->debug (">>>$out_target>>> $written");
         }
         
         if ($self->{__terminate}) {
@@ -314,6 +314,8 @@ sub __handleFIBSInput {
     if ($line =~ /^Type[ \t]+'join[ \t]+(.+?)'/) {
         $logger->info ("Got invitation from `$1'");
         $self->queueServerOutput ("join $1");
+    } elsif ($line =~ /^board:You:/) {
+        return $self->__handleClipBoard ($line);
     }
     
     return $self;
@@ -414,6 +416,17 @@ sub __handleClipTell {
                                   "What do you think I am?",
                                   "A human???");
     }
+    
+    return $self;
+}
+
+sub __handleClipBoard {
+    my ($self, $line) = @_;
+    
+    my $logger = $self->{__logger};
+    my $config = $self->{__config};
+    
+    $logger->debug ("Got board: $line");
     
     return $self;
 }
