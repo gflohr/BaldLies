@@ -58,10 +58,11 @@ sub execute {
     $logger->debug ("User $user->{name} logged in from $ip.");
     
     my $last_host = $user->{last_host} 
-        ? "  from $user->{last_host}" : '';
+        ? "  from $user->{last_host}" : ' from unknown';
+    my $last_login = $user->{last_login} ? $user->{last_login} : 0;
     
     if ($session->getClip) {
-        $session->reply ("1 $user->{name} $user->{last_host}\n");
+        $session->reply ("1 $user->{name} $last_login $user->{last_host}\n");
         my $own_info = join ' ', @{$user}{
             qw (allowpip autoboard autodouble automove away bell crawford 
                 double experience greedy moreboards moves notify rating ratings 
