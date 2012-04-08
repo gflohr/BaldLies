@@ -36,6 +36,7 @@ sub new {
     $self->{__score1} ||= 0;
     $self->{__player2} = 'White' if empty $self->{__player2};
     $self->{__score2} ||= 0;
+    $self->{__redoubles} ||= 0;
     
     if ($self->{__length} > 0) {
         if ($self->{__score1} >= $self->{__length}) {
@@ -183,6 +184,74 @@ sub __clipBoard {
         $output .= ':0:0:0:0';
     }
     
+    $output .= ':' . $game->cube;
+    
+    # FIBS sets these to 1 even in the crawford game!
+    my @may_double = (1, 1);
+    my $cube_owner = $game->cubeOwner;
+    if ($cube_owner == WHITE) {
+        @may_double = (1, 0);
+    } elsif ($cube_owner == BLACK) {
+        @may_double = (0, 1);
+    }
+    
+    # But it sets it to all zero, if the cube is currently turned.
+    @may_double = (0, 0) if $game->cubeTurned;
+    
+    @may_double = reverse @may_double if $x;
+    $output .= ":$may_double[0]:$may_double[1]";
+    
+    # Was doubled is always zero.
+    $output .= ':0';
+
+    # There are only two possible options.    
+    if ($x) {
+        $output .= ':-1:1:25:0';
+    } else {
+        $output .= ':1:-1:0:25';
+    }
+    
+    my $home1 = $game->borneOff (WHITE);
+    my $home2 = $game->borneOff (BLACK);
+    ($home1, $home2) = ($home2, $home1) if $x;
+    $output .= ":$home1:$home2";
+
+    my $bar1 = $board->[25];
+    my $bar2 = -$board->[0];
+    ($bar1, $bar2) = ($bar2, $bar1) if $x;
+    $output .= ":$bar1:$bar2";
+
+    my $turn = $game->getTurn;
+    my $num_pieces = 0;
+    if ($turn == WHITE && !$x || $turn == BLACK && $x) {
+        my $moves = $game->legalMoves;
+        if (@$moves) {
+            $num_pieces = @{$moves->[0]};
+            $num_pieces >>= 1;
+        }
+    }
+    $output .= ":$num_pieces";
+    
+    # The next field is documented as 'Did Crawford'.  But that is wrong.
+    # It is always 0, when the crawford rule applies.  When the crawford rule
+    # is not in use, then it is 3 for all games which would otherwise be
+    # the Crawford or a post-Crawford game.
+    my $no_crawford = 0;
+    my $post_crawford = 0;
+    if ($self->{__length} > 0 &&
+        ($self->{__length} - $self->{__score1} == 1)
+        || ($self->{__length} - $self->{__score1} == 1)) {
+        if ($self->{__crawford}) {
+            $post_crawford = 1 if !$game->isCrawford;
+        } else {
+            $no_crawford = '3';
+        }
+    }
+
+    $output .= ":$no_crawford:$post_crawford";
+    
+    $output .= ":$self->{__redoubles}";
+    
     $output .= "\n";
     
     return $output;
@@ -282,7 +351,7 @@ EOF
     my $lv = $x ? ' ' : 'v';
     my $rv = $x ? 'v' : '';
     my $match;
-    my $redoubles;
+    my $redoubles = $self->{__redoubles};
     if ($self->{__length} < 0) {
         $match = 'unlimited match';
         $redoubles ||= 'No';

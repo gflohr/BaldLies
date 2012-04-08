@@ -77,7 +77,15 @@ sub cube {
 }
 
 sub cubeOwner {
-    shift->{__cubeOwner};
+    shift->{__cube_owner};
+}
+
+sub cubeTurned {
+    my ($self) = @_;
+    
+    return 0 if TAKE_OR_DROP != $self->{__state};
+    
+    return $self->{__turn};
 }
 
 sub getRoll {
@@ -90,6 +98,10 @@ sub getTurn {
 
 sub legalMoves {
     shift->{__moves};
+}
+
+sub borneOff {
+    shift->{__board}->borneOff (shift);
 }
 
 sub roll {
