@@ -61,6 +61,7 @@ sub execute {
     $user->{client} = $client;
     $user->{login} = time;
     $user->{ip} = $ip;
+    $user->{away} = 0;
     $master->setClientUser ($fd, $user);
     
     my %users = ($user->{name} => $user);
