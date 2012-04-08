@@ -97,8 +97,15 @@ sub new {
     $logger->fatal ($@) if $@;
     
     $self->{__backend_class} = 'BaldLies::Client::Backend::' . $config{backend};
-        
     bless $self, $class;
+}
+
+sub getConfig {
+    shift->{__config}
+}
+
+sub getLogger {
+    shift->{__logger}
 }
 
 sub run {
@@ -129,20 +136,27 @@ sub __runSession {
     my $logger = $self->{__logger};
 
     # Clean up.
-    delete $self->{__backend};
+    delete $self->{__terminate};
     
-    my $socket = $self->__connectToServer or return;
     my $state = 'login';
     my $last_ping = time;
     $self->{__server_out} = '';
     $self->{__server_in} = '';
+    $self->{__backend_out} = '';
+    $self->{__backend_in} = '';
+    
+    my $socket = $self->__connectToServer or return;
+    my $backend = $self->__startBackend or return;
     
     while (1) {
         my $rsel = IO::Select->new;
         my $wsel = IO::Select->new;
         
         $rsel->add ($socket);
+        $rsel->add ($backend->stdout);
         $wsel->add ($socket) if !empty $self->{__server_out};
+        $wsel->add ($backend->stdin) if !empty $self->{__backend_out};
+        
         
         my ($rout, $wout, undef) = IO::Select->select ($rsel, $wsel, undef,
                                                        $config->{ping});
@@ -178,10 +192,29 @@ sub __runSession {
                         if ($line !~ /^1/) {
                             die "Authentication failed!\n";
                         }
-                        $self->{state} = 'logged_in';
+                        $state = 'logged_in';
                     }
                     $last_ping = time;
                     $self->__handleFIBSInput ($line);
+                }
+            }
+
+            if ($fd == $backend->stdout) {
+                my $bytes_read = sysread $fd, $self->{__backend_in},
+                                         4096, length $self->{__backend_in};
+                if (!defined $bytes_read) {
+                    if ($!{EAGAIN} || $!{EWOUDBLOCK}) {
+                        next;
+                    }
+                    die "Error reading from backend: $!!\n";
+                } elsif (0 == $bytes_read) {
+                    die "End-of-file reading from backend!\n";
+                }
+
+                while ($self->{__backend_in} =~ s/(.*?)\n//) {
+                    my $line = $1;
+                    next unless length $line;
+                    $backend->processLine ($line);
                 }
             }
         }
@@ -202,7 +235,9 @@ sub __runSession {
                 $out_ref = \$self->{__server_out};
                 $out_target = 'server';
             } else {
-                next;
+                $logger->debug ("Client ready for receiving input");
+                $out_ref = \$self->{__backend_out};
+                $out_target = 'client';
             }
             
             my $bytes_written = syswrite $fd, $$out_ref;
@@ -215,7 +250,14 @@ sub __runSession {
             } elsif (0 == $bytes_written) {
                 die "End-of-file writing to $out_target!\n";
             }
+            my $out = $$out_ref;
+            
             substr $$out_ref, 0, $bytes_written, '';
+        }
+        
+        if ($self->{__terminate}) {
+            $logger->notice ("Terminating on request.");
+            exit 0;
         }
     }
     
@@ -232,6 +274,26 @@ sub queueServerOutput {
     return $self;
 }
 
+sub queueClientOutput {
+    my ($self, @payload) = @_;
+    
+    my $payload = join ' ', @payload;
+    chomp $payload;
+    $self->{__backend_out} .= "$payload\n";
+    
+    return $self;
+}
+
+sub terminate {
+    my ($self) = @_;
+    
+    $self->{__terminate} = 1;
+    
+    exit 0 if empty $self->{__server_out};
+    
+    return $self;
+}
+
 sub __handleFIBSInput {
     my ($self, $line) = @_;
     
@@ -242,21 +304,117 @@ sub __handleFIBSInput {
     # Recognized clip message?
     if ($code == 1) {
         return $self->__handleClipWelcome ($line);
+    } elsif ($code == 2) {
+        return $self->__handleClipOwnInfo ($line);
+    } elsif ($code == 12) {
+        return $self->__handleClipTell ($line);
+    }
+    
+    # Invitation?
+    if ($line =~ /^Type[ \t]+'join[ \t]+(.+?)'/) {
+        $logger->info ("Got invitation from `$1'");
+        $self->queueServerOutput ("join $1");
     }
     
     return $self;
 }
 
 sub __handleClipWelcome {
-    my ($self, $data) = @_;
+    my ($self, $line) = @_;
     
-    my ($name, $last_login, $last_host) = @_;
+    my ($one, $name, $last_login, $last_host) = split /[ \t]+/, $line;
     
-    die "Invalid CLIP welcome message `$data' received!\n"
+    die "Invalid CLIP welcome message `$line' received!\n"
         if !defined $last_host;
     die "Got CLIP welcome for foreign user `$name'!\n"
         if $name ne $self->{__config}->{user};
         
+    return $self;
+}
+
+sub __handleClipOwnInfo {
+    my ($self, $line) = @_;
+    
+    my ($two, $name, $allowpip, $autoboard, $autodouble, $automove,
+        $away, $bell, $crawford, $double, $experience, $greedy,
+        $moreboards, $moves, $notify, $rating, $ratings, $ready,
+        $redoubles, $report, $silent, $timezone) = split /[ \t]+/, $line;
+    
+    die "Invalid CLIP own info `$line' received!\n"
+        if !defined $timezone;
+    die "Got CLIP welcome for foreign user `$name'!\n"
+        if $name ne $self->{__config}->{user};
+    
+    my $logger = $self->{__logger};
+    
+    # Check essential settings.
+    if (!$autoboard) {
+        $logger->notice ("Must toggle autoboard on.");
+        $self->queueServerOutput (toggle => 'autoboard');
+    }
+    
+    if ($autodouble) {
+        $logger->notice ("Must toggle autodouble off.");
+        $self->queueServerOutput (toggle => 'autodouble');
+    }
+    
+    if ($away) {
+        $logger->notice ("Must come back.");
+        $self->queueServerOutput ('back');
+    }
+    
+    if ($bell) {
+        $logger->notice ("Must turn off bell.");
+        $self->queueServerOutput (toggle => 'bell');
+    }
+    
+    if (!$crawford) {
+        $logger->notice ("Must toggle Crawford on.");
+        $self->queueServerOutput (toggle => 'crawford');
+    }
+    
+    if (!$moreboards) {
+        $logger->notice ("Must toggle moreboards on.");
+        $self->queueServerOutput (toggle => 'moreboards');
+    }
+    
+    if ($redoubles) {
+        $logger->notice ("Must switch redoubles from $redoubles to none.");
+        $self->queueServerOutput (set => 'redoubles none');
+    }
+    
+    $self->queueServerOutput (set => 'boardstyle 3');
+    
+    return $self;
+}
+
+sub __handleClipTell {
+    my ($self, $line) = @_;
+    
+    my $logger = $self->{__logger};
+    my $config = $self->{__config};
+
+    my ($twelve, $sender, $command, $data) = split /[ \t]/, $line, 4;
+    
+    if (defined $command && 'control' eq $command) {
+        
+        if (defined $config->{admin} && $sender eq $config->{admin}) {
+            $self->queueServerOutput ($data);
+            $self->queueServerOutput (tellx => $sender,
+                                      "Command executed: $data");
+            $logger->info ("Send command on behalf of `$sender': $data");
+        } else {
+            $self->queueServerOutput (tellx => $sender,
+                                      "What do you think I am?",
+                                      "A human???");
+            $logger->notice ("Unauthorized attempt to control me: $data");
+        }
+    } else {
+        $self->queueServerOutput (tellx => $sender,
+                                  "What do you think I am?",
+                                  "A human???");
+    }
+    
     return $self;
 }
 
@@ -281,6 +439,12 @@ sub __connectToServer {
     $socket->blocking (1);
     
     return $socket;
+}
+
+sub __startBackend {
+    my ($self) = @_;
+    
+    return $self->{__backend_class}->new($self)->run;
 }
 
 1;
