@@ -86,7 +86,7 @@ sub __showAll {
     my $session = $self->{_session};
     my $user = $session->getUser;
 
-    my $output = "Te current settings are:\n";
+    my $output = "The current settings are:\n";
     
     foreach my $variable (@toggles) {
         $output .= sprintf "\%-15s \%s\n", $variable, 
