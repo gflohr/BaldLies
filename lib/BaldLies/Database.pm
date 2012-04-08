@@ -1044,8 +1044,8 @@ sub loadMoves {
 
     my $rows = $self->_doStatement (SELECT_MOVES => $id1, $id2);
     $self->_commit;
-    unless ($rows && @$rows) {
-        $logger->info ("No match between user ids $id1 and $id2.");
+    unless ($rows) {
+        $logger->info ("SELECT MOVES returned false.");
         return;
     }
 
