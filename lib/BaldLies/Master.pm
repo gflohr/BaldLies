@@ -293,9 +293,9 @@ sub dropConnection {
     if ($dropper) {
         my $name = $dropper->{name};
         my $opponent = $self->getUser ($dropper->{playing});
-        if ($opponent && $name eq $opponent->{name}) {
-            $self->broadcastUserStatus ($opponent->{name});
+        if ($opponent && $name eq $opponent->{playing}) {
             delete $opponent->{playing};
+            $self->broadcastUserStatus ($opponent->{name});
         }
         if (exists $self->{__watched}->{$name}) {
             my @names = keys %{$self->{__watched}->{$name}};
