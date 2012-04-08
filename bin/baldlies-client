@@ -1,0 +1,243 @@
+#! /usr/bin/perl
+
+# This file is part of BaldLies.
+# Copyright (C) 2012 Guido Flohr, http://guido-flohr.net/.
+#
+# BaldLies is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# BaldLies is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Gibbon.  If not, see <http://www.gnu.org/licenses/>.
+
+use strict;
+
+use Getopt::Long;
+use Config::General;
+
+use BaldLies::Const (qw (:log_levels));
+use BaldLies::Client;
+use BaldLies::Server;
+
+sub display_usage;
+sub display_version;
+sub usage_error;
+
+# Make sure we run in the POSIX locale dispite of all Perl I18N
+# ideosyncrasies.
+$ENV{LC_ALL} = $ENV{LANGUAGE} = $ENV{LANG} = 'C';
+
+Getopt::Long::Configure ('bundling');
+
+my $option_help;
+my $option_version;
+my $option_quiet;
+
+my %options = ();
+
+GetOptions (
+    'c|config-file=s' => \$options{config_file},
+    'd|debug'         => \$options{debug},
+
+    'u|user=s'        => \$options{user},
+    'p|password=s'    => \$options{pass},
+    'H|host=s'        => \$options{host},
+    'P|port=i'        => \$options{port},
+        
+    'h|help'          => \$option_help,
+    
+    'v|verbose+'      => \$options{verbose},
+    'V|version'       => \$option_version,
+) or usage_error;
+
+display_usage if $option_help;
+display_version if $option_version;
+
+usage_error "The options --quiet and --verbose are mutually exclusive!\n"
+    if ($option_quiet && $options{verbose});
+usage_error "The options --upgrade and --dump-configuration are mutually exclusive!\n"
+    if ($options{upgrade} && $options{dump_configuration});
+
+if ($option_quiet) {
+    $options{verbose} = LOG_ERROR;
+}
+
+BaldLies::Client->new (%options)
+                ->run;
+                
+sub usage_error {
+    my $message = shift;
+    if ($message) {
+        $message =~ s/\s+$//;
+        $message = "$0: $message\n";
+    }
+    else {
+        $message = '';
+    }
+    die <<EOF;
+${message}Usage: $0 [OPTIONS]
+Try '$0 --help' for more information!
+EOF
+}
+
+sub display_usage {
+    # Pod::Text cannot print to memory.  We have to teach it that:
+    open my $saved_stdout, ">&STDOUT"
+        or die "Cannot dup standard output: $!\n";
+            
+    my $stdout = tie *STDOUT, 'MemPrinter';
+    require Pod::Text;
+    Pod::Text->new (indent => 4)
+             ->parse_from_file ($0);
+    my $buffer = $stdout->buffer;
+    untie *STDOUT;
+    
+    open STDOUT, '>&', $saved_stdout
+        or die "Cannot restore standard output: $!\n";
+
+    my @sections = split /((?:\n|\A)[A-Z]+)/, $buffer;          
+    shift @sections;
+    my %sections;
+    while (@sections) {
+        my $key = shift @sections;
+        $key =~ s/^\n//;
+        my $value = shift @sections;
+        $sections{$key} = $value;
+    }
+
+    $sections{SYNOPSIS} =~ s/baldlies/$0/g;
+    $sections{SYNOPSIS} =~ s/^[ \t\r\n]+//g;
+    print $sections{SYNOPSIS};
+    
+    $sections{NAME} =~ s/^[ \t\r\n]+//g;
+    $sections{NAME} =~ s/[ \t\r\n]+$//g;
+    $sections{NAME} =~ s/baldlies[ \t\r\n]*-[ \t\r\n]*//g;
+    
+    print "\n$sections{NAME}.\n";
+            
+    $sections{DESCRIPTION} =~ s/^[ \t\r\n]+//g;
+    $sections{DESCRIPTION} =~ s/\n[ \t\r]+/\n/g;
+    $sections{DESCRIPTION} =~ s/[ \t\r\n]+$//g;
+    print "\n$sections{DESCRIPTION}\n";
+
+    $sections{OPTIONS} =~ s/^[ \t\r\n]+//;
+    $sections{OPTIONS} =~ s/[ \t\r\n]+$//;
+    $sections{OPTIONS} =~ s/\n {4}/\n/g;
+    $sections{OPTIONS} =~ s/\n\n+ +-/\n  -/g;
+    print "\n$sections{OPTIONS}\n";
+    
+    print <<EOF;
+
+More in-depth information can be found with `man baldlies' or
+`perldoc $0'.
+EOF
+         
+    exit 0;
+}
+
+sub display_version {
+    print <<EOF;
+$0 (BaldLies) $BaldLies::Server::VERSION
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+Written by Guido Flohr.
+EOF
+
+    exit 0;
+}
+
+package MemPrinter;
+
+use strict;
+
+sub TIEHANDLE {
+    bless { __write_buffer => '' }, shift;
+}
+
+sub WRITE {
+    my ($self, $buffer, $length, $offset) = @_;
+
+    $length ||= length $buffer;
+    $offset ||= 0;
+    my $chunk = substr $buffer, $offset, $length;
+
+    $self->{__write_buffer} .= $chunk;
+    
+    return length $chunk;
+}
+
+sub PRINT {
+    my ($self, @chunks) = @_;
+
+    return $self->WRITE (join $,, @chunks);
+}
+
+sub PRINTF {
+    my ($self, $fmt, @args) = @_;
+    
+    my $string = sprintf $fmt, @args;
+    
+    return $self->PRINT($string);
+}
+
+sub CLOSE {
+    shift;
+}
+
+sub UNTIE {
+    shift->CLOSE;
+}
+
+sub buffer {
+    shift->{__write_buffer}
+}
+
+1;
+
+=head1 NAME
+
+baldlies - A BaldLies client
+
+=head1 SYNOPSIS
+
+Usage: baldlies-client [OPTIONS]
+
+=head1 DESCRIPTION
+
+BaldLies is a client for BaldLies::Server(3pm).  It is used internally
+for testing.
+
+=head1 OPTIONS
+
+Mandatory arguments to long options are mandatory for short options, too.
+
+Mode of operation:
+
+  -c, --config-file=FILE      read configuration from FILE
+  -u, --user=USER             connect as user USER
+  -p, --password=PASSWORD     use password PASSWORD
+  -H, --host=HOST             connect to host HOST (defaults to localhost)
+  -P, --port=PORT             on port PORT (defaults to 4321)
+  -v, --verbose               be verbose (you can give this option
+                              multiple times to increase the verbosity 
+                              level)
+  -q, --quiet                 be quiet
+  
+Informative output:
+
+  -h, --help                  show usage information and exit  
+  -V, --version               display version information and exit
+
+Options given on the command-line override options read from a configuration
+file.
+
+=head1 SEE ALSO
+
+BaldLies::Client(3pm), BaldLies::Server(3pm), perl(1)

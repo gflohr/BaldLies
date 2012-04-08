@@ -77,8 +77,10 @@ sub over {
 sub board {
     my ($self, $style, $turn) = @_;
     
-    if ($style == 1 || $style == 2) {
+    if (1 == $style || 2 == $style) {
         return $self->__graphicalBoard ($style - 1, $turn);
+    } elsif (3 == $style) {
+        return $self->__clipBoard ($turn);
     }
     die "Unsupported board style $style";
 }
@@ -127,6 +129,63 @@ sub player1 {
 
 sub player2 {
     shift->{__player2};
+}
+
+# board:You:GibbonTestD:9999:0:0:0:-2:0:0:0:0:5:0:3:0:0:0:-5:5:0:0:0:-3:0:-5:0:0:0:0:2:0:1:4:1:0:0:1:1:1:0:1:-1:0:25:0:0:0:0:2:0:0:0
+# board:You:GibbonTestA:9999:0:0:0:-2:0:0:0:0:5:0:3:0:0:0:-5:5:0:0:0:-3:0:-5:0:0:0:0:2:0:1:0:0:4:1:1:1:1:0:-1:1:25:0:0:0:0:0:0:0:0:0
+
+sub __clipBoard {
+    my ($self, $x) = @_;
+    
+    my $game = $self->{__game};
+    my $board = $game->getBoard;
+    
+    my $output = 'board';
+    
+    $output .= ':You';
+    
+    if ($x) {
+        $output .= ':' . $self->{__player1};
+    } else {
+        $output .= ':' . $self->{__player2};
+    }
+ 
+    my $l = $self->{__length};
+    $l = 9999 if $l < 0;
+    $output .= ':' . $l;
+    
+    if ($x) {
+        $output .= ":$self->{__score2}:$self->{__score1}";
+    } else {
+        $output .= ":$self->{__score1}:$self->{__score2}";
+    }
+
+    foreach my $i (0 .. 25) {
+        $output .= ':' . $board->[$i];
+    }
+    
+    if ($game->over) {
+        $output .= ':0';
+    } elsif ($game->getTurn < 0) {
+        $output .= ':-1';
+    } else {
+        $output .= ':1';
+    }
+    
+    my $roll = $game->getRoll;
+    if (@$roll) {
+        if ($x) {
+            $output .= ":0:0:$roll->[0]:$roll->[1]";
+        } else {
+            $output .= ":$roll->[0]:$roll->[1]:0:0";
+        }
+    } else {
+        $output .= ':0:0:0:0';
+    }
+    
+    $output .= "\n";
+    
+    return $output;
 }
 
 sub __graphicalBoard {
