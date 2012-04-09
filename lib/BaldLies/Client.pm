@@ -29,6 +29,7 @@ use Errno;
 use BaldLies::Util qw (empty);
 use BaldLies::Const qw (:log_levels);
 use BaldLies::Logger;
+use BaldLies::Backgammon::Match;
 
 my $singleton;
 
@@ -146,7 +147,7 @@ sub __runSession {
     $self->{__backend_in} = '';
     
     my $socket = $self->__connectToServer or return;
-    my $backend = $self->__startBackend or return;
+    my $backend = $self->{__backend} = $self->__startBackend or return;
     
     while (1) {
         my $rsel = IO::Select->new;
@@ -210,17 +211,13 @@ sub __runSession {
                     die "End-of-file reading from backend!\n";
                 }
 
-                while ($self->{__backend_in} =~ s/(.*?)\n//) {
-                    my $line = $1;
-                    next unless length $line;
-                    $backend->processLine ($line);
-                }
+                $backend->processInput (\$self->{__backend_in});
             }
         }
 
         # Check for authentication timeout.
         my $now = time;
-        if ($now - $self->{last_ping} < 0) {
+        if ($now - $last_ping < 0) {
             die "Clock skew detected!";
         } elsif ($now - $last_ping > $config->{timeout}) {
             die "Authentication timeout!\n";
@@ -274,7 +271,7 @@ sub queueServerOutput {
     return $self;
 }
 
-sub queueClientOutput {
+sub queueBackendOutput {
     my ($self, @payload) = @_;
     
     my $payload = join ' ', @payload;
@@ -300,13 +297,14 @@ sub __handleFIBSInput {
     my $logger = $self->{__logger};
 
     my ($code, $data) = split /[ \t]+/, $line;
+    return unless defined $code;
     
     # Recognized clip message?
-    if ($code == 1) {
+    if ($code eq '1') {
         return $self->__handleClipWelcome ($line);
-    } elsif ($code == 2) {
+    } elsif ($code eq '2') {
         return $self->__handleClipOwnInfo ($line);
-    } elsif ($code == 12) {
+    } elsif ($code eq '12') {
         return $self->__handleClipTell ($line);
     }
     
@@ -422,12 +420,56 @@ sub __handleClipTell {
 
 sub __handleClipBoard {
     my ($self, $line) = @_;
-    
+
     my $logger = $self->{__logger};
     my $config = $self->{__config};
+    my $client = $self->{__client};
     
     $logger->debug ("Got board: $line");
+
+    my @board = split /:/, $line;
+
+    my $turn = $board[32];
+    $logger->debug ("Turn: $turn");
+    return $self unless $turn;
     
+    my $color = -$board[39];
+    $logger->debug ("Color: $color");
+    return if $color != $turn;
+ 
+    my $match_length = $board[3];
+    $logger->debug ("Match length: $match_length");
+
+    $match_length = -1 if $match_length > 99;
+
+    my ($score1, $score2) = @board[4, 5];
+
+    # Crawford game?
+    my $is_crawford;
+    # FIXME! Use positive index here! Otherwise excess fields will corrupt
+    # the information.
+    if ($match_length > 0 && !$board[-2]
+        && ($match_length - $score1 == 1 || $match_length - $score2 == 1)) {
+        $is_crawford = 1;
+    }
+
+    my $match = BaldLies::Backgammon::Match->new (
+        player1 => $board[1],
+        player2 => $board[2],
+        length => $match_length,
+        crawford => $is_crawford,
+        score1 => $score1,
+        score2 => $score2,
+    );
+    
+    my @dice = @board[33, 34];
+    @dice = @board[35, 36] if !$dice[0];
+    $logger->debug ("Dice: $dice[0], $dice[1]");    
+
+    my $cube = $board[37];
+
+    $self->{__backend}->move ($match, $color);
+
     return $self;
 }
 

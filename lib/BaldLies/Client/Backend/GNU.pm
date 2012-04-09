@@ -75,7 +75,16 @@ sub run {
     my $client = $self->{__client};
     
     $logger->debug ("Send gnubg command: set confirm new off");
-    $client->queueClientOutput ("set confirm new off");
+    $client->queueBackendOutput ("set confirm new off");
+    
+    $logger->debug ("Send gnubg command: set variation standard");
+    $client->queueBackendOutput ("set variation standard");
+    
+    $logger->debug ("Send gnubg command: set clockwise off");
+    $client->queueBackendOutput ("set clockwise off");
+    
+    $logger->debug ("Send gnubg command: set rng manual");
+    $client->queueBackendOutput ("set rng manual");
     
     return $self;
 }
@@ -88,12 +97,32 @@ sub stdout {
     shift->{__child_out};
 }
 
-sub processLine {
+sub __processLine {
     my ($self, $line) = @_;
+    
+    chomp $line;
     
     my $logger = $self->{__logger};
     
     $logger->debug ("GNUBG: $line");
+    
+    return $self;
+}
+
+sub processInput {
+    my ($self, $dataref) = @_;
+    
+    while ($$dataref =~ s/(.*?\n|\AEnter dice: \z)//) {
+        my $line = $1;
+        next unless length $line;
+        $self->__processLine ($line);
+    }
+    
+    return $self;
+}
+
+sub move {
+    my ($self, $match, $color) = @_;
     
     return $self;
 }
