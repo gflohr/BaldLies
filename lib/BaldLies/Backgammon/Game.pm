@@ -52,6 +52,22 @@ sub new {
     bless $self, $class;
 }
 
+sub reset {
+    my ($self) = @_;
+    
+    $self->{__cube} = 1;
+    $self->{__cube_owner} = 0;
+    $self->{__score} = 0,
+    $self->{__board} = BaldLies::Backgammon::Board->new->init;
+    $self->{__actions} = [];
+    $self->{__turn} = 0,
+    $self->{__state} = OPENING_ROLL;
+    $self->{__roll} = [],
+    $self->{__resignation} = 0;
+    
+    return $self;
+}
+
 sub isCrawford {
     shift->{__crawford};
 }
@@ -477,6 +493,16 @@ sub forcedMove {
         push @move, @{$moves->[0]} if @$moves;
     }
     return BaldLies::Backgammon::Move->new (@move);
+}
+
+sub turnBoard {
+    my ($self) = @_;
+    
+    ($self->{__player1}, $self->{__player2}) 
+        = ($self->{__player2}, $self->{__player1});
+    
+    return $self;
+    
 }
 
 1;

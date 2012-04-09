@@ -58,6 +58,23 @@ sub new {
     return $self;    
 }
 
+sub newFromBoard {
+    my ($class, $board) = @_;
+    
+    my $self = $class->new;
+    
+    my @tokens = split /:/, $board;
+    my $num_tokens = @tokens;
+    
+    if ($num_tokens != 53) {
+        die "Expected 53 tokens, got $num_tokens";
+    }
+    
+    
+    
+    return $self;
+}
+
 sub do {
     my ($self, $action, @payload) = @_;
 
@@ -132,8 +149,38 @@ sub player2 {
     shift->{__player2};
 }
 
-# board:You:GibbonTestD:9999:0:0:0:-2:0:0:0:0:5:0:3:0:0:0:-5:5:0:0:0:-3:0:-5:0:0:0:0:2:0:1:4:1:0:0:1:1:1:0:1:-1:0:25:0:0:0:0:2:0:0:0
-# board:You:GibbonTestA:9999:0:0:0:-2:0:0:0:0:5:0:3:0:0:0:-5:5:0:0:0:-3:0:-5:0:0:0:0:2:0:1:0:0:4:1:1:1:1:0:-1:1:25:0:0:0:0:0:0:0:0:0
+sub setScore {
+    my ($self, $score1, $score2) = @_;
+    
+    $self->{__score1} = $score1;
+    $self->{__score2} = $score2;
+    
+    return $self;
+}
+
+# This currently only works at the beginning of a new game!  To make it
+# fully work, the corresponding method of BaldLies::Backgammon::Game has
+# to be improved;
+sub turnBoard {
+    my ($self) = @_;
+    
+    ($self->{__score1}, $self->{__score2}) 
+        = ($self->{__score2}, $self->{__score1});
+    ($self->{__player1}, $self->{__player2}) 
+        = ($self->{__player2}, $self->{__player1});
+    
+    $self->{__game}->turnBoard;
+    
+    return $self;
+}
+
+sub resetGame {
+    my ($self) = @_;
+    
+    $self->{__game}->reset;
+    
+    return $self;
+}
 
 sub __clipBoard {
     my ($self, $x) = @_;
@@ -165,6 +212,8 @@ sub __clipBoard {
         $output .= ':' . $board->[$i];
     }
     
+    my $turn = $game->getTurn;
+    
     if ($game->over) {
         $output .= ':0';
     } elsif ($game->getTurn < 0) {
@@ -173,16 +222,20 @@ sub __clipBoard {
         $output .= ':1';
     }
     
-    my $roll = $game->getRoll;
-    if (@$roll) {
-        if ($x) {
-            $output .= ":0:0:$roll->[0]:$roll->[1]";
+    my @dice = (0, 0, 0, 0);
+    my @roll = @{$game->getRoll};
+    if (@roll) {
+        if (WHITE == $turn) {
+            @dice[0, 1] = @roll;
+        } elsif (BLACK == $turn) {
+            @dice[2, 3] = @roll;
+        } elsif ($roll[1] > $roll[0]) {
+            @dice[0, 1] = @roll;
         } else {
-            $output .= ":$roll->[0]:$roll->[1]:0:0";
+            @dice[2, 3] = @roll;
         }
-    } else {
-        $output .= ':0:0:0:0';
     }
+    $output .= ":$dice[0]:$dice[1]:$dice[2]:$dice[3]";
     
     $output .= ':' . $game->cube;
     
@@ -221,9 +274,12 @@ sub __clipBoard {
     ($bar1, $bar2) = ($bar2, $bar1) if $x;
     $output .= ":$bar1:$bar2";
 
-    my $turn = $game->getTurn;
-    my $num_pieces = 0;
-    if ($turn == WHITE && !$x || $turn == BLACK && $x) {
+    # This field is completely bogs on FIBS.  It is initially 0, and has
+    # then a value with no real meaning because it is not reset, when it
+    # should be.
+    # We implement it correctly here.
+    my $num_pieces = 0;    
+    if (@roll && ($turn == WHITE && !$x || $turn == BLACK && $x)) {
         my $moves = $game->legalMoves;
         if (@$moves) {
             $num_pieces = @{$moves->[0]};
