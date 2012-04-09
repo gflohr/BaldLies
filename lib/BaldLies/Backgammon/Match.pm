@@ -182,6 +182,18 @@ sub resetGame {
     return $self;
 }
 
+sub setCrawford {
+    my ($self, $value) = @_;
+    
+    if ($self->{__crawford} && $value) {
+        $self->{__game}->setCrawford (1);
+    } else {
+        $self->{__game}->setCrawford (0);
+    }
+    
+    return $self;
+}
+
 sub __clipBoard {
     my ($self, $x) = @_;
     
@@ -225,11 +237,7 @@ sub __clipBoard {
     my @dice = (0, 0, 0, 0);
     my @roll = @{$game->getRoll};
     if (@roll) {
-        if (WHITE == $turn) {
-            @dice[0, 1] = @roll;
-        } elsif (BLACK == $turn) {
-            @dice[2, 3] = @roll;
-        } elsif ($roll[1] > $roll[0]) {
+        if ((WHITE == $turn && !$x) || (BLACK == $turn && $x)) {
             @dice[0, 1] = @roll;
         } else {
             @dice[2, 3] = @roll;
@@ -294,9 +302,21 @@ sub __clipBoard {
     # the Crawford or a post-Crawford game.
     my $no_crawford = 0;
     my $post_crawford = 0;
+#if ($self->{__crawford}) {
+#    print "Crawford rule is in use.";
+#} else {
+#    print "Crawford rule is not in use.";
+#}
+#if ($game->isCrawford) {
+#    print " This is the crawford game.\n";
+#} else {
+#    print " This is not the crawford game.\n";
+#}
+#print "Score: $self->{__score1}/$self->{__length}-$self->{__score2}/$self->{__length}.\n";
+
     if ($self->{__length} > 0 &&
         ($self->{__length} - $self->{__score1} == 1)
-        || ($self->{__length} - $self->{__score1} == 1)) {
+        || ($self->{__length} - $self->{__score2} == 1)) {
         if ($self->{__crawford}) {
             $post_crawford = 1 if !$game->isCrawford;
         } else {
