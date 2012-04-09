@@ -302,17 +302,6 @@ sub __clipBoard {
     # the Crawford or a post-Crawford game.
     my $no_crawford = 0;
     my $post_crawford = 0;
-#if ($self->{__crawford}) {
-#    print "Crawford rule is in use.";
-#} else {
-#    print "Crawford rule is not in use.";
-#}
-#if ($game->isCrawford) {
-#    print " This is the crawford game.\n";
-#} else {
-#    print " This is not the crawford game.\n";
-#}
-#print "Score: $self->{__score1}/$self->{__length}-$self->{__score2}/$self->{__length}.\n";
 
     if ($self->{__length} > 0 &&
         ($self->{__length} - $self->{__score1} == 1)
