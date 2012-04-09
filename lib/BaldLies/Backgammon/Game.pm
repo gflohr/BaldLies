@@ -505,6 +505,14 @@ sub turnBoard {
     
 }
 
+sub setCrawford {
+    my ($self, $value) = @_;
+    
+    $self->{__crawford} = $value;
+    
+    return $self;
+}
+
 1;
 
 =head1 NAME
