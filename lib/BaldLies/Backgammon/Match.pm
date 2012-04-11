@@ -58,23 +58,6 @@ sub new {
     return $self;    
 }
 
-sub newFromBoard {
-    my ($class, $board) = @_;
-    
-    my $self = $class->new;
-    
-    my @tokens = split /:/, $board;
-    my $num_tokens = @tokens;
-    
-    if ($num_tokens != 53) {
-        die "Expected 53 tokens, got $num_tokens";
-    }
-    
-    
-    
-    return $self;
-}
-
 sub do {
     my ($self, $action, @payload) = @_;
 
