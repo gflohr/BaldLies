@@ -318,7 +318,7 @@ sub __graphicalBoard {
     my ($player1, $player2) = $x ? ($self->{__player2}, $self->{__player1})
                                  : ($self->{__player1}, $self->{__player2});
     
-    my $output = '';
+    my $output = "\n";
     if ($extra) {
         if ($x) {
             $output .= <<EOF;
