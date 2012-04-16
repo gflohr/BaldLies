@@ -145,8 +145,8 @@ sub __runSession {
     my $last_ping = time;
     $self->{__server_out} = '';
     $self->{__server_in} = '';
-    $self->{__control_out} = '';
-    $self->{__control_in} = '';
+    $self->{__client_out} = '';
+    $self->{__client_in} = '';
     
     my $socket = $self->__connectToServer or return;
     my $backend = $self->{__backend} = $self->__startBackend or return;
@@ -156,9 +156,9 @@ sub __runSession {
         my $wsel = IO::Select->new;
         
         $rsel->add ($socket);
-        $rsel->add ($backend->controlOutput);
+        $rsel->add ($backend->readHandle);
         $wsel->add ($socket) if !empty $self->{__server_out};
-        $wsel->add ($backend->controlInput) if !empty $self->{__control_out};
+        $wsel->add ($backend->writeHandle) if !empty $self->{__client_out};
         
         my ($rout, $wout, undef) = IO::Select->select ($rsel, $wsel, undef,
                                                        $config->{ping});
@@ -201,9 +201,9 @@ sub __runSession {
                 }
             }
 
-            if ($fd == $backend->controlOutput) {
-                my $bytes_read = sysread $fd, $self->{__control_in},
-                                         4096, length $self->{__control_in};
+            if ($fd == $backend->readHandle) {
+                my $bytes_read = sysread $fd, $self->{__client_in},
+                                         4096, length $self->{__client_in};
                 if (!defined $bytes_read) {
                     if ($!{EAGAIN} || $!{EWOUDBLOCK}) {
                         next;
@@ -213,7 +213,7 @@ sub __runSession {
                     die "End-of-file reading from backend!\n";
                 }
 
-                $backend->processInput (\$self->{__control_in});
+                $backend->processInput (\$self->{__client_in});
             }
         }
 
@@ -234,7 +234,7 @@ sub __runSession {
                 $out_target = 'server';
             } else {
                 $logger->debug ("Client ready for receiving input");
-                $out_ref = \$self->{__control_out};
+                $out_ref = \$self->{__client_out};
                 $out_target = 'backend';
             }
             
@@ -273,12 +273,12 @@ sub queueServerOutput {
     return $self;
 }
 
-sub queueControlOutput {
+sub queueClientOutput {
     my ($self, @payload) = @_;
     
     my $payload = join ' ', @payload;
     chomp $payload;
-    $self->{__control_out} .= "$payload\n";
+    $self->{__client_out} .= "$payload\n";
     
     return $self;
 }
@@ -425,12 +425,19 @@ sub __handleClipBoard {
 
     my $logger = $self->{__logger};
     my $config = $self->{__config};
-    my $client = $self->{__client};
     
     $logger->debug ("Got board: $line");
 
-    my $match = BaldLies::Backgammon::Match->newFromFIBSBoard ($line);
+    my @board = split /:/, $line;
+
+    my $turn = $board[32];
+    return $self unless $turn;
+     
+    my $color = -$board[39];
+    return if $color != $turn;
     
+    $self->{__backend}->handleBoard ($line);
+     
     return $self;
 }
 

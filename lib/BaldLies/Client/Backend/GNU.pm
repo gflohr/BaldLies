@@ -34,6 +34,15 @@ sub new {
         __config    => $client->getConfig,
         __logger    => $client->getLogger,
         __child_pid => 0,
+        # When we receive a hint from GNU backgammon we do not know for which
+        # board state it was sent.  It can happen that we send a board state,
+        # and while waiting for a reply from GNU backgammon, our opponent
+        # drops, and we accept a new invitation.  In that case we might
+        # try to execute an action from the last match.  We therefore maintain
+        # a counter, increase it for every request sent, and decrease it
+        # for every reply received.  The reply is only valid if the counter
+        # is zero.
+        __queued    => 0,
     }, $class;
 }
 
@@ -131,11 +140,11 @@ sub run {
     return $self;
 }
 
-sub controlInput {
+sub readHandle {
     shift->{__socket};
 }
 
-sub controlOutput {
+sub writeHandle {
     shift->{__socket};
 }
 
@@ -163,8 +172,13 @@ sub processInput {
     return $self;
 }
 
-sub move {
-    my ($self, $match, $color) = @_;
+sub handleBoard {
+    my ($self, $board) = @_;
+
+    # Increase our input expectation counter.
+    ++$self->{__queued};
+    
+    $self->{__client}->queueClientOutput ($board . "\n");
     
     return $self;
 }
