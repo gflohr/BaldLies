@@ -62,9 +62,11 @@ sub new {
         timeout => 10,
         ping => 600,
     };
+    my @default_keys = keys %$defaults;
     
     my %config = Config::General->new (-ConfigFile => $options{config_file},
-                                       -DefaultConfig => $defaults)
+                                       -DefaultConfig => $defaults,
+                                       -AllowMultiOptions => 'yes')
                                 ->getall;
 
     # Override with command-line options.
@@ -72,8 +74,8 @@ sub new {
         $config{$key} = $value if !empty $value;
     }
     
-    # Santize all general options.
-    foreach my $key ((keys %options), (keys %$defaults)) {
+    # Sanitize all general options.
+    foreach my $key (@default_keys, keys %options) {
         if (exists $config{$key} && ref $config{$key} 
             && 'ARRAY' eq ref $config{$key}) {
             $config{$key} = $config{$key}->[-1];
@@ -143,8 +145,8 @@ sub __runSession {
     my $last_ping = time;
     $self->{__server_out} = '';
     $self->{__server_in} = '';
-    $self->{__backend_out} = '';
-    $self->{__backend_in} = '';
+    $self->{__control_out} = '';
+    $self->{__control_in} = '';
     
     my $socket = $self->__connectToServer or return;
     my $backend = $self->{__backend} = $self->__startBackend or return;
@@ -154,9 +156,9 @@ sub __runSession {
         my $wsel = IO::Select->new;
         
         $rsel->add ($socket);
-        $rsel->add ($backend->stdout);
+        $rsel->add ($backend->controlOutput);
         $wsel->add ($socket) if !empty $self->{__server_out};
-        $wsel->add ($backend->stdin) if !empty $self->{__backend_out};
+        $wsel->add ($backend->controlInput) if !empty $self->{__control_out};
         
         my ($rout, $wout, undef) = IO::Select->select ($rsel, $wsel, undef,
                                                        $config->{ping});
@@ -199,9 +201,9 @@ sub __runSession {
                 }
             }
 
-            if ($fd == $backend->stdout) {
-                my $bytes_read = sysread $fd, $self->{__backend_in},
-                                         4096, length $self->{__backend_in};
+            if ($fd == $backend->controlOutput) {
+                my $bytes_read = sysread $fd, $self->{__control_in},
+                                         4096, length $self->{__control_in};
                 if (!defined $bytes_read) {
                     if ($!{EAGAIN} || $!{EWOUDBLOCK}) {
                         next;
@@ -211,7 +213,7 @@ sub __runSession {
                     die "End-of-file reading from backend!\n";
                 }
 
-                $backend->processInput (\$self->{__backend_in});
+                $backend->processInput (\$self->{__control_in});
             }
         }
 
@@ -232,7 +234,7 @@ sub __runSession {
                 $out_target = 'server';
             } else {
                 $logger->debug ("Client ready for receiving input");
-                $out_ref = \$self->{__backend_out};
+                $out_ref = \$self->{__control_out};
                 $out_target = 'backend';
             }
             
@@ -271,12 +273,12 @@ sub queueServerOutput {
     return $self;
 }
 
-sub queueBackendOutput {
+sub queueControlOutput {
     my ($self, @payload) = @_;
     
     my $payload = join ' ', @payload;
     chomp $payload;
-    $self->{__backend_out} .= "$payload\n";
+    $self->{__control_out} .= "$payload\n";
     
     return $self;
 }
@@ -427,49 +429,8 @@ sub __handleClipBoard {
     
     $logger->debug ("Got board: $line");
 
-    my @board = split /:/, $line;
-
-    my $turn = $board[32];
-    $logger->debug ("Turn: $turn");
-    return $self unless $turn;
+    my $match = BaldLies::Backgammon::Match->newFromFIBSBoard ($line);
     
-    my $color = -$board[39];
-    $logger->debug ("Color: $color");
-    return if $color != $turn;
- 
-    my $match_length = $board[3];
-    $logger->debug ("Match length: $match_length");
-
-    $match_length = -1 if $match_length > 99;
-
-    my ($score1, $score2) = @board[4, 5];
-
-    # Crawford game?
-    my $is_crawford;
-    # FIXME! Use positive index here! Otherwise excess fields will corrupt
-    # the information.
-    if ($match_length > 0 && !$board[-2]
-        && ($match_length - $score1 == 1 || $match_length - $score2 == 1)) {
-        $is_crawford = 1;
-    }
-
-    my $match = BaldLies::Backgammon::Match->new (
-        player1 => $board[1],
-        player2 => $board[2],
-        length => $match_length,
-        crawford => $is_crawford,
-        score1 => $score1,
-        score2 => $score2,
-    );
-    
-    my @dice = @board[33, 34];
-    @dice = @board[35, 36] if !$dice[0];
-    $logger->debug ("Dice: $dice[0], $dice[1]");    
-
-    my $cube = $board[37];
-
-    $self->{__backend}->move ($match, $color);
-
     return $self;
 }
 

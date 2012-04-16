@@ -20,10 +20,11 @@ package BaldLies::Client::Backend::GNU;
 
 use strict;
 
-use IPC::Open2;
+use IPC::Open3;
 use POSIX qw (:sys_wait_h);
 
 use BaldLies::Util qw (empty);
+use IO::Socket::INET;
 
 sub new {
     my ($class, $client) = @_;
@@ -41,6 +42,8 @@ sub run {
 
     my $config = $self->{__config};
     my $logger = $self->{__logger};
+    
+    my $port = $config->{backend_port} || 8642;
     
     my $path = $config->{backend_path};
     $path = 'gnubg' if empty $path;
@@ -63,38 +66,77 @@ sub run {
     my @cmd = ($path, '--tty', '--quiet', '--lang', 'POSIX');
  
     my ($child_out, $child_in, $child_error);
-    my $pid = open2 $child_out, $child_in, @cmd;
+    my $pid = open3 $child_out, $child_in, $child_error, @cmd;
     $self->{__child_pid} = $pid;
     close $child_error if $child_error;
-    
-    $self->{__child_out} = $child_out;
+
     $self->{__child_in} = $child_in;
+    $self->{__child_out} = $child_out;
         
     $logger->info ("Started backgammon engine $path with pid $pid.");
-    
-    my $client = $self->{__client};
-    
-    $logger->debug ("Send gnubg command: set confirm new off");
-    $client->queueBackendOutput ("set confirm new off");
-    
+ 
+    # This will block but that's okay.
     $logger->debug ("Send gnubg command: set variation standard");
-    $client->queueBackendOutput ("set variation standard");
+    $child_out->print ("set variation standard\n");
     
     $logger->debug ("Send gnubg command: set clockwise off");
-    $client->queueBackendOutput ("set clockwise off");
+    $child_out->print ("set clockwise off\n");
     
-    $logger->debug ("Send gnubg command: set rng manual");
-    $client->queueBackendOutput ("set rng manual");
+    my $settings = $config->{backend_setting};
+    if (!defined $settings) {
+        $settings = [];
+    } elsif (!ref $settings) {
+        $settings = [$settings];
+    }
+    foreach my $cmd (@$settings) {
+        $logger->debug ("Send gnubg command: $cmd");
+        $child_out->print ("$cmd\n");
+    }
+    
+    $child_out->print ("external localhost:$port\n");
+    
+    my $try = 0;
+    my $socket = $self->{__socket} = IO::Socket::INET->new (
+            PeerHost => 'localhost',
+            PeerPort => $port,
+            Timeout => 3,
+            Proto => 'tcp',
+        );
+    while (!$socket) {
+        $socket = $self->{__socket} = IO::Socket::INET->new (
+            PeerHost => 'localhost',
+            PeerPort => $port,
+            Timeout => 3,
+            Proto => 'tcp',
+        ) and last;
+        last if ++$try > 30;
+        select undef, undef, undef, 0.1;
+    }
+    unless ($socket) {
+        kill 3, $pid;
+        $logger->fatal ("Could not connect to gnubg external socket: $!!");
+    }
+    
+    $logger->info ("Connected to gnubg external interface on localhost:$port.");
+    $self->{__socket} = $socket;
+         
+    my $client = $self->{__client};
+    
+    # Slurp current output.
+    my $output;
+    my $bytes_read = sysread $child_in, $output, 100000;
+    $logger->debug ("Replies from GNU backgammon so far:\n", $output);
+    $logger->debug ("Backend GNU backgammon ready.\n");
     
     return $self;
 }
 
-sub stdin {
-    shift->{__child_in};
+sub controlInput {
+    shift->{__socket};
 }
 
-sub stdout {
-    shift->{__child_out};
+sub controlOutput {
+    shift->{__socket};
 }
 
 sub __processLine {
