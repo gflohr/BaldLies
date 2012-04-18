@@ -162,7 +162,7 @@ sub roll {
     }
 
     $self->{__roll} = [$die1, $die2];
-    push @{$self->{__actions}}, roll => $color, $die1, $die2;
+    push @{$self->{__actions}}, [roll => $color, $die1, $die2];
     if ($self->{__state}) {
         # Calculate legal moves.
         $self->{__moves} = $self->{__board}->generateMoves ($die1, $die2, 
@@ -213,7 +213,7 @@ sub move {
         #    print " $from/$to";
         #}
         #print ":\n";
-        push @{$self->{__actions}}, move => $color, @pairs;
+        push @{$self->{__actions}}, [move => $color, @pairs];
         $self->{__roll} = [];
         $self->{__turn} = -$color;
         $self->{__state} = ROLL_OR_DOUBLE;
@@ -246,7 +246,7 @@ sub move {
                     }
                     $score *= $value;
                 }
-                $self->{__score} = $score;;
+                $self->{__score} = $score;
             }
             
         }
@@ -408,9 +408,11 @@ sub double {
         die "You cannot double in the first move.\n"
             if $state == OPENING_ROLL;
         die "unknown error in state $state";
-    } elsif ($self->{__cube_owner} * $color > 0) {
+    } elsif ($self->{__cube_owner} * $color < 0) {
         die "It's not your turn to double.\n";
     }
+    
+    push @{$self->{__actions}}, [double => $color];
     
     $self->{__state} = TAKE_OR_DROP;
     
@@ -430,6 +432,8 @@ sub resign {
         }
     }
     
+    push @{$self->{__actions}}, [resign => $color, $points];
+    
     $self->{__resignation} = $points * $color;
     
     return $self;
@@ -441,13 +445,15 @@ sub accept {
     die "game over" if $self->{__score};
     
     if ($self->{__resignation} * $color < 0) {
-        $self->{__score} = $self->{__resignation};
+        $self->{__score} = -$self->{__resignation};
         $self->{__resignation} = 0;
+        push @{$self->{__actions}}, [accept => $color];
         return $self;
     } elsif ($self->{__state} == TAKE_OR_DROP && $self->{__turn} * $color < 0) {
         $self->{__cube} <<= 1;
-        $self->{__cube_owner} = -$color;
+        $self->{__cube_owner} = $color;
         $self->{__state} = ROLL_OR_DOUBLE;
+        push @{$self->{__actions}}, [accept => $color];
         return $self;
     }
     
@@ -464,9 +470,11 @@ sub reject {
     
     if ($self->{__resignation} * $color < 0) {
         $self->{__resignation} = 0;
+        push @{$self->{__actions}}, [reject => $color];
         return $self;
     } elsif ($self->{__state} == TAKE_OR_DROP && $self->{__turn} * $color < 0) {
         $self->{__score} = $color < 0 ? $self->{__cube} : -$self->{__cube};
+        push @{$self->{__actions}}, [reject => $color];
         return $self;
     }
     
@@ -511,6 +519,85 @@ sub setCrawford {
     $self->{__crawford} = $value;
     
     return $self;
+}
+
+sub getMoves {
+    my ($self) = @_;
+    
+    my $retval = "$self->{__player2} is X - $self->{__player1} is O.\n"; 
+    
+    my @actions = @{$self->{__actions}};
+    
+    # Weed out opening doubles.
+    while (@actions) {
+        if ($actions[0]->[0] eq 'roll'
+            && $actions[0]->[1] == $actions[0]->[2]) {
+                shift @actions;
+        } else {
+            last;
+        }
+    }
+    
+    # Move resignations that were done after a roll and before a move.
+    for (my $i = 0; $i < @actions - 2; ++$i) {
+        if ('roll' eq $actions[$i]->[0]
+            && 'resign' eq $actions[$i + 1]->[0]) {
+            @actions[$i, $i + 1, $i + 2] = @actions[$i + 1, $i + 2, $i];
+            $i += 2;
+            if ($i == $#actions) {
+                --$#actions;
+            }
+            next;
+        }
+    }
+    
+    foreach my $action (@actions) {
+        my ($type, $color, @args) = @$action;
+        my $player = $color > 0 ? 'O' : 'X';
+        
+        if ('roll' eq $type) {
+            $retval .= "$player: ($args[0] $args[1])";
+        } elsif ('move' eq $type) {
+            my @points = @args;
+            if (@points) {
+                while (@points) {
+                    my $from = shift @points;
+                    my $to = shift @points;
+                    if ($from == 0 || $from == 25) {
+                        $from = 'bar';
+                    }
+                    if ($to == 0 || $to == 25) {
+                        $to = 'off';
+                    }
+                    $retval .= " $from-$to";
+                }
+            } else {
+                # FIXME! This is just an educated guess.  What is the real
+                # reply here?
+                $retval .= " can't move";
+            }
+            $retval .= "\n";
+        } elsif ('double' eq $type) {
+            $retval .= "$player: doubles\n";
+        } elsif ('accept' eq $type) {
+            $retval .= "$player: accepts\n";
+        } elsif ('reject' eq $type) {
+            $retval .= "$player: rejects\n";
+        } elsif ('resign' eq $type) {
+            $retval .= "$player: wants to resign\n";
+        } else {
+            die "Unknown move action `$type'";
+        }
+    }
+    
+    my $over = $self->{__score};
+    if ($over > 0) {
+        $retval .= "O: wins\n";
+    } elsif ($over < 0) {
+        $retval .= "X: wins\n";
+    }
+    
+    return $retval;
 }
 
 1;
