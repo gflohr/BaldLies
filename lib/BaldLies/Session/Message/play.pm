@@ -189,6 +189,7 @@ sub __handleMove {
     my $logger = $session->getLogger;
     my $user = $session->getUser;
     my $match = $user->{match};
+    my $no_prompt;
 
     my $msg = '';
     
@@ -206,12 +207,24 @@ sub __handleMove {
     $msg .= $user->{match}->board ($user->{boardstyle}, 
                                    $self->{__color} == BLACK);
     
-    if ($color == -$self->{__color}) {
-        $msg .= "It's your turn. Please roll or double.\n";
+    my $cube_owner = $match->getCubeOwner;
+    $session->reply ("Cube owner: $cube_owner, color: $color, selfcolor: $self->{__color}\n");
+    if ($color != $self->{__color}) {
+        if ($cube_owner && $cube_owner != $self->{__color}) {
+            $no_prompt = 1;
+        } else {
+            $msg .= "It's your turn. Please roll or double.\n";
+        }
     }
     
-    $session->reply ($msg);
+    $session->reply ($msg, $no_prompt);
     
+    if ($color != $self->{__color} && $cube_owner
+        && $cube_owner != $self->{__color}) {
+        my $dispatcher = $session->getCommandDispatcher;
+        $dispatcher->execute ($session, 'roll');
+    }
+
     return $self;
 }
 
@@ -268,6 +281,122 @@ sub __handleRoll {
         }
     }
     
+    $session->reply ($msg);
+    
+    return $self;
+}
+
+sub __handleDouble {
+    my ($self, $color) = @_;
+    
+    my $session = $self->{__session};
+    my $logger = $session->getLogger;
+    my $user = $session->getUser;
+    my $match = $user->{match};
+
+    my $msg = '';
+    
+    if ($self->{__color} == $color) {
+        my $opp = $color == BLACK ? $match->player1 : $match->player2;
+        $msg = "You double. Please wait for $opp to accept or reject.\n";
+    } else {
+        $logger->debug ("Match action ($self->{__me}:"
+                        . " double $color");
+        $match->do (double => $color);
+        my $who = $color == BLACK ? $match->player2 : $match->player1;
+        $msg .= "$who doubles. Type 'accept' or 'reject'.\n";
+    }
+    
+    $session->reply ($msg);
+    
+    return $self;
+}
+
+sub __handleAccept {
+    my ($self, $color) = @_;
+    
+    my $session = $self->{__session};
+    my $logger = $session->getLogger;
+    my $user = $session->getUser;
+    my $match = $user->{match};
+    my $no_prompt;
+    
+    my $msg = '';
+    my $cube = $match->getCube;
+    if ($self->{__color} == $color) {
+        $msg = "You accept the double. The cube shows $cube.\n";
+    } else {
+        $match->do (accept => $color);
+        my $opp = $color == BLACK ? $match->player1 : $match->player2;
+        $msg = "$opp accepts the double. The cube shows $cube.\n";
+        $no_prompt = 1;
+    }
+    
+    $session->reply ($msg, $no_prompt);
+
+    if ($self->{__color} != $color) {
+        my $dispatcher = $session->getCommandDispatcher;
+        $dispatcher->execute ($session, 'roll');
+    }
+    
+    return $self;
+}
+
+sub __handleReject {
+    my ($self, $color) = @_;
+    
+    my $session = $self->{__session};
+    my $logger = $session->getLogger;
+    my $user = $session->getUser;
+    my $match = $user->{match};
+    
+    my $msg = '';
+    my $cube = $match->getCube;
+    my $opp = $color == BLACK ? $match->player1 : $match->player2;
+    if ($self->{__color} == $color) {
+        $msg = "You give up. $opp wins $cube points.\n";
+    } else {
+        $match->do (reject => $color);
+        $msg = "$opp gives up. You win $cube points.\n";
+    }
+    
+    $self->__endOfGame ($msg);
+
+    return $self;
+}
+
+sub __endOfGame {
+    my ($self, $msg) = @_;
+        
+    my $session = $self->{__session};
+    my $user = $session->getUser;
+    my $match = $user->{match};
+    return $self->__endOfMatch if $match->over;
+
+    my $logger = $session->getLogger;
+    
+    my ($score1, $score2) = $match->score;
+    my $points = $match->getLength;
+    if ($points < 0) {
+        $points = "$points point";
+    } else {
+        $points = 'unlimited';
+    }
+    my $score;
+    
+    if ($user->{name} eq $match->player1) {
+        my $opp = $match->player2;
+        $score = "$user->{name}-$score1 $opp-$score2";
+    } else {
+        my $opp = $match->player1;
+        $score = "$user->{name}-$score2 $opp-$score1";
+    }
+    
+    $msg .= "score in $points match: $score\n";
+    $msg .= <<EOF;
+Type 'join' if you want to play the next game, type 'leave' if you don't.
+EOF
+
     $session->reply ($msg);
     
     return $self;

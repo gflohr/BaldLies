@@ -82,12 +82,20 @@ sub execute {
 
     my $database = $master->getDatabase;
 
+    my $options = $database->loadMatch ($inviter->{id}, $invitee->{id});
     if ($length) {
+        # First delete old match if necessary.
+        $database->deleteMatch ($inviter->{id}, $invitee->{id}) if $options;
         $database->createMatch ($inviter->{id}, $invitee->{id}, $length)
             or return;
+        $options = $database->loadMatch ($inviter->{id}, $invitee->{id});
+    } else {
+        if (!$options) {
+            $master->queueResponse ("** There's no saved match with user."
+                                    . " Please give a match length.");
+            return;   
+        }
     }
-    my $options = $database->loadMatch ($inviter->{id},
-                                        $invitee->{id});
     unless ($options) {
         $logger->error ("Freshly created match vanished!");
     }

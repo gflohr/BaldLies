@@ -1003,7 +1003,7 @@ sub loadMatch {
     my $rows = $self->_doStatement (SELECT_MATCH => $id1, $id2);
     $self->_commit;
     unless ($rows && @$rows) {
-        $logger->info ("No match between user ids $id1 and $id2.");
+        $logger->debug ("No match between user ids $id1 and $id2.");
         return;
     }
 

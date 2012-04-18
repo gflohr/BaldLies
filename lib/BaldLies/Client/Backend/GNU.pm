@@ -26,6 +26,11 @@ use POSIX qw (:sys_wait_h);
 use BaldLies::Util qw (empty);
 use IO::Socket::INET;
 
+our $from_re = qr/[1-9]|1[0-9]|2[0-5]/;
+our $to_re = qr/[1-9]|1[0-9]|2[0-4]/;
+our $movement_re = qr{$from_re/$to_re};
+our $move_re = qr/^$movement_re\*?(?: +$movement_re\*?){0,3}?$/;
+
 sub new {
     my ($class, $client) = @_;
 
@@ -34,15 +39,6 @@ sub new {
         __config    => $client->getConfig,
         __logger    => $client->getLogger,
         __child_pid => 0,
-        # When we receive a hint from GNU backgammon we do not know for which
-        # board state it was sent.  It can happen that we send a board state,
-        # and while waiting for a reply from GNU backgammon, our opponent
-        # drops, and we accept a new invitation.  In that case we might
-        # try to execute an action from the last match.  We therefore maintain
-        # a counter, increase it for every request sent, and decrease it
-        # for every reply received.  The reply is only valid if the counter
-        # is zero.
-        __queued    => 0,
     }, $class;
 }
 
@@ -84,25 +80,21 @@ sub run {
         
     $logger->info ("Started backgammon engine $path with pid $pid.");
  
-    # This will block but that's okay.
-    $logger->debug ("Send gnubg command: set variation standard");
-    $child_out->print ("set variation standard\n");
-    
-    $logger->debug ("Send gnubg command: set clockwise off");
-    $child_out->print ("set clockwise off\n");
-    
     my $settings = $config->{backend_setting};
     if (!defined $settings) {
         $settings = [];
     } elsif (!ref $settings) {
         $settings = [$settings];
     }
+
+    # Printing will block but that's okay.
     foreach my $cmd (@$settings) {
         $logger->debug ("Send gnubg command: $cmd");
         $child_out->print ("$cmd\n");
     }
     
-    $child_out->print ("external localhost:$port\n");
+    $logger->debug ("Send gnubg command: set variation standard");
+    $child_out->print ("set variation standard\n");
     
     my $try = 0;
     my $socket = $self->{__socket} = IO::Socket::INET->new (
@@ -133,7 +125,7 @@ sub run {
     
     # Slurp current output.
     my $output;
-    my $bytes_read = sysread $child_in, $output, 100000;
+    my $bytes_read = sysread $child_in, $output, 1000000;
     $logger->debug ("Replies from GNU backgammon so far:\n", $output);
     $logger->debug ("Backend GNU backgammon ready.\n");
     
@@ -150,12 +142,50 @@ sub writeHandle {
 
 sub __processLine {
     my ($self, $line) = @_;
-    
-    chomp $line;
-    
+
     my $logger = $self->{__logger};
-    
     $logger->debug ("GNUBG: $line");
+    
+    $line =~ s/^[ \t\r\n]+//;
+    $line =~ s/[ \t\r\n]+$//;
+    
+    if ($line eq 'roll') {
+        $self->{__client}->queueServerOutput ('roll');
+    } elsif ($line eq 'double') {
+        $self->{__client}->queueServerOutput ('double');
+    } elsif ($line eq 'drop') {
+        $self->{__client}->queueServerOutput ('reject');
+    } elsif ($line eq 'take') {
+        $self->{__client}->queueServerOutput ('accept');
+    } elsif ($line eq 'beaver') {
+        $self->{__client}->queueServerOutput ('redouble');
+    } elsif ($line =~ $move_re) {
+        $self->__processMove ($line);
+    } else {
+        $logger->error ("Got invalid reply from gnubg: >>>$line<<<");
+    }
+    
+    return $self;
+}
+
+sub __processMove {
+    my ($self, $move) = @_;
+    
+    $move =~ s/\*//g;
+    my @movements = split / +/, $move;
+    
+    my $reply = 'move';
+    
+    foreach my $movement (@movements) {
+        my ($from, $to) = split /\//, $movement;
+        $from = 25 - $from;
+        $from ||= 'bar';
+        $to = 25 - $to;
+        $reply .= " $from-$to";
+    }
+    $reply .= "\n";
+    
+    $self->{__client}->queueServerOutput ($reply);
     
     return $self;
 }
@@ -163,7 +193,7 @@ sub __processLine {
 sub processInput {
     my ($self, $dataref) = @_;
     
-    while ($$dataref =~ s/(.*?\n|\AEnter dice: \z)//) {
+    while ($$dataref =~ s/(.*?)\n//) {
         my $line = $1;
         next unless length $line;
         $self->__processLine ($line);
@@ -175,10 +205,33 @@ sub processInput {
 sub handleBoard {
     my ($self, $board) = @_;
 
-    # Increase our input expectation counter.
-    ++$self->{__queued};
-    
+    # When we receive a hint from GNU backgammon we do not know for which
+    # board state it was sent.  It can happen that we send a board state,
+    # and while waiting for a reply from GNU backgammon, our opponent
+    # drops, and we accept a new invitation.  In that case we might
+    # try to execute an action from the last match.
+    #
+    # Trying to fix that is nearly impossible.  It is not completely
+    # clear, when FIBS will send us a board state.  And gnubg, for example
+    # does not bother sending a reply at all, if there is no move in the
+    # current board state.
     $self->{__client}->queueClientOutput ($board . "\n");
+    
+    return $self;
+}
+
+sub handleAction {
+    my ($self, $action, @args) = @_;
+    
+    my $logger = $self->{__logger};
+    $logger->debug ("Handle match action `$action @args'.");
+    
+    if ('double' eq $action) {
+        # Get a new board from the server.
+        $self->{__client}->queueServerOutput ('board');
+    } else {
+        $logger->error ("Invalid action `$action @args'.");
+    }
     
     return $self;
 }

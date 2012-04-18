@@ -316,7 +316,9 @@ sub __handleFIBSInput {
         $self->queueServerOutput ("join $1");
     } elsif ($line =~ /^board:You:/) {
         return $self->__handleClipBoard ($line);
-    }
+    } elsif ($line =~ /^[^ ]+ doubles. Type 'accept' or 'reject'.$/) {
+        $self->{__backend}->handleAction ('double');
+    }    
     
     return $self;
 }
@@ -431,10 +433,16 @@ sub __handleClipBoard {
     my @board = split /:/, $line;
 
     my $turn = $board[32];
-    return $self unless $turn;
-     
-    my $color = -$board[39];
-    return if $color != $turn;
+    return $self unless $turn;     
+
+    my $was_doubled = $board[40];
+    my $color = $board[41];
+
+    if ($was_doubled) {
+        return if $color == $turn;
+    } else {
+        return if $color != $turn;
+    }
     
     $self->{__backend}->handleBoard ($line);
      
