@@ -37,6 +37,7 @@ sub new {
     $self->{__player2} = 'White' if empty $self->{__player2};
     $self->{__score2} ||= 0;
     $self->{__redoubles} ||= 0;
+    $self->{__old_games} ||= [];
     
     if ($self->{__length} > 0) {
         if ($self->{__score1} >= $self->{__length}) {
@@ -63,10 +64,15 @@ sub do {
 
     die "The match is already over.\n" if $self->{__over};
     
+    delete $self->{__fresh_game};
+    
     my $game = $self->{__game};
     $game->$action (@payload);
 
-    $self->__newGame if $game->over;
+    if ($game->over) {
+        $self->__newGame;
+        $self->{__fresh_game} = 1;
+    }
     
     return $self;
 }
@@ -116,12 +122,40 @@ sub getCube {
     shift->{__game}->cube;
 }
 
+sub getCubeOwner {
+    shift->{__game}->cubeOwner;
+}
+
 sub getTurn {
     shift->{__game}->getTurn;
 }
 
 sub getLength {
     shift->{__length};
+}
+
+sub getMoves {
+    my ($self) = @_;
+    
+    my $points = $self->{__length} < 0 ?
+         'an unlimited' : "a $self->{__length} point";
+    
+    my $game = $self->{__fresh_game} ? 
+        $self->{__old_games}->[-1] : $self->{__game};
+    
+    my $score1 = $self->{__score1};
+    my $score2 = $self->{__score2};
+    my $over = $self->{__game}->over;
+    if ($over > 0) {
+        $score1 -= $over;
+    } elsif ($over < 0) {
+        $score2 += $over;
+    }
+    my $retval = "Score is $score1-$score2 in $points match.\n";
+    
+    $retval .= $game->getMoves;
+    
+    return $retval;
 }
 
 sub player1 {
@@ -243,10 +277,9 @@ sub __clipBoard {
     @may_double = (0, 0) if $game->cubeTurned;
     
     @may_double = reverse @may_double if $x;
-    $output .= ":$may_double[0]:$may_double[1]";
+    $output .= ":$may_double[0]:$may_double[1]:";
     
-    # Was doubled is always zero.
-    $output .= ':0';
+    $output .= $game->cubeTurned ? '1' : '0';
 
     # There are only two possible options.    
     if ($x) {
@@ -471,15 +504,20 @@ EOF
     my $white_off = $board->borneOff (WHITE);
     my $black_off = $board->borneOff (BLACK);
     my $cube = $game->cube;
-    if ($game->cubeOwner) {
-        if ($game->cubeOwner < 0) {
-            $cube .= " (owned by $self->{__player2}";
-        } else {
-            $cube .= " (owned by $self->{__player1}";
+    my $cube_owner = $game->cubeOwner;
+    if ($cube_owner) {
+        if ($cube_owner < 0) {
+            $cube .= " (owned by $self->{__player2})";
+        } elsif ($cube_owner > 0) {
+            $cube .= " (owned by $self->{__player1})";
         }
     }
 
     my $roll = $game->getRoll;
+    
+    # FIXME! There are more possible messages here:
+    # - user doubled.
+    # - ...
     my $turn = '';
     if (@$roll) {
         if ($game->getTurn < 0) {
@@ -568,10 +606,10 @@ sub __newGame {
                    undef $is_crawford;
             }
         }
+        push @{$self->{__old_games}}, $old_game;
     }
 
     if ($self->{__over}) {
-        delete $self->{__game};
         return $self;
     }
     
@@ -605,48 +643,3 @@ B<BaldLies::Backgammon::Match> represents a backgammon match.
 perl(1)
 
 =cut
-
-__END__
-
-> set boardstyle 1
-Value of 'boardstyle' set to 1.
-> board
-   +-1--2--3--4--5--6--------7--8--9-10-11-12-+ O: GibbonTestD - score: 0
-   | X              O |   |     O     O     X |
-   | X              O |   |     O           X |
-   |                O |   |     O           X |
-   |                O |   |                 X |
-   |                O |   |                   |
-   |                  |BAR|                   |v    unlimited match
-   |                X |   |                   |     No redoubles
-   |                X |   |                 O |
-   |                X |   |                 O |
-   |                X |   |  X  X           O |
-   | O              X |   |  X  X        O  O |
-   +24-23-22-21-20-19-------18-17-16-15-14-13-+ X: GibbonTestA - score: 0
-
-   BAR: O-0 X-0   OFF: O-0 X-0   Cube: 2 (owned by GibbonTestD)  You rolled 5 6.
-> set boardstyle 2
-Value of 'boardstyle' set to 2.
-> board
-     1  2  3  4  5  6        7  8  9 10 11 12
-   +------------------------------------------+ O: GibbonTestD - score: 0
-   | X              O |   |     O     O     X |
-   | X              O |   |     O           X |
-   |                O |   |     O           X |
-   |                O |   |                 X |
-   |                O |   |                   |
-   |                  |BAR|                   |v    unlimited match
-   |                X |   |                   |     No redoubles
-   |                X |   |                 O |
-   |                X |   |                 O |
-   |                X |   |  X  X           O |
-   | O              X |   |  X  X        O  O |
-   +------------------------------------------+ X: GibbonTestA - score: 0
-    24 23 22 21 20 19       18 17 16 15 14 13
-
-   BAR: O-0 X-0   OFF: O-0 X-0   Cube: 2 (owned by GibbonTestD)  You rolled 5 6.
-> set boardstyle 3
-Value of 'boardstyle' set to 3.
-> board
-board:You:GibbonTestD:9999:0:0:0:-2:0:0:0:0:5:0:3:0:1:0:-4:4:1:0:0:-2:-2:-5:0:0:0:0:1:0:-1:5:6:0:0:2:0:1:0:-1:1:25:0:0:0:0:0:2:0:0:0
