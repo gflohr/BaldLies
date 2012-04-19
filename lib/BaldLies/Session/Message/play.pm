@@ -383,9 +383,9 @@ sub __endOfGame {
     my ($score1, $score2) = $match->score;
     my $points = $match->getLength;
     if ($points < 0) {
-        $points = "$points point";
-    } else {
         $points = 'unlimited';
+    } else {
+        $points = "$points point";
     }
     my $score;
     
