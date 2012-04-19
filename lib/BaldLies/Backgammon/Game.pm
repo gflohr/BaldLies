@@ -551,6 +551,16 @@ sub getMoves {
         }
     }
     
+    # And now correct the color of the first move.
+    for (my $i = 1; $i < @actions; ++$i) {
+        if ('move' eq $actions[$i]->[0]) {
+            if ('roll' eq $actions[$i - 1]->[0]) {
+                $actions[$i - 1]->[1] = $actions[$i]->[1];
+            }
+            last;
+        }
+    }
+    
     foreach my $action (@actions) {
         my ($type, $color, @args) = @$action;
         my $player = $color > 0 ? 'O' : 'X';
