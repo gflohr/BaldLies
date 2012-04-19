@@ -208,7 +208,6 @@ sub __handleMove {
                                    $self->{__color} == BLACK);
     
     my $cube_owner = $match->getCubeOwner;
-    $session->reply ("Cube owner: $cube_owner, color: $color, selfcolor: $self->{__color}\n");
     if ($color != $self->{__color}) {
         if ($cube_owner && $cube_owner != $self->{__color}) {
             $no_prompt = 1;
@@ -371,7 +370,13 @@ sub __endOfGame {
     my $session = $self->{__session};
     my $user = $session->getUser;
     my $match = $user->{match};
-    return $self->__endOfMatch if $match->over;
+    
+    if ($user->{moves}) {
+        chomp $msg;
+        $msg .= $match->getMoves;
+    }
+    
+    return $self->__endOfMatch ($msg) if $match->over;
 
     my $logger = $session->getLogger;
     
