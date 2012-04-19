@@ -531,7 +531,7 @@ sub getMoves {
     # Weed out opening doubles.
     while (@actions) {
         if ($actions[0]->[0] eq 'roll'
-            && $actions[0]->[1] == $actions[0]->[2]) {
+            && $actions[0]->[2] == $actions[0]->[3]) {
                 shift @actions;
         } else {
             last;
