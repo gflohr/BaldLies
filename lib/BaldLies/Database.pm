@@ -175,7 +175,7 @@ SELECT DISTINCT id, name, password, address, admin, last_login,
     last_logout, last_host, experience, rating,
     boardstyle, linelength, pagelength, redoubles, sortwho, timezone,
     allowpip, autoboard, autodouble, automove, bell, crawford, 1, 0, 
-    moreboards, moves, notify, ratings, ready, report, silent, 1, wrap
+    moreboards, 0, notify, ratings, ready, report, silent, 1, wrap
 FROM users WHERE name = ?
 EOF
     $sths->{SELECT_USER} = 
@@ -266,12 +266,6 @@ UPDATE users SET moreboards = NOT moreboards WHERE name = ?
 EOF
     $sths->{TOGGLE_MOREBOARDS} = 
         $dbh->prepare ($statements->{TOGGLE_MOREBOARDS});
-
-    $statements->{TOGGLE_MOVES} = <<EOF;
-UPDATE users SET moves = NOT moves WHERE name = ?
-EOF
-    $sths->{TOGGLE_MOVES} = 
-        $dbh->prepare ($statements->{TOGGLE_MOVES});
 
     $statements->{TOGGLE_NOTIFY} = <<EOF;
 UPDATE users SET notify = NOT notify WHERE name = ?
@@ -444,7 +438,8 @@ CREATE TABLE users (
     --double BOOLEAN NOT NULL DEFAULT 1,
     --greedy BOOLEAN NOT NULL DEFAULT 0,
     moreboards BOOLEAN NOT NULL DEFAULT 0,
-    moves BOOLEAN NOT NULL DEFAULT 0,
+    -- Per-game setting.
+    --moves BOOLEAN NOT NULL DEFAULT 0,
     notify BOOLEAN NOT NULL DEFAULT 1,
     ratings BOOLEAN NOT NULL DEFAULT 0,
     ready BOOLEAN NOT NULL DEFAULT 0,

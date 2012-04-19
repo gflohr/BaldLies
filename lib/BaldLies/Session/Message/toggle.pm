@@ -22,8 +22,8 @@ use strict;
 
 use base qw (BaldLies::Session::Message);
 
-my @toggles = qw (allowpip autoboard automove bell crawford double
-                  greedy moreboards moves notify ratings ready
+my @toggles = qw (allowpip autoboard automove bell crawford
+                  moreboards notify ratings ready
                   report silent telnet wrap);
 my %toggles = map { $_ => 1 } @toggles;
 
@@ -112,14 +112,6 @@ sub __showToggleMoreboards {
     my $wont = $value ? "Will" : " Won't";
     
     return "$wont send rawboards after rolling.";
-}
-
-sub __showToggleMoves {
-    my ($self, $value) = @_;
-
-    my $wont = $value ? "want" : "won't see";
-    
-    return "You $wont a list of moves after this game.";
 }
 
 sub __showToggleNotify {

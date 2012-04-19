@@ -77,6 +77,7 @@ sub __handleJoined {
 
     my $match = $user->{match} = BaldLies::Backgammon::Match->new (%$options);
     $self->__replayMoves ($user->{match}, $old_moves);
+    $user->startGame;
     
     my $color = 0;
     if ($user->{name} eq $match->player1) {
@@ -136,8 +137,9 @@ sub __handleInvited {
     }
     
     my $match = $user->{match} = BaldLies::Backgammon::Match->new (%$options);
-    $self->__replayMoves ($user->{match}, $old_moves);
-    
+    $self->__replayMoves ($user->{match}, $old_moves);    
+    $user->startGame;
+
     my $color = 0;
     if ($user->{name} eq $match->player1) {
         $color = WHITE;

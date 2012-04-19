@@ -369,6 +369,7 @@ sub __endOfGame {
         
     my $session = $self->{__session};
     my $user = $session->getUser;
+    $user->startGame;
     my $match = $user->{match};
     
     if ($user->{moves}) {

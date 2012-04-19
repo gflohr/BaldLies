@@ -48,6 +48,16 @@ sub copy {
     bless {%$self}, ref $self;
 }
 
+sub startGame {
+    my ($self) = @_;
+    
+    $self->{double} = 1;
+    $self->{greedy} = 0;
+    $self->{moves} = 0;
+    
+    return $self;
+}
+
 sub rawwho {
     my ($self) = @_;
     

@@ -52,6 +52,24 @@ sub execute {
     } elsif ('greedy' eq $variable) {
         my $user = $session->getUser;
         if ($user->{$variable}) {
+            $user->{$variable} = 0;
+        } else {
+            $user->{$variable} = 1;
+        }
+        if ($user->{$variable}) {
+            $session->reply ("** Will use automatic greedy bearoffs.\n");
+        } else {
+            $session->reply ("** Won't use automatic greedy bearoffs.\n");
+        }
+        return $self;
+    } elsif ('moves' eq $variable) {
+        my $user = $session->getUser;
+        if ($user->{$variable}) {
+            $user->{$variable} = 0;
+        } else {
+            $user->{$variable} = 1;
+        }
+        if ($user->{$variable}) {
             $session->reply ("** Will use automatic greedy bearoffs.\n");
         } else {
             $session->reply ("** Won't use automatic greedy bearoffs.\n");
