@@ -38,7 +38,8 @@ sub new {
     $self->{__score2} ||= 0;
     $self->{__redoubles} ||= 0;
     $self->{__old_games} ||= [];
-    
+    $self->{__pending} = {};
+        
     if ($self->{__length} > 0) {
         if ($self->{__score1} >= $self->{__length}) {
             $self->{__over} = WHITE;
@@ -209,6 +210,27 @@ sub setCrawford {
     }
     
     return $self;
+}
+
+sub setPending {
+    my ($self, $name) = @_;
+    
+    if ($name eq $self->{__player1} || $name eq $self->{__player2}) {
+        $self->{__pending}->{$name} = 1;
+        return $self;
+    }
+    
+    return;
+}
+
+sub getPending {
+    my ($self, $name) = @_;
+    
+    if ($name eq $self->{__player1} || $name eq $self->{__player2}) {
+        return $self->{__pending}->{$name};    
+    }
+    
+    return;
 }
 
 sub __clipBoard {
