@@ -39,15 +39,34 @@ sub execute {
     my ($self, $payload) = @_;
     
     my $session = $self->{_session};
+    
+    my $user = $session->getUser;
+    my $match = $user->{match};
 
+    if ($match && !$match->getTurn) {
+        $session->getLogger->debug ("Unset pending in match for"
+                                    . " ourselves ($user->{name}).");
+        $match->setPending ($user->{name}, 0);
+        if ($match->getPending ($user->{playing})) {
+            $session->reply ("** Please wait for $user->{playing} to join"
+                             . " too.\n");
+            $session->sendMaster (join => 'You', $user->{playing});
+            return $self;
+        } else {
+            my $msg_dispatcher = $session->getMessageDispatcher;
+            $msg_dispatcher->execute ($session,
+                                      report => "rejoined $user->{playing}");
+            return $self;
+        }
+    }
+    
+    $payload = '' if !defined $payload;
     my ($opponent) = split / /, $payload;
 
     if (empty $opponent) {
         $session->reply ("** Error: Join who?\n");
         return $self;
     }
-
-    my $user = $session->getUser;
     
     # It does NOT matter whether we toggled our ready state to unavailable
     # if we want to join.  But we can check whether our user is already
@@ -96,3 +115,5 @@ This plug-in handles the ommand `join'.
 =head1 SEE ALSO
 
 BaldLies::Session::Command(3pm), baldlies(1), perl(1)
+
+=cut

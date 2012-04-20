@@ -259,6 +259,8 @@ sub getPending {
     return;
 }
 
+# Board between games:
+#board:You:GibbonTestD:9999:7:9:0:-2:0:0:0:0:5:0:3:0:0:0:-5:5:0:0:0:-3:0:-5:0:0:0:0:2:0:0:0:0:0:0:1:1:1:0:1:-1:0:25:0:0:0:0:2:0:0:0
 sub __clipBoard {
     my ($self, $x) = @_;
     

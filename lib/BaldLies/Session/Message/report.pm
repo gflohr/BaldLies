@@ -196,6 +196,77 @@ sub __handleStart {
     return $self;
 }
 
+sub __handleRejoined {
+    my ($self, $session, $opponent) = @_;
+
+    my $user = $session->getUser;
+    
+    my $logger = $session->getLogger;
+    $logger->debug ("$opponent rejoined us.");
+        
+    my $match = $user->{match};
+    if (!$match) {
+        $logger->debug ("But we have left the match already.\n");
+        return $self;
+    }
+
+    # Game already in progress?
+    if ($match->getTurn) {
+        $logger->debug ("But the match is already going.\n");
+        return $self;
+    }
+    
+    if ($opponent ne $match->player1 && $opponent ne $match->player2) {
+        $logger->debug ("But we are already playing with somebody else.");
+        return $self;
+    }
+    
+    if ($match->getPending ($user->{name})) {
+        $logger->debug ("Now waiting for `join' from user.");
+        $logger->debug ("Unset pending in match for opponent $opponent.");
+        $match->setPending ($opponent, 0);
+        return $self;
+    }   
+    
+    $session->sendMaster (rejoin => $match->player1, $match->player2);
+    
+    return $self;
+}
+
+sub __handleContinue {
+    my ($self, $session, $payload) = @_;
+
+    my ($player1, $player2) = split / /, $payload;
+
+    my $logger = $session->getLogger;
+    
+    my $user = $session->getUser;
+    my $match = $user->{match};
+    unless ($match) {
+        $logger->info ("Cannot continue (no match).");
+        return $self;
+    }    
+    
+    if ($match->getPending ($user->{playing})) {
+        $logger->debug ("Unset pending for rejoined `$user->{playing}'.\n");
+        $match->setPending ($user->{playing}, 0);
+    }
+    
+    my $color = 0;
+    if ($user->{name} eq $match->player1) {
+        $color = WHITE;
+    } elsif ($user->{playing} eq $match->player1) {
+        $color = BLACK;
+    } else {
+        $color = BLACK;
+    }
+    
+    my $msg_dispatcher = $session->getMessageDispatcher;
+    $msg_dispatcher->execute ($session, play => "start $color");
+    
+    return $self;
+}
+
 sub __replayMoves {
     my ($self, $match, $moves) = @_;
 

@@ -109,7 +109,7 @@ sub __handleResume {
     } elsif ($turn == BLACK) {
         $reply .= "turn: $player2\n";
     } else {
-        die;
+        # Nothing.
     }
     
     my $length = $match->getLength;
@@ -124,8 +124,17 @@ points for user $player1: $score1
 points for user $player2: $score2
 EOF
 
-    $reply .= $user->{match}->board ($user->{boardstyle}, 
-                                     $self->{__color} == BLACK);
+    if (!$turn && $color == WHITE) {
+        if ($color == WHITE) {
+            my $die1 = 1 + int rand 6;
+            my $die2 = 1 + int rand 6;
+            $session->sendMaster (play => "roll 0 $die1 $die2");
+        }
+    } else {
+        $reply .= $user->{match}->board ($user->{boardstyle}, 
+                                         $self->{__color} == BLACK);
+    }
+    
     $session->reply ($reply);
     
     return $self;

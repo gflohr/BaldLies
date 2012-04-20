@@ -29,7 +29,7 @@ sub execute {
     
     my $logger = $session->getLogger;
 
-    $logger->debug ("Session handling command `$msg'.");
+    $logger->debug ("Session handling message `$msg'.");
 
     my $module = eval { $self->_loadModule ($msg) };
     if ($@) {
