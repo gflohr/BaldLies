@@ -66,6 +66,31 @@ sub do {
     die "The match is already over.\n" if $self->{__over};
     
     delete $self->{__fresh_game};
+
+    if (keys %{$self->{__pending}}) {
+        if ('roll' eq $action) {
+            die "It's not your turn to roll the dice.\n";
+        } elsif ('move' eq $action) {
+            die "It's not your turn to move.\n";
+        } elsif ('beaver' eq $action || 'redouble' eq $action) {
+            die "You are not allowed to redouble.\n";
+        } elsif ('resign' eq $action) {
+            die "The game is already over.\n";
+        }
+        
+        my $color = $payload[0];
+        my $opponent;
+        if ($color == BLACK) {
+            $opponent = $self->{__player1};
+        } else {
+            $opponent = $self->{__player2};
+        }
+        if ('accept' eq $action || 'reject' eq $action) {
+            die "$opponent didn't double or resign.\n";
+        }     
+       
+        die "The match is paused.\n";
+    }
     
     my $game = $self->{__game};
     $game->$action (@payload);
@@ -213,11 +238,12 @@ sub setCrawford {
 }
 
 sub setPending {
-    my ($self, $name) = @_;
+    my ($self, $name, $value) = @_;
     
-    if ($name eq $self->{__player1} || $name eq $self->{__player2}) {
+    if ($value) {
         $self->{__pending}->{$name} = 1;
-        return $self;
+    } else {
+        delete $self->{__pending}->{$name};
     }
     
     return;
@@ -226,7 +252,7 @@ sub setPending {
 sub getPending {
     my ($self, $name) = @_;
     
-    if ($name eq $self->{__player1} || $name eq $self->{__player2}) {
+    if (exists $self->{__pending}->{$name}) {
         return $self->{__pending}->{$name};    
     }
     
