@@ -378,6 +378,9 @@ sub __endOfGame {
     }
     
     return $self->__endOfMatch ($msg) if $match->over;
+    
+    $match->setPending ($match->player1, 1);
+    $match->setPending ($match->player2, 1);
 
     my $logger = $session->getLogger;
     
