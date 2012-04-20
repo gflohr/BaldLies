@@ -95,6 +95,8 @@ sub run {
     
     $logger->debug ("Send gnubg command: set variation standard");
     $child_out->print ("set variation standard\n");
+    $logger->debug ("Send gnubg command: external localhost:$port");
+    $child_out->print ("external localhost:$port\n");
     
     my $try = 0;
     my $socket = $self->{__socket} = IO::Socket::INET->new (
