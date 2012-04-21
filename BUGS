@@ -5,6 +5,8 @@
 - Failure to create a match in the database is currently ignored.
   This is on purpose for now.
 - The moves toggle is per-game only.
+- Resignations are saved in the database as n, g, and b instead of numerical
+  values.
 ============================================================================
 You roll 2 and 2.
    +-1--2--3--4--5--6--------7--8--9-10-11-12-+ O: foobar
