@@ -267,6 +267,25 @@ sub __handleContinue {
     return $self;
 }
 
+sub __handleResume {
+    my ($self, $session, $payload) = @_;
+
+    my ($player1, $player2, $length) = split / /, $payload;
+    
+    my $user = $session->getUser;
+    if ($user->{report}) {
+        if ($length > 0) {
+            $session->reply ("\n$player1 and $player2 are resuming their"
+                             . " $length-point match.\n");
+        } else {
+            $session->reply ("\n$player1 and $player2 are resuming their"
+                             . " unlimited match.\n");
+        }
+    }
+
+    return $self;
+}
+    
 sub __replayMoves {
     my ($self, $match, $moves) = @_;
 
