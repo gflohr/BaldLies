@@ -27,7 +27,7 @@ use BaldLies::Util qw (empty);
 use IO::Socket::INET;
 
 our $from_re = qr/[1-9]|1[0-9]|2[0-5]/;
-our $to_re = qr/[1-9]|1[0-9]|2[0-4]/;
+our $to_re = qr/[0-9]|1[0-9]|2[0-4]/;
 our $movement_re = qr{$from_re/$to_re};
 our $move_re = qr/^$movement_re\*?(?: +$movement_re\*?){0,3}?$/;
 
