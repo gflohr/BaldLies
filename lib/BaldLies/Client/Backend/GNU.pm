@@ -231,6 +231,10 @@ sub handleAction {
     if ('double' eq $action) {
         # Get a new board from the server.
         $self->{__client}->queueServerOutput ('board');
+    } elsif ('resign' eq $action) {
+        # FIXME! How can we ask GNU backgammon whether it is correct to
+        # resign?
+        $self->{__client}->queueServerOutput ('reject');
     } else {
         $logger->error ("Invalid action `$action @args'.");
     }

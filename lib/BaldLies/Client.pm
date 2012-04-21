@@ -312,12 +312,18 @@ sub __handleFIBSInput {
     
     # Invitation?
     if ($line =~ /^Type[ \t]+'join[ \t]+(.+?)'/) {
-        $logger->info ("Got invitation from `$1'");
+        $logger->info ("Got invitation from `$1'.");
         $self->queueServerOutput ("join $1");
     } elsif ($line =~ /^board:You:/) {
         return $self->__handleClipBoard ($line);
     } elsif ($line =~ /^[^ ]+ doubles. Type 'accept' or 'reject'.$/) {
         $self->{__backend}->handleAction ('double');
+    } elsif ($line eq "Type 'join' if you want to play the next game, type"
+                      . " 'leave' if you don't.") {
+        $logger->debug ("Must rejoin.");
+        $self->queueServerOutput ("join");
+    } elsif ($line =~ /^[^ ]+ wants to resign. You will win ([1-9][0-9]*) points?. Type 'accept' or 'reject'.$/) {
+        $self->{__backend}->handleAction ('resign', $1);
     }    
     
     return $self;
@@ -435,14 +441,8 @@ sub __handleClipBoard {
     my $turn = $board[32];
     return $self unless $turn;     
 
-    my $was_doubled = $board[40];
     my $color = $board[41];
-
-    if ($was_doubled) {
-        return if $color == $turn;
-    } else {
-        return if $color != $turn;
-    }
+    return if $color != $turn;
     
     $self->{__backend}->handleBoard ($line);
      
