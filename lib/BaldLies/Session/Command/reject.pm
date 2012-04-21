@@ -46,6 +46,7 @@ sub execute {
     
     my $logger = $session->getLogger;
     $logger->debug ("Match action ($user->{name}): reject $color");
+    my $action = $match->getResignation * $color < 0 ? 'reject' : 'drop';
     eval { $match->do (reject => $color) };
     if ($@) {
         chomp $@;
@@ -53,7 +54,7 @@ sub execute {
         return $self;
     }
     
-    $session->sendMaster (play => 'reject', $color);
+    $session->sendMaster (play => $action, $color);
     
     return $self;
 }

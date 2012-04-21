@@ -51,11 +51,17 @@ sub execute {
         return $self;
     }
 
-    my ($color, $action, @arguments) = split / /, $payload;
+    my ($action, $color, @arguments) = split / /, $payload;
+    if ('take' eq $action) {
+        $action = 'accept';
+    } elsif ('drop' eq $action) {
+        $action = 'reject';
+    }
     
     my $db = $master->getDatabase;
+    $logger->debug ("Adding move to database: $color $action @arguments");
     unless ($db->addMove ($user->{id}, $user2->{id},
-                          $color, $action, @arguments)) {
+                          $action, $color, @arguments)) {
         $logger->error ("Error adding move $color $action @arguments");
         return $self;
     }

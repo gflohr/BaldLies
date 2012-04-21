@@ -22,6 +22,55 @@ use strict;
 
 use base qw (BaldLies::Session::Command);
 
+use BaldLies::Const qw (:colors);
+use BaldLies::Util qw (empty);
+
+sub execute {
+    my ($self, $how) = @_;
+    
+    my $session = $self->{_session};
+    my $user = $session->getUser;
+    
+    if (!empty $user->{watching} || !$user->{match}) {
+        $session->reply ("** You're not playing.\n");
+        return $self;
+    }
+    
+    my %values = (
+        n => 1,
+        g => 2,
+        b => 3
+    );
+    
+    if (empty $how || !exists $values{$how}) {
+        $session->reply ("** Type 'n' (normal), 'g' (gammon) or 'b'"
+                         . " (backgammon) after resign.\n");
+        return $self;
+    }
+    
+    my $match = $user->{match};
+    my $color;
+    if ($user->{name} eq $match->player2) {
+        $color = BLACK;
+    } else {
+        $color = WHITE;
+    }    
+    
+    my $logger = $session->getLogger;
+    $logger->debug ("Match action ($user->{name}): resign $color");
+    eval { $match->do (resign => $color, $values{$how}) };
+    if ($@) {
+        chomp $@;
+        $session->reply ("** $@\n");
+        return $self;
+    }
+
+    my $value = $values{$how} * $match->getCube;
+    $session->sendMaster (play => 'resign', $color, $value);
+    
+    return $self;
+}
+
 1;
 
 =head1 NAME

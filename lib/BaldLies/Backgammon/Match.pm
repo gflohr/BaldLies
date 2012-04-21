@@ -152,12 +152,28 @@ sub getCubeOwner {
     shift->{__game}->cubeOwner;
 }
 
+sub cubeTurned {
+    shift->{__game}->cubeTurned;
+}
+
 sub getTurn {
     shift->{__game}->getTurn;
 }
 
 sub getLength {
     shift->{__length};
+}
+
+sub getResignation {
+    shift->{__game}->getResignation;
+}
+
+sub getLastWin {
+    my ($self) = @_;
+    
+    return 0 if !@{$self->{__old_games}};
+
+    return abs $self->{__old_games}->[-1]->over;
 }
 
 sub getMoves {

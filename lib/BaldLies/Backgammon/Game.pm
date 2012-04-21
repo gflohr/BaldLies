@@ -112,6 +112,10 @@ sub getTurn {
     shift->{__turn};
 }
 
+sub getResignation {
+    shift->{__resignation};
+}
+
 sub legalMoves {
     shift->{__moves};
 }

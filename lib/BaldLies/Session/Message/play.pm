@@ -320,7 +320,63 @@ sub __handleDouble {
     return $self;
 }
 
+sub __handleResign {
+    my ($self, $color, $value) = @_;
+    
+    my $session = $self->{__session};
+    my $logger = $session->getLogger;
+    my $user = $session->getUser;
+    my $match = $user->{match};
+
+    my $msg = '';
+    
+    my $points = $value == 1 ? "1 point" : "$value points";
+    
+    if ($self->{__color} == $color) {
+        my $opp = $color == BLACK ? $match->player1 : $match->player2;
+        $msg = "You want to resign. $opp will win $points.\n";
+    } else {
+        $logger->debug ("Match action ($self->{__me}:"
+                        . " resign $color $value");
+        $match->do (resign => $color, $value);
+        my $who = $color == BLACK ? $match->player2 : $match->player1;
+        $msg .= "$who wants to resign. You will win $points."
+                . " Type 'accept' or 'reject'.\n";
+    }
+    
+    $session->reply ($msg);
+    
+    return $self;
+}
+
 sub __handleAccept {
+    my ($self, $color) = @_;
+    
+    my $session = $self->{__session};
+    my $logger = $session->getLogger;
+    my $user = $session->getUser;
+    my $match = $user->{match};
+
+    my $msg = '';
+    if ($self->{__color} == $color) {
+        my $value = $match->getLastWin;
+        my $points = $value == 1 ? "1 point" : "$value points";
+        $msg = "You accept and win $points.\n";
+    } else {
+        my $value = abs $match->getResignation;
+        return $self->__handleTake ($color) if !$value;
+        my $points = $value == 1 ? "1 point" : "$value points";
+        $match->do (accept => $color);
+        my $opp = $self->{__color} == BLACK ? $match->player1 : $match->player2;
+        $msg = "$opp accepts and wins $points.\n";
+    }
+    
+    $self->__endOfGame ($msg);
+    
+    return $self;
+}
+
+sub __handleTake {
     my ($self, $color) = @_;
     
     my $session = $self->{__session};
@@ -330,12 +386,13 @@ sub __handleAccept {
     my $no_prompt;
     
     my $msg = '';
-    my $cube = $match->getCube;
     if ($self->{__color} == $color) {
+        my $cube = $match->getCube;
         $msg = "You accept the double. The cube shows $cube.\n";
     } else {
         $match->do (accept => $color);
-        my $opp = $color == BLACK ? $match->player1 : $match->player2;
+        my $cube = $match->getCube;
+        my $opp = $color == WHITE ? $match->player1 : $match->player2;
         $msg = "$opp accepts the double. The cube shows $cube.\n";
         $no_prompt = 1;
     }
@@ -358,6 +415,25 @@ sub __handleReject {
     my $user = $session->getUser;
     my $match = $user->{match};
     
+    if ($self->{__color} == $color) {
+        $session->reply ("You reject. The game continues.\n");
+    } else {
+        $match->do (reject => $color);
+        my $opp = $color == WHITE ? $match->player1 : $match->player2;
+        $session->reply ("$opp rejects. The game continues.\n");
+    }
+    
+    return $self;
+}
+
+sub __handleDrop {
+    my ($self, $color) = @_;
+    
+    my $session = $self->{__session};
+    my $logger = $session->getLogger;
+    my $user = $session->getUser;
+    my $match = $user->{match};
+
     my $msg = '';
     my $cube = $match->getCube;
     my $opp = $color == BLACK ? $match->player1 : $match->player2;
