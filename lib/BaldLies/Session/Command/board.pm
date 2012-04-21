@@ -36,7 +36,7 @@ sub execute {
             return $self;
         }
     } elsif (empty $user->{playing}) {
-        $session->reply ("You are not playing.");
+        $session->reply ("You are not playing.\n");
         return $self;
     }
 
