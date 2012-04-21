@@ -1047,6 +1047,8 @@ sub loadMoves {
     foreach my $row (@$rows) {
         if (!empty $row->[2]) {
             splice @$row, 2, 1, split /:/, $row->[2];
+        } else {
+            $#$row = 1;
         }
     }
     
