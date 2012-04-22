@@ -662,7 +662,7 @@ sub __newGame {
         } elsif ($score < 0) {
             $self->{__score2} -= $score;
             if ($self->{__length} > 0 
-                && $self->{__score1} >= $self->{__length}) {
+                && $self->{__score2} >= $self->{__length}) {
                 $self->{__over} = BLACK;
             }
         }
