@@ -451,7 +451,7 @@ sub __handleDrop {
 
 sub __endOfGame {
     my ($self, $msg) = @_;
-        
+
     my $session = $self->{__session};
     my $user = $session->getUser;
     $user->startGame;
@@ -492,6 +492,24 @@ Type 'join' if you want to play the next game, type 'leave' if you don't.
 EOF
 
     $session->reply ($msg);
+    
+    return $self;
+}
+
+sub __endOfMatch {
+    my ($self, $msg) = @_;
+    
+    my $session = $self->{__session};
+    
+    $session->reply ($msg, 1);
+    
+    my $user = $session->getUser;
+    my $match = $user->{match};
+
+    my @score = $match->score;
+    
+    $session->sendMaster (result => "@score") 
+        if $user->{name} eq $match->player1;
     
     return $self;
 }
