@@ -311,7 +311,7 @@ EOF
 
     $statements->{CREATE_MATCH} = <<EOF;
 INSERT INTO matches (player1, player2, match_length, last_action,
-                     crawford, autodouble, redoubles, r1, e1, r2, e2, swap)
+                     crawford, autodouble, redoubles, r1, r2, e1, e2, swap)
     VALUES (?, ?, ?, ?,
             (SELECT MAX (
                 (SELECT (CASE WHEN crawford THEN 1 ELSE 0 END) 
