@@ -393,6 +393,13 @@ EOF
     $sths->{DELETE_MATCH} = 
         $dbh->prepare ($statements->{DELETE_MATCH});
 
+    $statements->{UPDATE_RATING} = <<EOF;
+UPDATE USERS SET rating = rating + ?, experience = experience + ?
+    WHERE id = ?
+EOF
+    $sths->{UPDATE_RATING} = 
+        $dbh->prepare ($statements->{UPDATE_RATING});
+
     return $self;
 }
 
@@ -1078,6 +1085,24 @@ sub deleteMatch {
     ($id1, $id2) = ($id2, $id1) if $id2 < $id1;
     
     return if !$self->_doStatement (DELETE_MATCH => $id1, $id2);
+                                    
+    return if !$self->_commit;
+    
+    return $self;
+}
+
+sub endOfMatch {
+    my ($self, $id1, $id2, $length, $delta1, $delta2) = @_;
+    
+    if ($id2 < $id1) {
+        ($id1, $id2) = ($id2, $id1);
+        ($delta1, $delta2) = ($delta2, $delta1);
+    }
+    
+    my $now = time;
+    return if !$self->_doStatement (DELETE_MATCH => $id1, $id2);
+    return if !$self->_doStatement (UPDATE_RATING => $delta1, $length, $id1);
+    return if !$self->_doStatement (UPDATE_RATING => $delta2, $length, $id2);
                                     
     return if !$self->_commit;
     
