@@ -54,7 +54,6 @@ sub execute {
                                            $opponent->{name});
         }
     }
-    
         
     return $self;
 }
