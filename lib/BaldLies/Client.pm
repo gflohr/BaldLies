@@ -298,6 +298,8 @@ sub __handleFIBSInput {
     
     my $logger = $self->{__logger};
 
+    $logger->debug ("<<<server<<< $line");
+
     my ($code, $data) = split /[ \t]+/, $line;
     return unless defined $code;
     
@@ -324,7 +326,7 @@ sub __handleFIBSInput {
         $self->queueServerOutput ("join");
     } elsif ($line =~ /^[^ ]+ wants to resign. You will win ([1-9][0-9]*) points?. Type 'accept' or 'reject'.$/) {
         $self->{__backend}->handleAction ('resign', $1);
-    }    
+    }
     
     return $self;
 }
