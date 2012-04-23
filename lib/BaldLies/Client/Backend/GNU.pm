@@ -178,12 +178,27 @@ sub __processMove {
     
     my $reply = 'move';
     
-    foreach my $movement (@movements) {
-        my ($from, $to) = split /\//, $movement;
-        $from = 25 - $from;
-        $from ||= 'bar';
-        $to = 25 - $to;
-        $reply .= " $from-$to";
+    # GNU backgammon always moves from 24 to 1.  We have to translate the move
+    # to FIBS' notion of a move if we play from 1 to 24.  The explicit flag
+    # for that in the board state is item #42.  Alternatively, we could
+    # use the color or our representation (O or X).
+    my @board = split /:/, $self->{__last_board};    
+    if ($board[42] == 1) {
+        foreach my $movement (@movements) {
+            my ($from, $to) = split /\//, $movement;
+            $from = 25 - $from;
+            $from ||= 'bar';
+            $to = 25 - $to;
+            $to = 'home' if 25 == $to;
+            $reply .= " $from-$to";
+        }
+    } else {
+        foreach my $movement (@movements) {
+            my ($from, $to) = split /\//, $movement;
+            $from = 'bar' if 25 == $from;
+            $to ||= 'home';
+            $reply .= " $from-$to";
+        }
     }
     $reply .= "\n";
     
@@ -218,6 +233,9 @@ sub handleBoard {
     # does not bother sending a reply at all, if there is no move in the
     # current board state.
     $self->{__client}->queueClientOutput ($board . "\n");
+    
+    # Remember the last board state.  It is sometimes needed.
+    $self->{__last_board} = $board;
     
     return $self;
 }
