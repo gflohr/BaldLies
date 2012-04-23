@@ -94,9 +94,12 @@ sub execute {
     my $K2 = -$e2 / 100 + 5;
     $K2 = 1 if $K2 < 1;
     my $c1 = 4 * $K1 * sqrt ($N) * $P;
+    $c1 = -$c1 if $score1 < $score2;
     my $c2 = 4 * $K2 * sqrt ($N) * $P;
+    $c2 = -$c2 if $score2 < $score1;   
     
-    
+    $database->endOfMatch ($id1, $id2, $N, $c1, $c2);
+
     # Format numbers.
     $D = sprintf '%.6f', $D;
     $Pu = sprintf '%.6f', $Pu;
@@ -104,9 +107,7 @@ sub execute {
     $K1 = sprintf '%.6f', $K1;
     $K2 = sprintf '%.6f', $K2;
     $c1 = sprintf '%.6f', $c1;
-    $c1 = -$c1 if $score1 < $score2;
     $c2 = sprintf '%.6f', $c2;
-    $c2 = -$c2 if $score2 < $score1;
     my $sign1 = $score1 < $score2 ? '-' : '';
     my $sign2 = $score2 < $score2 ? '-' : '';
     
@@ -123,7 +124,59 @@ K=max(1 , -Experience/100+5) for $player2: $K2
 change for $player2: ${sign2}4*K*sqrt(N)*P=$c2
 EOF
     $logger->debug ($ratings);
-        
+    
+    my $report = '';
+    if ($score1 > $score2) {
+        $report = "$player1 wins a $N point match against $player2"
+                  . "  $score1-$score2 .";
+    } else {
+        $report = "$player2 wins a $N point match against $player1"
+                  . "  $score2-$score1 .";
+    }
+    
+    delete $white_user->{playing};
+    my $info1 = $white_user->rawwho;
+    delete $black_user->{playing};
+    my $info2 = $black_user->rawwho;
+
+    foreach my $name ($master->getLoggedIn) {
+        if ($name eq $white_user->{name}) {
+            my $reply = '';
+            if ($white_user->{ratings}) {
+                $reply = $ratings . "\n";
+            }
+            if ($score1 > $score2) {
+                $reply .= "You win the $N point match $score1-$score2 .";
+            } else {
+                $reply .= "$player2 wins the $N point match"
+                          . " $score2-$score1 .";
+            }
+            $reply =~ s/\n/\\n/g;
+            $master->queueResponseForUser ($name, echo_e => $reply);
+        } elsif ($name eq $black_user->{name}) {
+            my $reply = '';
+            if ($black_user->{ratings}) {
+                $reply = $ratings . "\n";
+            }
+            if ($score1 > $score2) {
+                $reply .= "$player1 wins the $N point match"
+                          . " $score1-$score2 .";
+            } else {
+                $reply .= "You win the $N point match $score2-$score1 .";
+            }
+            $reply =~ s/\n/\\n/g;
+            $master->queueResponseForUser ($name, echo_e => $reply);
+        } else {
+            my $user = $master->getUser ($name);
+            if ($user->{report}) {
+                $master->queueResponseForUser ($name, echo =>
+                                               $report);
+            }
+        }
+        $master->queueResponseForUser ($name, status => $info1);
+        $master->queueResponseForUser ($name, status => $info2);
+    }
+    
     return $self;
 }
 
