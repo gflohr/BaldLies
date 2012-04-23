@@ -213,6 +213,19 @@ sub __handleMove {
         $msg .= "$who moves $formatted .\n";
     }
     
+    if ($match->gameOver) {
+        my $value = $match->getLastWin;
+        if ($self->{__color} == $color) {
+            my $points = $value == 1 ? "1 point" : "$value points";
+            $msg = "You win the game and get $points. Congratulations!\n";
+        } else {
+            my $points = $value == 1 ? "1 point" : "$value points";
+            my $opp = $self->{__color} == BLACK ? $match->player1 : $match->player2;
+            $msg = "$opp wins the game and gets $points. Sorry.\n";
+        }
+        return $self->__endOfGame ($msg);
+    }
+    
     $msg .= $user->{match}->board ($user->{boardstyle}, 
                                    $self->{__color} == BLACK);
     
@@ -364,7 +377,6 @@ sub __handleAccept {
         $msg = "You accept and win $points.\n";
     } else {
         my $value = abs $match->getResignation;
-        return $self->__handleTake ($color) if !$value;
         my $points = $value == 1 ? "1 point" : "$value points";
         $match->do (accept => $color);
         my $opp = $self->{__color} == BLACK ? $match->player1 : $match->player2;
@@ -510,6 +522,8 @@ sub __endOfMatch {
     
     $session->sendMaster (result => "@score") 
         if $user->{name} eq $match->player1;
+    delete $user->{playing};
+    delete $user->{match};
     
     return $self;
 }
