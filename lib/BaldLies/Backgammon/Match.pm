@@ -140,6 +140,14 @@ sub forcedMove {
     return $self->{__game}->forcedMove;    
 }
 
+sub gameOver {
+    my ($self) = @_;
+    
+    return $self if $self->{__fresh_game};
+    
+    return;
+}
+
 sub getAutodouble {
     shift->{__autodouble};
 }
