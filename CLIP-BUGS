@@ -1,0 +1,54 @@
+CLIP is the protocol for communicating with FIBS compatible servers.  It
+is documented at http://www.fibs.com/fibs_interface.html.
+
+This file lists a couple of corrections and clarifications.
+
+Toggles
+=======
+
+The toggle "moves" is a per-game toggle like "double" and "greedy".
+It is always reset to "NO" at the start of a new game.  Note: new game,
+not new match!
+
+Board State
+===========
+
+The two "colors" for FIBS are X and O (the letter, not zero).  For the first
+game in a match, the colors are picked randomly.  After that, the server
+switches sides at the start of every new game.
+
+You must take care to not confuse the "colors" O and X with the players.
+The second player is your opponent, or the opponent of the player you are
+currently watching.  The first one is yourself or the player you are watching.
+The colors (O and X) of these two players have to determined from the
+board state.
+
+Player O always moves from 24 to 1, X plays from 1 to 24.
+
+X is represented as -1 as a color and by negative pip counts.  O is
+represented as 1 as a color and by positive pip counts.
+
+The colon-separated items in a board state are:
+
+0: The word "board"
+1: Player 1.  This is always "You", when you are playing yourself,
+   or the name of the player you are watching.
+2: Player 2.  Your opponent's name or the name of the opponent of the
+   player you are watching.
+3: The length of the match or 9999 for unlimited matches.
+4: Player 1's score in the match.
+5: Player 2's score in the match.
+6-31: 26 numbers giving the board. Positions 0 and 25 represent the bars 
+   for the players. Positive numbers represent 0's pieces and negative numbers 
+   represent X's pieces.  The first number (index 6) represents O's
+   bar, the last number (index 31) represents X's bar.
+32: Who is on turn?
+    -1: It is X's turn
+     1: It is O's turn
+     0: Nobody's turn, aka game over, or the situation between games,
+        where both players have to send a "join".
+33: Player 1's first die.
+34: Player 1's second die.
+35: Player 2's frist die.
+36: Player 2's second die.
+    
