@@ -417,14 +417,17 @@ sub __handleClipTell {
             $logger->info ("Send command on behalf of `$sender': $data");
         } else {
             $self->queueServerOutput (tellx => $sender,
-                                      "What do you think I am?",
-                                      "A human???");
+                                      "What do you think I am?"
+                                      . " A human???");
             $logger->notice ("Unauthorized attempt to control me: $data");
         }
+    } elsif (defined $command && 'What' eq $command
+             && 'do you think I am? A human???' eq $data) {
+        # Ignore to avoid endless loop.
     } else {
         $self->queueServerOutput (tellx => $sender,
-                                  "What do you think I am?",
-                                  "A human???");
+                                  "What do you think I am?"
+                                  . " A human???");
     }
     
     return $self;
