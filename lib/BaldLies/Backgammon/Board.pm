@@ -262,7 +262,7 @@ sub __generateNMoves {
 
         my $new_board = $self->copy;
         $new_board->__applyMovement ($from, $to);
-        my $digest = pack 'c26', @$new_board;
+        my $digest = pack 'c*', @$new_board, @dice;
         next if $seen->{$digest};
         $seen->{$digest} = 1;
 
@@ -292,7 +292,17 @@ sub __generateNMoves {
         while ($from) {
             my $new_board = $self->copy;
             $new_board->__applyMovement ($from, 0);
-            my $digest = pack 'c26', @$new_board;
+            # Why do we have to add the dice that are left to the board, when
+            # building the digest? Say we have one chequer on the 5 point, all
+            # others on the deuce and on the ace point, and we roll 51.  Under
+            # normal circumstances, we would bear-off from the five and the
+            # ace point.
+            #
+            # But it is perfectly legal to move 5/4 4/off instead.  However,
+            # after that move, the position is exactly the same like the one
+            # we have after bearing off from the five point with one die,
+            # and having the 1 left to use.
+            my $digest = pack 'c*', @$new_board, @dice;
             last if $seen->{$digest};
             $seen->{$digest} = 1;
 
