@@ -318,12 +318,13 @@ sub __clipBoard {
     my $turn = $game->getTurn;
     
     if ($game->over) {
-        $output .= ':0';
-    } elsif ($game->getTurn < 0) {
-        $output .= ':-1';
-    } else {
-        $output .= ':1';
+        $turn = '0';
+    } elsif ($game->cubeTurned) {
+        # This is FIBS' behavior when the cube is turned.
+        $turn = -$turn;
+        
     }
+    $output .= ":$turn";
     
     my @dice = (0, 0, 0, 0);
     my @roll = @{$game->getRoll};
