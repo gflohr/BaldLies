@@ -352,8 +352,14 @@ sub __clipBoard {
     
     @may_double = reverse @may_double if $x;
     $output .= ":$may_double[0]:$may_double[1]:";
-    
-    $output .= $game->cubeTurned ? '1' : '0';
+
+    if ($game->cubeTurned
+        && (BLACK == $game->cubeTurned && !$x
+            || WHITE == $game->cubeTurned && $x)) {
+        $output .= '1';
+    } else {
+        $output .= '0';
+    }
 
     # There are only two possible options.    
     if ($x) {
