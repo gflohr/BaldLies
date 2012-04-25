@@ -20,7 +20,7 @@ use strict;
 
 use Test;
 
-BEGIN { plan tests => 11 }
+BEGIN { plan tests => 12 }
 
 use BaldLies::Const qw (:colors);
 use BaldLies::Backgammon::Board;
@@ -91,4 +91,16 @@ $board->set ([
   0
 ]);
 $move = BaldLies::Backgammon::Move->new (4, 6, 23, 17);
+ok $board->move ($move, WHITE);
+
+# Black could bear-off two checkers but choses to bear-off only one.
+$board->set ([
+  0,
+ 11, 3, 0, 0, 1, 0,
+  0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0,
+  0,-3, 0, 0, 0, 0,
+  0
+]);
+$move = BaldLies::Backgammon::Move->new (5, 1, 5, 4, 4, 0);
 ok $board->move ($move, WHITE);
