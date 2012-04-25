@@ -447,7 +447,16 @@ sub __handleClipBoard {
     return $self unless $turn;     
 
     my $color = $board[41];
-    return if $color != $turn;
+    my $was_doubled = $board[40];
+    
+    if ($was_doubled) {
+        # We have to respond.
+    } elsif (!$board[38] && !$board[39]) {
+        # We have doubled ourselves.
+        return;
+    } else {
+        return if $color != $turn;
+    }
     
     $self->{__backend}->handleBoard ($line);
      
