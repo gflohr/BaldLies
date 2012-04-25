@@ -68,7 +68,7 @@ sub run {
         }
     };
     
-    my @cmd = ($path, '--tty', '--quiet', '--lang', 'POSIX');
+    my @cmd = ($path, '--tty', '--quiet', '--no-rc', '--lang', 'POSIX');
  
     my ($child_out, $child_in, $child_error);
     my $pid = open3 $child_out, $child_in, $child_error, @cmd;
