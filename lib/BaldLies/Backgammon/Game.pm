@@ -237,7 +237,7 @@ sub move {
                     }
                     $score *= $value;
                 }
-                $self->{__score} = $score;;
+                $self->{__score} = -$score;
             } else {
                 my $score = $self->{__cube};
                 if (!$other_borne_off) {
@@ -252,7 +252,6 @@ sub move {
                 }
                 $self->{__score} = $score;
             }
-            
         }
         return $self;
     }
