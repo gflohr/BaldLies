@@ -523,8 +523,13 @@ sub __endOfMatch {
     
     $session->sendMaster (result => "@score")
         if $user->{name} eq $match->player1;
-    delete $user->{playing};
+    my $opponent = delete $user->{playing};
     delete $user->{match};
+    
+    my $users = $session->getUsers ($opponent);
+    if ($opponent && exists $users->{$opponent}) {
+        delete $users->{$opponent}->{playing};
+    }
     
     return $self;
 }
