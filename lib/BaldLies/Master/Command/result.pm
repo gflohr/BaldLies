@@ -99,6 +99,10 @@ sub execute {
     $c2 = -$c2 if $score2 < $score1;   
     
     $database->endOfMatch ($id1, $id2, $N, $c1, $c2);
+    $white_user->{rating} += $c1;
+    $white_user->{experience} += $N;
+    $black_user->{rating} += $c2;
+    $black_user->{experience} += $N;
 
     # Format numbers.
     $D = sprintf '%.6f', $D;
