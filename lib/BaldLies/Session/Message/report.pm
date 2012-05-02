@@ -283,6 +283,24 @@ sub __handleResume {
         }
     }
 
+    my $player = $session->getUsers->{$player1};
+    $player->{playing} = $player2;
+    delete $player->{watching};
+    
+    if ($session->getClip) {
+        my $rawwho = $player->rawwho;
+        $session->reply ("5 $rawwho\n6\n");
+    }
+    
+    $player = $session->getUsers->{$player2};
+    $player->{playing} = $player1;
+    delete $player->{watching};
+    
+    if ($session->getClip) {
+        my $rawwho = $player->rawwho;
+        $session->reply ("5 $rawwho\n6\n");
+    }
+    
     return $self;
 }
     
