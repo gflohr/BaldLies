@@ -184,9 +184,6 @@ sub run {
                         $logger->warning ("Too much data from $self->{__ip}.");
                         return $self;
                     }
-                    while ($self->{__client_in} =~ /\n/) {
-                        $self->__checkClientInput;
-                    }
                 }
             } elsif ($fh == $master) {
                 my $offset = length $self->{__master_in};
@@ -203,12 +200,15 @@ sub run {
                         $logger->info ("Lost connection to master.");
                         return $self;
                     }
-                    while ($self->{__master_in} =~ /\n/) {
-                        $self->__checkMasterInput;
-                    }
                 }
             }
-        }      
+        }
+        while ($self->{__master_in} =~ /\n/) {
+            $self->__checkMasterInput or last;
+        }
+        while ($self->{__client_in} =~ /\n/) {
+            $self->__checkClientInput or last;
+        }
     }
     
     return $self;
@@ -311,12 +311,14 @@ sub getUser {
 sub __checkClientInput {
     my ($self) = @_;
 
+    my $logger = $self->{__logger};
+
+    return if 'logging_in' eq $self->{__state};
+    
     return if $self->{__client_in} !~ s/(.*?)\015?\012//;
 
-    my $logger = $self->{__logger};
-    
     my $input = $1;
-    
+
     # Strip-off possible echo on request.
     # FIXME: Handle other telnet options as well?
     $input =~ s/\xff.\x01//;
@@ -411,8 +413,8 @@ sub login {
     
     $logger->debug ("Checking credentials for `$name'.");
     
-    $self->{state} = 'logging_in';
-    
+    $self->{__state} = 'logging_in';
+
     $self->sendMaster ('authenticate', $name, $self->{__ip},
                                 $self->{__client}, $password);
     
