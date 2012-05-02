@@ -1101,7 +1101,7 @@ sub nextGame {
     
     $post_crawford ||= 0;
     
-    return if !$self->_doStatement (CLEAR_MOVES => $id1);
+    return if !$self->_doStatement (CLEAR_MOVES => $id1, $id2);
     return if !$self->_doStatement (NEXT_GAME => $score1, $score2,
                                     $post_crawford, time, 
                                     $id1, $id2);

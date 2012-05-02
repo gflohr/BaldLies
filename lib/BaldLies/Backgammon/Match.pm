@@ -128,6 +128,22 @@ sub getCurrentGame {
     shift->{__game};
 }
 
+sub getPostCrawford {
+    my ($self) = @_;
+    
+    return if !$self->{__crawford};
+    
+    my $white_away = $self->{__length} - $self->{__score1};
+    my $black_away = $self->{__length} - $self->{__score2};
+    
+    return $self if ($white_away == 1 && $black_away == 1);
+    return if ($white_away != 1 && $black_away != 1);
+    
+    return $self if !$self->{__game}->isCrawford;
+    
+    return;
+}
+
 sub legalMoves {
     shift->{__game}->legalMoves;
 }
