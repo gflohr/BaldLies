@@ -82,8 +82,18 @@ sub new {
         }
     };
     
+    my @admins;
+    if (exists $config{admin} && ref $config{admin}
+        && 'ARRAY' eq ref $config{admin}) {
+        @admins = @{$config{admin}};
+    } elsif ($config{admin}) {
+        @admins = $config{admin};
+    }
+    my %admins = map { $_ => 1 } @admins;
+    $config{admin} = \%admins;
+        
     $self->{__config} = \%config;
-    
+        
     die "No username given!\n" if empty $config{user};
     die "No password specified!\n" if empty $config{pass};
 
@@ -100,6 +110,9 @@ sub new {
     $logger->fatal ($@) if $@;
     
     $self->{__backend_class} = 'BaldLies::Client::Backend::' . $config{backend};
+    
+    $self->{__last_board} = time;
+    
     bless $self, $class;
 }
 
@@ -296,6 +309,12 @@ sub terminate {
 sub __handleFIBSInput {
     my ($self, $line) = @_;
     
+    if (time - $self->{__last_board} > 120) {
+        $self->{__last_board} = time;
+        $self->queueServerOutput ("leave");
+        return $self;
+    }
+    
     my $logger = $self->{__logger};
 
     $logger->debug ("<<<server<<< $line");
@@ -410,7 +429,7 @@ sub __handleClipTell {
     
     if (defined $command && 'control' eq $command) {
         
-        if (defined $config->{admin} && $sender eq $config->{admin}) {
+        if ($config->{admin}->{$sender}) {
             $self->queueServerOutput ($data);
             $self->queueServerOutput (tellx => $sender,
                                       "Command executed: $data");
@@ -435,6 +454,8 @@ sub __handleClipTell {
 
 sub __handleClipBoard {
     my ($self, $line) = @_;
+
+    $self->{__last_board} = time;
 
     my $logger = $self->{__logger};
     my $config = $self->{__config};
