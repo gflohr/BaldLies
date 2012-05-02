@@ -400,6 +400,38 @@ EOF
     $sths->{UPDATE_RATING} = 
         $dbh->prepare ($statements->{UPDATE_RATING});
 
+    $statements->{SELECT_RATING_RANGE} = <<EOF;
+SELECT name, rating, experience FROM users
+    WHERE experience > ?
+    ORDER BY rating DESC
+    LIMIT ?
+    OFFSET ?
+EOF
+    $sths->{SELECT_RATING_RANGE} = 
+        $dbh->prepare ($statements->{SELECT_RATING_RANGE});
+
+    $statements->{SELECT_TOTAL_USERS} = <<EOF;
+SELECT COUNT(*) FROM users
+EOF
+    $sths->{SELECT_TOTAL_USERS} =
+        $dbh->prepare ($statements->{SELECT_RATING_RANGE});
+
+    $statements->{SELECT_RATING_FOR_USER} = <<EOF;
+SELECT name, rating, experience FROM users
+    WHERE experience > ?
+      AND name = ?
+EOF
+    $sths->{SELECT_RATING_FOR_USER} = 
+        $dbh->prepare ($statements->{SELECT_RATING_FOR_USER});
+    
+    $statements->{SELECT_RANK_FOR_USER} = <<EOF;
+SELECT COUNT(*) FROM users 
+    WHERE experience > ?
+      AND rating >= (SELECT rating FROM users WHERE name = ?)
+EOF
+    $sths->{SELECT_RANK_FOR_USER} = 
+        $dbh->prepare ($statements->{SELECT_RANK_FOR_USER});
+    
     return $self;
 }
 
@@ -1107,6 +1139,39 @@ sub endOfMatch {
     return if !$self->_commit;
     
     return $self;
+}
+
+sub getRatings {
+    my ($self, $min_exp, $from, $to, @users) = @_;
+    
+    my $limit = $to - $from + 1;
+    
+    my @rows;
+    my %seen;
+    if ($from && $to) {
+        my $rows = $self->_doStatement (SELECT_RATING_RANGE => 
+                                        $min_exp, $limit, $from - 1);
+        my $pos = $from;
+        foreach my $row (@$rows) {
+            ++$seen{$row->[1]};
+            push @rows, [$pos++, @$row];
+        }
+    }
+    
+    foreach my $name (@users) {
+        next if $seen{$name};
+        my $set = $self->_doStatement (SELECT_RATING_FOR_USER => 
+                                       $min_exp, $name);
+        next unless @$set;
+        
+        my $row = $self->_doStatement (SELECT_RANK_FOR_USER =>
+                                       $min_exp, $name);
+        push @rows, [$row->[0]->[0], @{$set->[0]}];
+    }
+    
+    return if !$self->_commit;
+    
+    return \@rows;
 }
 
 1;

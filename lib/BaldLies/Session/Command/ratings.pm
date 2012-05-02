@@ -22,6 +22,67 @@ use strict;
 
 use base qw (BaldLies::Session::Command);
 
+use BaldLies::Util qw (empty);
+use BaldLies::Const qw (:colors);
+
+sub execute {
+    my ($self, $payload) = @_;
+    
+    my $session = $self->{_session};
+    my $user = $session->getUser;
+    
+    $payload = '' if empty $payload;
+    
+    my @tokens = split / +/, $payload;
+    my $params;
+    if (!@tokens) {
+        $params = 'range 1 20';
+    } elsif (@tokens >= 4 && 'from' eq $tokens[0] && 'to' eq $tokens[2]) {
+        if (@tokens > 4) {
+            splice @tokens, 0, 4;
+        } else {
+            my ($from, $to) = @tokens[1, 3];
+            if ($from !~ /^[1-9][0-9]+$/) {
+                $session->reply ("** Please give a positive number after"
+                                 . " 'from'.\n");
+                return $self;
+            }
+            if ($to !~ /^[1-9][0-9]+$/) {
+                $session->reply ("** Please give a positive number after"
+                                 . " 'to'.\n");
+                return $self;
+            }
+            if ($to <= $from) {
+                $session->reply ("** Invalid range from $from to $to\n");
+                return $self;
+            }
+            if ($to - $from > 100) {
+                $session->reply ("** range currently limited to 100.\n");
+                return $self;
+            }
+            $params = "range $from $to";
+        }
+    }
+    
+    if (empty $params) {
+        if (@tokens > 1) {
+            $session->reply ("** Please use only one of the given names"
+                             . " '$tokens[0]' and '$tokens[1]'.\n");
+            return $self;
+        }
+        if (!@tokens) {
+            # Cannot actually not happen.
+            $params = 'range 1 20';
+        } else {
+            $params = "user $tokens[0]";
+        }
+    }
+    
+    $session->sendMaster (ratings => $params);
+    
+    return $self;    
+}
+
 1;
 
 =head1 NAME
