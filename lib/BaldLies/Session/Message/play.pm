@@ -205,7 +205,7 @@ sub __handleMove {
     if ($self->{__color} == $color) {
         # This is our own move which is already applied to the match.
     } else {
-        $logger->debug ("Match action ($self->{__me}:"
+        $logger->debug ("Match action ($self->{__me}):"
                         . " move $color @points");
         $match->do (move => $color, @points);
         my $who = $color == BLACK ? $match->player2 : $match->player1;
@@ -215,6 +215,7 @@ sub __handleMove {
     
     if ($match->gameOver) {
         my $value = $match->getLastWin;
+
         if ($self->{__color} == $color) {
             my $points = $value == 1 ? "1 point" : "$value points";
             $msg = "You win the game and get $points. Congratulations!\n";
@@ -520,7 +521,7 @@ sub __endOfMatch {
 
     my @score = $match->score;
     
-    $session->sendMaster (result => "@score") 
+    $session->sendMaster (result => "@score")
         if $user->{name} eq $match->player1;
     delete $user->{playing};
     delete $user->{match};
