@@ -127,7 +127,7 @@ sub upgrade {
     my $logger = $self->{__logger};
     $logger->debug ("Upgrade database schema from version"
                     . " $self->{__schema_version} to $schema_version.");
-    for (my $i = $self->{__schema_version} + 1; $i <= $schema_version; ++$i) {
+    for (my $i = $self->{__schema_version}; $i <= $schema_version; ++$i) {
         my $version = ucfirst $versions->[$i];
         $version =~ s/_(.)/uc $1/ge;
         my $method = '_upgradeStep' . $version;
@@ -532,7 +532,28 @@ sub _upgradeStepRedoubles {
     my ($self, $version) = @_;
     
     $self->{_dbh}->do (<<EOF);
-ALTER TABLE matches ADD COLUMN redoubles INTEGER NOT NULL
+DROP TABLE IF EXISTS matches
+EOF
+    my $auto_increment = $self->_getAutoIncrement;
+    
+    $self->{_dbh}->do (<<EOF);
+CREATE TABLE matches (
+    id $auto_increment,
+    player1 INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    player2 INTEGER NOT NULL CHECK (player1 != player2)
+        REFERENCES users (id) ON DELETE CASCADE,
+    match_length INTEGER NOT NULL CHECK (match_length != 0),
+    points1 INTEGER NOT NULL DEFAULT 0 
+        CHECK (match_length < 0 OR points1 < match_length),
+    points2 INTEGER NOT NULL DEFAULT 0 
+        CHECK (match_length < 0 OR points2 < match_length),
+    last_action BIGINT NOT NULL,
+    crawford BOOLEAN NOT NULL DEFAULT 1,
+    post_crawford BOOLEAN NOT NULL DEFAULT 0,
+    autodouble BOOLEAN NOT NULL DEFAULT 0,
+    redoubles INTEGER NOT NULL,
+    UNIQUE (player1, player2)
+)
 EOF
 
     $self->{_dbh}->do (<<EOF, {}, $version);
@@ -546,11 +567,30 @@ sub _upgradeStepRatingChange {
     my ($self, $version) = @_;
     
     $self->{_dbh}->do (<<EOF);
-ALTER TABLE matches ADD COLUMN change1 DOUBLE NOT NULL DEFAULT 0.0
+DROP TABLE IF EXISTS matches
 EOF
-
+    my $auto_increment = $self->_getAutoIncrement;
+    
     $self->{_dbh}->do (<<EOF);
-ALTER TABLE matches ADD COLUMN change2 DOUBLE NOT NULL DEFAULT 0.0
+CREATE TABLE matches (
+    id $auto_increment,
+    player1 INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    player2 INTEGER NOT NULL CHECK (player1 != player2)
+        REFERENCES users (id) ON DELETE CASCADE,
+    match_length INTEGER NOT NULL CHECK (match_length != 0),
+    points1 INTEGER NOT NULL DEFAULT 0 
+        CHECK (match_length < 0 OR points1 < match_length),
+    points2 INTEGER NOT NULL DEFAULT 0 
+        CHECK (match_length < 0 OR points2 < match_length),
+    last_action BIGINT NOT NULL,
+    crawford BOOLEAN NOT NULL DEFAULT 1,
+    post_crawford BOOLEAN NOT NULL DEFAULT 0,
+    autodouble BOOLEAN NOT NULL DEFAULT 0,
+    redoubles INTEGER NOT NULL,
+    change1 DOUBLE NOT NULL DEFAULT 0.0,
+    change2 DOUBLE NOT NULL DEFAULT 0.0,
+    UNIQUE (player1, player2)
+)
 EOF
 
     $self->{_dbh}->do (<<EOF, {}, $version);
@@ -562,18 +602,17 @@ EOF
 
 sub _upgradeStepRatingChange2 {
     my ($self, $version) = @_;
-
-    my $auto_increment = $self->_getAutoIncrement;
     
     $self->{_dbh}->do (<<EOF);
 DROP TABLE IF EXISTS matches
 EOF
-
+    my $auto_increment = $self->_getAutoIncrement;
+    
     $self->{_dbh}->do (<<EOF);
 CREATE TABLE matches (
     id $auto_increment,
     player1 INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    player2 INTEGER NOT NULL CHECK (player1 < player2)
+    player2 INTEGER NOT NULL CHECK (player1 != player2)
         REFERENCES users (id) ON DELETE CASCADE,
     match_length INTEGER NOT NULL CHECK (match_length != 0),
     points1 INTEGER NOT NULL DEFAULT 0 
@@ -665,15 +704,6 @@ EOF
 
 sub _upgradeStepBoardState {
     my ($self, $version) = @_;
-    
-    $self->{__logger}->warning (<<EOF);
-IMPORTANT
-This database upgrade will delete all saved matches.  Ratings
-are not affected.  Proceeding in 15 seconds.
-IMPORTANT
-EOF
-    
-    sleep 15;
     
     $self->{_dbh}->do (<<EOF);
 DELETE FROM matches
