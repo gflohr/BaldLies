@@ -70,6 +70,24 @@ sub newFromDump {
     bless $self, $class;
 }
 
+sub copy {
+    my ($proto, $arg) = @_;
+
+    my $class;
+    my $self;
+    if (ref $proto) {
+        $class = ref $proto;
+        $self = {%$proto};
+    } else {
+        $class = $proto;
+        $self = {%$arg};
+    }
+
+    $self->{__game} = $self->{__game}->copy if $self->{__game};
+    
+    bless $self, $class;
+}
+
 sub do {
     my ($self, $action, @payload) = @_;
 
@@ -137,7 +155,7 @@ sub getEncodedBoard {
 sub dump {
     my ($self) = @_;
     
-    my $copy = $self;
+    my $copy = $self->copy;
     my $dump = encode_base64 nfreeze $copy;
     
     return $dump;

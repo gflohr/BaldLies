@@ -52,6 +52,24 @@ sub new {
     bless $self, $class;
 }
 
+sub copy {
+    my ($proto, $arg) = @_;
+
+    my $class;
+    my $self;
+    if (ref $proto) {
+        $class = ref $proto;
+        $self = {%$proto};
+    } else {
+        $class = $proto;
+        $self = {%$arg};
+    }
+
+    $self->{__board} = $self->{__board}->copy;
+    
+    bless $self, $class;
+}
+
 sub reset {
     my ($self) = @_;
     
