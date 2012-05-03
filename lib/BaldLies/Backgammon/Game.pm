@@ -162,7 +162,9 @@ sub roll {
             $self->{__cube} <<= 1;
         }
     } else {
-            die "Usage: roll COLOR, die1, die2";
+        require Carp;
+        Carp::confess ("Usage: roll COLOR, die1, die2 (in state $state, with"
+                       . " color: $color, die1: $die1, die2: $die2");
     }
 
     $self->{__roll} = [$die1, $die2];
