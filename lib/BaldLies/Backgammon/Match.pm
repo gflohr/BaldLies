@@ -23,6 +23,8 @@ use strict;
 use BaldLies::Const qw (:colors);
 use BaldLies::Util qw (empty);
 use BaldLies::Backgammon::Game;
+use MIME::Base64 qw (encode_base64 decode_base64);
+use Storable qw (nfreeze thaw);
 
 sub new {
     my ($class, %args) = @_;
@@ -58,6 +60,14 @@ sub new {
     $self->__newGame unless $self->{__game};
     
     return $self;    
+}
+
+sub newFromDump {
+    my ($class, $dump) = @_;
+    
+    my $self = thaw decode_base64 $dump;
+    
+    bless $self, $class;
 }
 
 sub do {
@@ -119,7 +129,18 @@ sub board {
 }
 
 sub getEncodedBoard {
-    return join ':', @{shift->{__game}->getBoard};    
+    my ($self) = @_;
+    
+    return join ':', @{$self->{__game}->getBoard};    
+}
+
+sub dump {
+    my ($self) = @_;
+    
+    my $copy = $self;
+    my $dump = encode_base64 nfreeze $copy;
+    
+    return $dump;
 }
 
 sub score {
