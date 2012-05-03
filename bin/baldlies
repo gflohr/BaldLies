@@ -373,6 +373,12 @@ loopback interface, unless specified otherwise with the option `--listen'.
 
 The server runs without problems in Perl's taint mode (perl option `-T').
 
+When the server forks into the background it changes into the root
+directory ("/" under Unix).  Before it does so, it manipulates the Perl
+variable @INC: It delete all occurencies of "." and ".." and makes all
+other paths absolute if they are not so already.  You should keep that in
+mind because it may change the way that modules are resolved.
+
 =head1 DEVELOPER OPTIONS
 
 There are some rather esoteric options not exactly suited for the general

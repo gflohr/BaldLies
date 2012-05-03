@@ -136,6 +136,7 @@ sub run {
     $self->__openPorts;
     $self->__changePersona;
     $self->__upgradeDatabaseSchema;
+    $self->__absolutizeINC if !$config->{debug};
     $self->__loadMessageDispatcher;
     $self->__loadCommandDispatcher;
     $self->__daemonize if !$config->{debug};
@@ -201,6 +202,22 @@ sub shutdownServer {
     
     # ptkdb overloads exit().
     CORE::exit ($exit_code);
+}
+
+sub __absolutizeINC {
+    my ($self) = @_;
+
+    # Weed out '.'.
+    @INC = grep {! /^\.\.?$/ } @INC;
+
+    foreach my $path (@INC) {
+        next if File::Spec->file_name_is_absolute ($path);
+        $path = File::Spec->rel2abs ($path);
+        $path =~ /^(.*)$/;
+	$path = $1;
+    }
+
+    return $self;
 }
 
 sub __loadMessageDispatcher {
