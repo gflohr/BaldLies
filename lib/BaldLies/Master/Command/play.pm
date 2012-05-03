@@ -51,23 +51,27 @@ sub execute {
         return $self;
     }
 
-    my ($action, $color, @arguments) = split / /, $payload;
+    my ($position, $action, $color, @arguments) = split / /, $payload;
+    my $db_action;
     if ('take' eq $action) {
-        $action = 'accept';
+        $db_action = 'accept';
     } elsif ('drop' eq $action) {
-        $action = 'reject';
+        $db_action = 'reject';
+    } else {
+        $db_action = $action;
     }
     
     my $db = $master->getDatabase;
     $logger->debug ("Adding move to database: $color $action @arguments");
     unless ($db->addMove ($user->{id}, $user2->{id},
-                          $action, $color, @arguments)) {
+                          $position, $db_action, $color, @arguments)) {
         $logger->error ("Error adding move $color $action @arguments");
         return $self;
     }
     
-    $master->queueResponse ($fd, play => $payload);
-    $master->queueResponseForUser ($opponent, play => $payload);
+    $master->queueResponse ($fd, play => $action, $color, @arguments);
+    $master->queueResponseForUser ($opponent, play => $action, $color, 
+                                   @arguments);
 
     return $self;
 }

@@ -83,7 +83,16 @@ sub __handleStart {
     if ($self->{__color} == WHITE) {
         my $die1 = 1 + int rand 6;
         my $die2 = 1 + int rand 6;
-        $session->sendMaster (play => "roll 0 $die1 $die2");
+        eval { $match->do (roll => 0, $die1, $die2) };
+        if ($@) {
+            chomp $@;
+            $session->reply ("** $@\n");
+            return $self;
+        }
+    
+        my $board = $match->getEncodedBoard;
+        $session->sendMaster (play => $board, roll => 0, $die1, $die2);
+
         return $self;
     }
     
@@ -148,7 +157,7 @@ sub __handleOpening {
     my $user = $session->getUser;
     my $match = $user->{match};
 
-    if ($self->{__color}) {
+    if ($self->{__color} == BLACK) {
         $logger->debug ("Match action ($user->{name}): roll 0 $die1 $die2");
         $match->do (roll => 0, $die1, $die2);
     }

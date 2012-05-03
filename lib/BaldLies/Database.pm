@@ -27,7 +27,7 @@ use BaldLies::Util qw (empty);
 
 my $versions = [qw (
     users matches redoubles rating_change rating_change2
-    moves
+    moves board_state
 )];
 
 my $schema_version = $#$versions;
@@ -352,10 +352,10 @@ EOF
         $dbh->prepare ($statements->{TOUCH_MATCH});
 
     $statements->{ADD_MOVE} = <<EOF;
-INSERT INTO moves (match_id, action_id, color, arguments)
+INSERT INTO moves (match_id, action_id, color, arguments, board)
     VALUES ((SELECT id FROM matches WHERE player1 = ? AND player2 = ?), 
             (SELECT id FROM actions WHERE name = ?), 
-            ?, ?)
+            ?, ?, ?)
 EOF
     $sths->{ADD_MOVE} = 
         $dbh->prepare ($statements->{ADD_MOVE});
@@ -653,6 +653,47 @@ CREATE TABLE moves (
     color INTEGER NOT NULL CHECK (color IN (-1, 0, 1)),
     -- Colon-separated list of arguments.
     arguments TEXT NOT NULL
+)
+EOF
+
+    $self->{_dbh}->do (<<EOF, {}, $version);
+UPDATE version SET schema_version = ?
+EOF
+
+    return $self;
+}
+
+sub _upgradeStepBoardState {
+    my ($self, $version) = @_;
+    
+    $self->{__logger}->warning (<<EOF);
+IMPORTANT
+This database upgrade will delete all saved matches.  Ratings
+are not affected.  Proceeding in 15 seconds.
+IMPORTANT
+EOF
+    
+    sleep 15;
+    
+    $self->{_dbh}->do (<<EOF);
+DELETE FROM matches
+EOF
+
+    $self->{_dbh}->do (<<EOF);
+DROP TABLE IF EXISTS moves
+EOF
+
+    my $auto_increment = $self->_getAutoIncrement;
+    
+    $self->{_dbh}->do (<<EOF);
+CREATE TABLE moves (
+    id $auto_increment,
+    match_id INTEGER NOT NULL REFERENCES matches (id) ON DELETE CASCADE,
+    action_id INTEGER NOT NULL REFERENCES actions (id),
+    color INTEGER NOT NULL CHECK (color IN (-1, 0, 1)),
+    -- Colon-separated list of arguments.
+    arguments TEXT NOT NULL,
+    board TEXT NOT NULL
 )
 EOF
 
@@ -1053,14 +1094,14 @@ sub loadMatch {
 }
 
 sub addMove {
-    my ($self, $id1, $id2, $color, $action, @arguments) = @_;
+    my ($self, $id1, $id2, $position, $color, $action, @arguments) = @_;
     
     ($id1, $id2) = ($id2, $id1) if $id2 < $id1;
     
     my $arguments = join ':', @arguments;
     
     return if !$self->_doStatement (ADD_MOVE => $id1, $id2, $color, 
-                                    $action, $arguments);
+                                    $action, $arguments, $position);
                                     
     return if !$self->_doStatement (TOUCH_MATCH => time, $id1, $id2);
     

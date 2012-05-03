@@ -54,7 +54,8 @@ sub execute {
         return $self;
     }
     
-    $session->sendMaster (play => $action, $color);
+    my $board = $match->getEncodedBoard;
+    $session->sendMaster (play => $board, $action, $color);
     
     return $self;
 }

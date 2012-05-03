@@ -66,7 +66,8 @@ sub execute {
     }
 
     my $value = $values{$how} * $match->getCube;
-    $session->sendMaster (play => 'resign', $color, $value);
+    my $board = $match->getEncodedBoard;
+    $session->sendMaster (play => $board, resign => $color, $value);
     
     return $self;
 }

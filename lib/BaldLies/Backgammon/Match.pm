@@ -118,6 +118,10 @@ sub board {
     die "Unsupported board style $style";
 }
 
+sub getEncodedBoard {
+    return join ':', @{shift->{__game}->getBoard};    
+}
+
 sub score {
     my ($self) = @_;
     
