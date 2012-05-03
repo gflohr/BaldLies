@@ -22,6 +22,56 @@ use strict;
 
 use base qw (BaldLies::Session::Command);
 
+use BaldLies::Util qw (empty);
+
+sub execute {
+    my ($self, $who) = @_;
+    
+    my $session = $self->{_session};
+    my $user = $session->getUser;
+
+    if (empty $who) {
+        $session->reply ("** Look at who?\n");
+        return $self;
+    } elsif ($user->{name} eq $who) {
+        $session->reply ("You look great.\n");
+        return $self;
+    }
+    
+    my $users = $session->getUsers;
+    if (!exists $users->{$who}) {
+        $session->reply ("** There is no one called $who.\n");
+        return $self;
+    }
+    
+    my $watchee = $users->{$who};
+    if (0) {
+        # Blinded?
+        $session->reply ("$who doesn't want you to look.\n");
+        return $self;
+    }
+    
+    if (empty $watchee->{playing}) {
+        $session->reply ("$who is not playing.\n");
+        return $self;
+    }
+    
+    if (!exists $users->{$watchee->{playing}}) {
+        $session->reply ("$who is not playing.\n");
+        return $self;
+    }
+    my $opponent = $users->{$watchee->{playing}};
+    if (0) {
+        # Blinded?
+        $session->reply ("$watchee->{playing} doesn't want you to look.\n");
+        return $self;
+    }
+
+    $session->sendMaster (look => $who);
+    
+    return $self;    
+}
+
 1;
 
 =head1 NAME
