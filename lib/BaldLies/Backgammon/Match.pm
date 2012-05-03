@@ -158,6 +158,7 @@ sub dump {
     my $copy = $self->copy;
     $copy->{__game}->clearActions;
     my $dump = encode_base64 nfreeze $copy;
+    $dump =~ s/[^A-Za-z0-9\/+=]//g;
     
     return $dump;
 }
