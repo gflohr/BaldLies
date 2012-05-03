@@ -81,7 +81,7 @@ sub execute {
         $session->reply ("You stop watching $stop_watching.\n");
     } elsif ($is_about_me && !empty $start_watching) {
         my $message = "You are now watching $start_watching.\n";
-        my $other = $session->getUser ($watching);
+        my $other = $session->getUsers->{$start_watching};
         if (empty $other->{playing}) {
             $message .= "$watching is not doing anything interesting.\n";
         }
