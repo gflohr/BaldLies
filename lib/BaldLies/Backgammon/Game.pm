@@ -122,6 +122,10 @@ sub cubeTurned {
     return $self->{__turn};
 }
 
+sub clearActions {
+    shift->{__actions} = [];
+}
+
 sub getRoll {
     shift->{__roll};
 }

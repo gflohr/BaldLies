@@ -156,6 +156,7 @@ sub dump {
     my ($self) = @_;
     
     my $copy = $self->copy;
+    $copy->{__game}->clearActions;
     my $dump = encode_base64 nfreeze $copy;
     
     return $dump;
