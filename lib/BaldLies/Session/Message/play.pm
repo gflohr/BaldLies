@@ -134,11 +134,17 @@ points for user $player2: $score2
 EOF
 
     if (!$turn && $color == WHITE) {
-        if ($color == WHITE) {
-            my $die1 = 1 + int rand 6;
-            my $die2 = 1 + int rand 6;
-            $session->sendMaster (play => "roll 0 $die1 $die2");
+        my $die1 = 1 + int rand 6;
+        my $die2 = 1 + int rand 6;
+        eval { $match->do (roll => 0, $die1, $die2) };
+        if ($@) {
+            chomp $@;
+            $session->reply ("** $@\n");
+            return $self;
         }
+    
+        my $board = $match->getEncodedBoard;
+        $session->sendMaster (play => $board, roll => 0, $die1, $die2);
     } else {
         $reply .= $user->{match}->board ($user->{boardstyle}, 
                                          $self->{__color} == BLACK);
@@ -176,9 +182,18 @@ sub __handleOpening {
             $session->reply ("The number on the doubling cube is now $cube", 1);
         }
         if ($self->{__color} == WHITE) {
-            $die1 = 1 + int rand 6;
-            $die2 = 1 + int rand 6;
-            $session->sendMaster (play => "roll 0 $die1 $die2");
+            my $die1 = 1 + int rand 6;
+            my $die2 = 1 + int rand 6;
+            eval { $match->do (roll => 0, $die1, $die2) };
+            if ($@) {
+                chomp $@;
+                $session->reply ("** $@\n");
+                return $self;
+            }
+    
+            my $board = $match->getEncodedBoard;
+            $session->sendMaster (play => $board, roll => 0, $die1, $die2);
+            
             return $self;
         }
         return $self;
@@ -295,7 +310,8 @@ sub __handleRoll {
                     $session->reply ("$msg** $@\n");
                     return $self;
                 }
-                $session->sendMaster (play => 'move', $color, @points);
+                my $board = $match->getEncodedBoard;
+                $session->sendMaster (play => $board, move => $color, @points);
             } else {
                 my $num_pieces = @{$moves->[0]} >> 1;
                 $msg .= "Please move $num_pieces pieces.\n";
@@ -308,7 +324,8 @@ sub __handleRoll {
                 $session->reply ("$msg** $@\n");
                 return $self;
             }
-            $session->sendMaster (play => 'move', $color);
+            my $board = $match->getEncodedBoard;
+            $session->sendMaster (play => $board, move => $color);
         }
     }
     
