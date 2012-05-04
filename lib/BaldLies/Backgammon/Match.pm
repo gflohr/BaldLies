@@ -136,12 +136,12 @@ sub over {
 }
 
 sub board {
-    my ($self, $style, $turn) = @_;
+    my ($self, $style, $turn, $watching) = @_;
     
     if (1 == $style || 2 == $style) {
-        return $self->__graphicalBoard ($style - 1, $turn);
+        return $self->__graphicalBoard ($style - 1, $turn, $watching);
     } elsif (3 == $style) {
-        return $self->__clipBoard ($turn);
+        return $self->__clipBoard ($turn, $watching);
     }
     die "Unsupported board style $style";
 }
@@ -341,19 +341,22 @@ sub getPending {
 # Board between games:
 #board:You:GibbonTestD:9999:7:9:0:-2:0:0:0:0:5:0:3:0:0:0:-5:5:0:0:0:-3:0:-5:0:0:0:0:2:0:0:0:0:0:0:1:1:1:0:1:-1:0:25:0:0:0:0:2:0:0:0
 sub __clipBoard {
-    my ($self, $x) = @_;
+    my ($self, $x, $watching) = @_;
     
     my $game = $self->{__game};
     my $board = $game->getBoard;
     
-    my $output = 'board';
+    my $output = 'board:';
     
-    $output .= ':You';
     
     if ($x) {
-        $output .= ':' . $self->{__player1};
+        $output .= $watching ? $self->{__player2} : 'You';
+        $output .= ':';
+        $output .= $self->{__player1};
     } else {
-        $output .= ':' . $self->{__player2};
+        $output .= $watching ? $self->{__player1} : 'You';
+        $output .= ':';
+        $output .= $self->{__player2};
     }
  
     my $l = $self->{__length};

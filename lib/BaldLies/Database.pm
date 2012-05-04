@@ -432,6 +432,15 @@ EOF
     $sths->{SELECT_RANK_FOR_USER} = 
         $dbh->prepare ($statements->{SELECT_RANK_FOR_USER});
     
+    $statements->{SELECT_CURRENT_POSITION} = <<EOF;
+SELECT board FROM moves
+    WHERE match_id = (SELECT id FROM matches 
+                      WHERE player1 = ? and player2 = ?)
+    ORDER BY id DESC LIMIT 1
+EOF
+    $sths->{SELECT_CURRENT_POSITION} = 
+        $dbh->prepare ($statements->{SELECT_CURRENT_POSITION});
+
     return $self;
 }
 
@@ -1163,6 +1172,22 @@ sub loadMoves {
     }
     
     return $rows;
+}
+
+sub loadPosition {
+    my ($self, $id1, $id2) = @_;
+
+    ($id1, $id2) = ($id2, $id1) if $id2 < $id1;
+
+    my $logger = $self->{__logger};
+
+    my $rows = $self->_doStatement (SELECT_CURRENT_POSITION => $id1, $id2);
+   $self->_commit;
+
+    # Not necessarily an error.  This can happen, before the opening roll.
+    return unless $rows;
+    
+    return $rows->[0]->[0];
 }
 
 sub nextGame {
