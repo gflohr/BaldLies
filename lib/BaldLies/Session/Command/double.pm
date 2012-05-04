@@ -53,7 +53,7 @@ sub execute {
         return $self;
     }
     
-    my $board = $match->getEncodedBoard;
+    my $board = $match->dump;
     $session->sendMaster (play => $board, double => $color);
     
     return $self;

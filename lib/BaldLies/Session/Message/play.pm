@@ -90,7 +90,7 @@ sub __handleStart {
             return $self;
         }
     
-        my $board = $match->getEncodedBoard;
+        my $board = $match->dump;
         $session->sendMaster (play => $board, roll => 0, $die1, $die2);
 
         return $self;
@@ -143,7 +143,7 @@ EOF
             return $self;
         }
     
-        my $board = $match->getEncodedBoard;
+        my $board = $match->dump;
         $session->sendMaster (play => $board, roll => 0, $die1, $die2);
     } else {
         $reply .= $user->{match}->board ($user->{boardstyle}, 
@@ -191,7 +191,7 @@ sub __handleOpening {
                 return $self;
             }
     
-            my $board = $match->getEncodedBoard;
+            my $board = $match->dump;
             $session->sendMaster (play => $board, roll => 0, $die1, $die2);
             
             return $self;
@@ -310,7 +310,7 @@ sub __handleRoll {
                     $session->reply ("$msg** $@\n");
                     return $self;
                 }
-                my $board = $match->getEncodedBoard;
+                my $board = $match->dump;
                 $session->sendMaster (play => $board, move => $color, @points);
             } else {
                 my $num_pieces = @{$moves->[0]} >> 1;
@@ -324,7 +324,7 @@ sub __handleRoll {
                 $session->reply ("$msg** $@\n");
                 return $self;
             }
-            my $board = $match->getEncodedBoard;
+            my $board = $match->dump;
             $session->sendMaster (play => $board, move => $color);
         }
     }

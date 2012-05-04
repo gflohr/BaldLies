@@ -146,12 +146,6 @@ sub board {
     die "Unsupported board style $style";
 }
 
-sub getEncodedBoard {
-    my ($self) = @_;
-    
-    return join ':', @{$self->{__game}->getBoard};    
-}
-
 sub dump {
     my ($self) = @_;
     

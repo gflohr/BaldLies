@@ -58,7 +58,7 @@ sub execute {
     
     $session->reply ("You roll $die1 and $die2.\n");
     
-    my $board = $match->getEncodedBoard;
+    my $board = $match->dump;
     $session->sendMaster (play => $board, roll => $color, $die1, $die2);
     
     return $self;
