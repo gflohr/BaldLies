@@ -403,6 +403,14 @@ sub removeWatching {
     return $self;
 }
 
+sub getWatchers {
+    my ($self, $who) = @_;
+    
+    return unless exists $self->{__watched}->{$who};
+    
+    return keys %{$self->{__watched}->{$who}};
+}
+
 1;
 
 =head1 NAME

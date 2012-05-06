@@ -73,6 +73,11 @@ sub execute {
     $master->queueResponseForUser ($opponent, play => $action, $color, 
                                    @arguments);
 
+    foreach my $watcher ($master->getWatchers ($user->{name}),
+                         $master->getWatchers ($opponent)) {
+        $master->queueResponseForUser ($watcher, watch => $payload);
+    };
+
     return $self;
 }
 

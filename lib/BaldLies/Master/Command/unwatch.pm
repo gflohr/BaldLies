@@ -16,45 +16,51 @@
 # You should have received a copy of the GNU General Public License
 # along with BaldLies.  If not, see <http://www.gnu.org/licenses/>.
 
-package BaldLies::Session::Command::unwatch;
+package BaldLies::Master::Command::unwatch;
 
 use strict;
 
-use base qw (BaldLies::Session::Command);
+use base qw (BaldLies::Master::Command);
 
 use BaldLies::Util qw (empty);
 
 sub execute {
-    my ($self) = @_;
+    my ($self, $fd) = @_;
     
-    my $session = $self->{_session};
-    my $user = $session->getUser;
+    my $master = $self->{_master};
     
+    my $logger = $master->getLogger;
+    
+    my $dirty;
+    
+    my $user = $master->getUserFromDescriptor ($fd);
     if (empty $user->{watching}) {
-        $session->reply ("** You're not watching.\n", 1);
-        delete $user->{watching};
+        $master->queueResponse ($fd, reply =>
+                                "** You're not watching.");
+        return $self;
     }
     
-    # The rest has to be handled by the master process.
-    $session->sendMaster ('unwatch');
-    
-    return $self;
+    $master->queueResponse ($fd, reply =>
+                            "You stop watching $user->{watching}.");
+    $master->removeWatching ($user, $user->{watching});
+        
+    return $self;    
 }
 
 1;
 
 =head1 NAME
 
-BaldLies::Session::Command::unwatch - BaldLies Command `unwatch'
+BaldLies::Master::Command::unwatch - BaldLies Command `unwatch'
 
 =head1 SYNOPSIS
 
-  use BaldLies::Session::Command::unwatch->new (unwatch => $session, $call);
+  use BaldLies::Master::Command::unwatch->new ($master);
   
 =head1 DESCRIPTION
 
-This plug-in handles the ommand `unwatch'.
+This plug-in handles the command `unwatch'.
 
 =head1 SEE ALSO
 
-BaldLies::Session::Command(3pm), baldlies(1), perl(1)
+BaldLies::Master::Command(3pm), baldlies(1), perl(1)
