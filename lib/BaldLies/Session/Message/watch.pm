@@ -129,12 +129,23 @@ sub __handleDouble {
 }
 
 sub __handleResign {
-    my ($self, $color, $value) = @_;
+    my ($self, $match, $color, $value) = @_;
     
     my $session = $self->{__session};
     my $logger = $session->getLogger;
 
-    $session->reply (__LINE__ . ": $color\n");
+    my ($resigner, $other);
+    if ($color == BLACK) {
+        $resigner = $match->player2;
+        $other = $match->player1;
+    } else {
+        $resigner = $match->player1;
+        $other = $match->player2;
+    }
+    
+    my $points = $value == 1 ? "1 point" : "$value points";
+
+    $session->reply ("\n$resigner wants to resign. $other will win $points.\n");
     
     return $self;
 }
@@ -167,7 +178,14 @@ sub __handleReject {
     my $session = $self->{__session};
     my $logger = $session->getLogger;
 
-    $session->reply (__LINE__ . ": $color\n");
+    my $player;
+    if ($color == BLACK) {
+        $player = $match->player2;
+    } else {
+        $player = $match->player1;
+    }
+    
+    $session->reply ("\n$player rejects. The game continues.\n");
     
     return $self;
 }
