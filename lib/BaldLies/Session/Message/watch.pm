@@ -23,7 +23,7 @@ use strict;
 use base qw (BaldLies::Session::Message);
 use BaldLies::Const qw (:colors);
 use BaldLies::User;
-use BaldLies::Util qw (equals);
+use BaldLies::Util qw (equals empty);
 
 use BaldLies::Backgammon::Match;
 
@@ -53,8 +53,22 @@ sub __handleStart {
     
     my $session = $self->{__session};
     my $logger = $session->getLogger;
-
-    $session->reply (__LINE__ . ": $color\n");
+    my $user = $session->getUser;
+    
+    return $self if empty $user->{watching};
+    
+    my ($player1, $player2) = ($match->player1, $match->player2);
+    my $opponent;
+    
+    if ($player1 eq $user->{watching}) {
+        $opponent = $player2;
+    } elsif ($player2 eq $user->{watching}) {
+        $opponent = $player1;
+    } else {
+        return $self;
+    }
+    
+    $session->reply ("\nStarting a new match with $opponent.\n", 1);
     
     return $self;
 }
