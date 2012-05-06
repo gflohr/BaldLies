@@ -43,8 +43,8 @@ sub execute {
     
     my $method = '__handle' . ucfirst $action;
 
-    my $match = BaldLies::Backgammon::Match->new ($dump);
-    
+    my $match = BaldLies::Backgammon::Match->newFromDump ($dump);
+
     return $self->$method ($match, $color, @data);
 }
 
@@ -87,7 +87,13 @@ sub __handleMove {
     my $session = $self->{__session};
     my $logger = $session->getLogger;
 
-    $session->reply (__LINE__ . ": $color\n");
+    my $who = $color == BLACK ? $match->player2 : $match->player1;
+    my $formatted = $self->__formatMove ($color, @points);
+    $session->reply ("\n$who moves $formatted .\n");
+    
+    if ($match->gameOver) {
+        die;
+    }
     
     return $self;
 }
