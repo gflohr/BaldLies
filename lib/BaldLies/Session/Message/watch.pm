@@ -68,18 +68,7 @@ sub __handleStart {
         return $self;
     }
     
-    $session->reply ("\nStarting a new match with $opponent.\n", 1);
-    
-    return $self;
-}
-
-sub __handleResume {
-    my ($self, $match, $color) = @_;
-    
-    my $session = $self->{__session};
-    my $logger = $session->getLogger;
-
-    $session->reply (__LINE__ . ": $color\n");
+    $session->reply ("\nStarting a new game with $opponent.\n", 1);
     
     return $self;
 }

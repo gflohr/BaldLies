@@ -142,6 +142,9 @@ sub execute {
         }
     }
 
+    # Nothing more to do for watchers, when a match is resumed.
+    return $self if 'resume' eq $report;
+
     my @watchers;
     push @watchers, $master->getWatchers ($inviter->{name});
     push @watchers, $master->getWatchers ($invitee->{name});
