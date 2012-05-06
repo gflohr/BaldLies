@@ -156,7 +156,18 @@ sub __handleAccept {
     my $session = $self->{__session};
     my $logger = $session->getLogger;
 
-    $session->reply (__LINE__ . ": $color\n");
+    my $player;
+    if ($color == BLACK) {
+        $player = $match->player2;
+    } else {
+        $player = $match->player1;
+    }
+    
+    my $value = $match->getLastWin;
+    my $points = $value == 1 ? "1 point" : "$value points";
+    my $msg = "\n$player accepts and wins $points.\n";
+        
+    $self->__endOfGame ($match, $msg);
     
     return $self;
 }
@@ -221,6 +232,69 @@ sub __formatMove {
     }
 
     return $move;
+}
+
+sub __endOfGame {
+    my ($self, $match, $msg) = @_;
+
+    my $session = $self->{__session};
+    my $user = $session->getUser;
+
+    return $self->__endOfMatch ($match, $msg) if $match->over;
+    
+    my $logger = $session->getLogger;
+    
+    my ($score1, $score2) = $match->score;
+    my $points = $match->getLength;
+    if ($points < 0) {
+        $points = 'unlimited';
+    } else {
+        $points = "$points point";
+    }
+    my $score;
+    
+    my ($player1, $player2) = ($match->player1, $match->player2);
+    if ($user->{name} eq $match->player1) {
+        my $opp = $match->player2;
+        $score = "$user->{name}-$score1 $opp-$score2";
+        my $post_crawford = $match->getPostCrawford ? 1 : 0;
+        $session->sendMaster (end_of_game => $score1, $score2, $post_crawford);
+    } else {
+        my $opp = $match->player1;
+        $score = "$user->{name}-$score2 $opp-$score1";
+    }
+    
+    $msg .= "score in $points match: $player1-$score1 $player2-$score2\n";
+
+    $session->reply ($msg);
+    
+    return $self;
+}
+
+sub __endOfMatch {
+    my ($self, $match, $msg) = @_;
+    
+    my $session = $self->{__session};
+    
+    my @score = $match->score;
+    my $winner;
+    
+    if ($score[0] > $score[1]) {
+        $winner = $match->player1;
+    } else {
+        $winner = $match->player2;
+    }    
+    my $points = $match->getLength;
+    if ($points < 0) {
+        $points = 'unlimited';
+    } else {
+        $points = "$points point";
+    }
+    $msg .= "$winner wins the $points match $score[0]-$score[1] .\n";
+    
+    $session->reply ($msg);
+        
+    return $self;
 }
 
 1;
