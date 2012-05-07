@@ -25,6 +25,8 @@ use base qw (BaldLies::Master::Command);
 use MIME::Base64 qw (encode_base64);
 use Storable qw (nfreeze);
 
+use BaldLies::Backgammon::Match;
+
 sub execute {
     my ($self, $fd, $payload) = @_;
     
@@ -43,6 +45,24 @@ sub execute {
     $master->queueResponseForUser ($players[1], report =>
                                    'continue', @players);
     
+    my $user1 = $master->getUser ($players[0]);
+    my $user2 = $master->getUser ($players[1]);
+    
+    my @watchers;
+    push @watchers, $master->getWatchers ($user1->{name});
+    push @watchers, $master->getWatchers ($user2->{name});
+    
+    return $self unless @watchers;
+    
+    # Our internal API requires a dummy match.
+    my $match = BaldLies::Backgammon::Match->new (player1 => $players[0],
+                                                  player2 => $players[1]);
+    my $dump = $match->dump;
+
+    foreach my $watcher (@watchers) {
+        $master->queueResponseForUser ($watcher, watch => $dump, 'start');
+    }
+
     return $self;
 }
 
