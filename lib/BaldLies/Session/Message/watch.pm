@@ -45,6 +45,8 @@ sub execute {
 
     my $match = BaldLies::Backgammon::Match->newFromDump ($dump);
 
+    $self->{__reverse} = $user->{watching} eq $match->player2;
+    
     return $self->$method ($match, $color, @data);
 }
 
@@ -78,8 +80,23 @@ sub __handleOpening {
     
     my $session = $self->{__session};
     my $logger = $session->getLogger;
+    my $user = $session->getUser;
+    
+    my $player1 = $match->player1;
+    my $player2 = $match->player2;
 
-    $session->reply (__LINE__ . ": $color\n");
+    my $msg = "$player1 rolls $die1, $player2 rolls $die2.\n";
+    if ($die1 > $die2) {
+        $msg .= "$player1 makes the first move.\n";
+    } elsif ($die1 < $die2) {
+        $msg .= "$player2 makes the first move.\n";
+    } elsif ($die1 == $die2) {
+        my $cube = $match->getCube;
+        $msg .= "The number on the doubling cube is now $cube\n";
+    }
+    
+    $msg .= $match->board ($user->{boardstyle}, 1, $self->{__reverse});
+    $session->reply ($msg);
     
     return $self;
 }
@@ -89,10 +106,14 @@ sub __handleMove {
     
     my $session = $self->{__session};
     my $logger = $session->getLogger;
-
+    my $user = $session->getUser;
+    
     my $who = $color == BLACK ? $match->player2 : $match->player1;
     my $formatted = $self->__formatMove ($color, @points);
-    $session->reply ("\n$who moves $formatted .\n");
+
+    my $msg = "\n$who moves$formatted .\n";
+    $msg .= $match->board ($user->{boardstyle}, $self->{__reverse});
+    $session->reply ($msg);
     
     if ($match->gameOver) {
         die;

@@ -54,15 +54,7 @@ sub execute {
         $self->{__me} = $user->{name};
         $self->{__other} = $match->player1;
     } else {
-        $self->{__color} = 0;
-        $self->{__me} = $user->{watching};
-        if (equals $user->{watching}, $match->player1) {
-            $self->{__other} = $match->{player2};
-        } elsif (equals $user->{watching}, $match->player2) {
-            $self->{__other} = $match->{player1};
-        } else {
-            die "Orphaned play message";
-        }
+        die "Orphaned play message";
     }
     
     return $self->$method ($color, @data);
@@ -168,13 +160,12 @@ sub __handleOpening {
         $match->do (roll => 0, $die1, $die2);
     }
     
-    my $me = $self->{__color} > 1 ? 'You' : $self->{__me};
     my $opponent = $self->{__other};
 
     if ($self->{__color} == BLACK) {
         ($die1, $die2) = ($die2, $die1);
     }
-    $session->reply ("$me rolled $die1, $opponent rolled $die2.\n", 1);
+    $session->reply ("You rolled $die1, $opponent rolled $die2.\n", 1);
     
     if ($die1 == $die2) {
         if ($match->getAutodouble) {
@@ -203,7 +194,7 @@ sub __handleOpening {
         if ($self->{__color}) {
             $session->reply ("It's your turn to move.\n", 1);
         } else {
-            $session->reply ("$me makes the first move.\n", 1);
+            $session->reply ("You make the first move.\n", 1);
         }
     } elsif ($die1 < $die2) {
         $session->reply ("$opponent makes the first move.\n", 1);
@@ -234,7 +225,7 @@ sub __handleMove {
         $match->do (move => $color, @points);
         my $who = $color == BLACK ? $match->player2 : $match->player1;
         my $formatted = $self->__formatMove ($color, @points);
-        $msg .= "$who moves $formatted .\n";
+        $msg .= "$who moves$formatted .\n";
     }
     
     if ($match->gameOver) {
