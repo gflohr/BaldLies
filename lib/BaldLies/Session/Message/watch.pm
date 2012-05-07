@@ -61,7 +61,7 @@ sub __handleStart {
     
     my ($player1, $player2) = ($match->player1, $match->player2);
     my $opponent;
-    
+
     if ($player1 eq $user->{watching}) {
         $opponent = $player2;
     } elsif ($player2 eq $user->{watching}) {
@@ -90,12 +90,13 @@ sub __handleOpening {
         $msg .= "$player1 makes the first move.\n";
     } elsif ($die1 < $die2) {
         $msg .= "$player2 makes the first move.\n";
-    } elsif ($die1 == $die2) {
-        my $cube = $match->getCube;
+    } elsif ($die1 == $die2 && $match->getAutodouble) {
+        my $cube = 2 * $match->getCube;
         $msg .= "The number on the doubling cube is now $cube\n";
     }
     
-    $msg .= $match->board ($user->{boardstyle}, 1, $self->{__reverse});
+    $msg .= $match->board ($user->{boardstyle}, 1, $self->{__reverse})
+        if $die1 != $die2;
     $session->reply ($msg);
     
     return $self;
