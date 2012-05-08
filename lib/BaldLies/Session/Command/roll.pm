@@ -56,7 +56,7 @@ sub execute {
         return $self;
     }
     
-    $session->reply ("You roll $die1 and $die2.\n");
+    $session->reply ("You roll $die1 and $die2.\n", 1);
     
     my $board = $match->dump;
     $session->sendMaster (play => $board, roll => $color, $die1, $die2);

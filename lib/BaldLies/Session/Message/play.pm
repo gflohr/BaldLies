@@ -225,7 +225,7 @@ sub __handleMove {
         $match->do (move => $color, @points);
         my $who = $color == BLACK ? $match->player2 : $match->player1;
         my $formatted = $self->__formatMove ($color, @points);
-        $msg .= "$who moves$formatted .\n";
+        $msg .= "\n$who moves$formatted .\n";
     }
     
     if ($match->gameOver) {
@@ -282,10 +282,8 @@ sub __handleRoll {
                         . " roll $color $die1 $die2");
         $match->do (roll => $color, $die1, $die2);
         my $who = $color == BLACK ? $match->player2 : $match->player1;
-        $msg .= "$who rolled $die1 and $die2.\n";
+        $msg .= "\n$who rolled $die1 and $die2.\n";
     }
-    
-    $msg .= $match->board ($user->{boardstyle}, $self->{__color} == BLACK);
     
     if ($color == $self->{__color}) {
         my $moves = $match->legalMoves;
