@@ -148,8 +148,10 @@ sub __handleDouble {
     my $session = $self->{__session};
     my $logger = $session->getLogger;
 
-    $session->reply (__LINE__ . ": $color\n");
-    
+    my $who = $color == BLACK ? $match->player2 : $match->player1;
+
+    $session->reply ("\n$who doubles.\n");
+        
     return $self;
 }
 
@@ -203,8 +205,10 @@ sub __handleTake {
     my $session = $self->{__session};
     my $logger = $session->getLogger;
 
-    $session->reply (__LINE__ . ": $color\n");
-    
+    my $who = $color == BLACK ? $match->player2 : $match->player1;
+
+    $session->reply ("\n$who accepts the double.", 1);
+        
     return $self;
 }
 
@@ -232,8 +236,15 @@ sub __handleDrop {
     my $session = $self->{__session};
     my $logger = $session->getLogger;
 
-    $session->reply (__LINE__ . ": $color\n");
+    my $dropper = $color == BLACK ? $match->player1 : $match->player2;
+    my $opp = $color == WHITE ? $match->player1 : $match->player2;
+
+    my $cube = $match->getCube;
+    my $points = $cube == 1 ? "1 point" : "$cube points";
+    my $msg = "\n$opp gives up. $dropper wins $points.\n";
     
+    $self->__endOfGame ($match, $msg);
+
     return $self;
 }
 

@@ -466,12 +466,12 @@ sub __handleDrop {
 
     my $msg = '';
     my $cube = $match->getCube;
-    my $opp = $color == BLACK ? $match->player1 : $match->player2;
+    my $points = $cube == 1 ? "1 point" : "$cube points";
     if ($self->{__color} == $color) {
-        $msg = "You give up. $opp wins $cube points.\n";
+        $msg = "You give up. $user->{playing} wins $points.\n";
     } else {
         $match->do (reject => $color);
-        $msg = "$opp gives up. You win $cube points.\n";
+        $msg = "\n$user->{playing} gives up. You win $points.\n";
     }
     
     $self->__endOfGame ($msg);
