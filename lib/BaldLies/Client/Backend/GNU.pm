@@ -240,6 +240,22 @@ sub handleBoard {
     return $self;
 }
 
+sub handleYouRoll {
+    my ($self, @dice) = @_;
+    
+    # Ignore.  Instead we wait for "Please move $n pieces'.  This will
+    # make us skip "You cannot move".
+    return $self;
+}
+
+sub handlePleaseMove {
+    my ($self, @dice) = @_;
+
+    # We need a new board from the server.    
+    $self->{__client}->queueServerOutput ('board');
+
+    return $self;
+}
 sub handleAction {
     my ($self, $action, @args) = @_;
     

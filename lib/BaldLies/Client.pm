@@ -336,7 +336,11 @@ sub __handleFIBSInput {
         $logger->info ("Got invitation from `$1'.");
         $self->queueServerOutput ("join $1");
     } elsif ($line =~ /^board:You:/) {
-        return $self->__handleClipBoard ($line);
+        $self->__handleClipBoard ($line);
+    } elsif ($line =~ /^You roll ([1-6]) and ([1-6])/) {
+        $self->{__backend}->handleYouRoll ($1, $2);
+    } elsif ($line =~ /^Please move ([1-4]) pieces?/) {
+        $self->{__backend}->handlePleaseMove ($1);
     } elsif ($line =~ /^[^ ]+ doubles. Type 'accept' or 'reject'.$/) {
         $self->{__backend}->handleAction ('double');
     } elsif ($line eq "Type 'join' if you want to play the next game, type"
@@ -345,7 +349,10 @@ sub __handleFIBSInput {
         $self->queueServerOutput ("join");
     } elsif ($line =~ /^[^ ]+ wants to resign. You will win ([1-9][0-9]*) points?. Type 'accept' or 'reject'.$/) {
         $self->{__backend}->handleAction ('resign', $1);
+    } else {
+        return $self;
     }
+    $self->{__last_board} = time;
     
     return $self;
 }
@@ -454,8 +461,6 @@ sub __handleClipTell {
 
 sub __handleClipBoard {
     my ($self, $line) = @_;
-
-    $self->{__last_board} = time;
 
     my $logger = $self->{__logger};
     my $config = $self->{__config};

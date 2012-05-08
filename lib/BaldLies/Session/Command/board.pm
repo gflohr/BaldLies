@@ -31,16 +31,15 @@ sub execute {
     my $user = $session->getUser;
     
     if (!empty $user->{watching}) {
-        if (!$user->{match}) {
-            $session->reply ("$user->{watching} is not playing.\n");
-            return $self;
-        }
+        $session->getMaster->sendMaster ('board');
     } elsif (empty $user->{playing}) {
         $session->reply ("You are not playing.\n");
         return $self;
     }
 
-    $session->reply ($user->{match}->board ($user->{boardstyle}));
+    my $x = $user->{name} eq $user->{match}->player2;
+
+    $session->reply ($user->{match}->board ($user->{boardstyle}, $x));
 }
 
 1;
