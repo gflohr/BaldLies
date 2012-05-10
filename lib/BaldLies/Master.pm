@@ -139,7 +139,8 @@ sub checkInput {
         my $rec = $sockets->{$fd};
         my $user = $rec->{user};
         my $ident = $user ? "`$user->{name}'" : 'unknown user';
-        my $bytes_read = sysread $fd, $rec->{in_queue}, 4096;
+        my $bytes_read = sysread $fd, $rec->{in_queue}, 4096, 
+                                 length $rec->{in_queue};
         if (!defined $bytes_read) {
             if ($!{EAGAIN} || $!{EWOUDBLOCK}) {
                 next;
@@ -148,8 +149,8 @@ sub checkInput {
         } elsif (0 == $bytes_read) {
             $self->dropConnection ($fd, "End-of-file reading from $ident.");
         }
-        
-        if ($rec->{in_queue} =~ s/(.*?)\n//) {
+
+        while ($rec->{in_queue} =~ s/(.*?)\n//) {
             my $line = $1;
             my ($command, $payload) = split / /, $line, 2;
             
