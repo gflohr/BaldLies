@@ -309,7 +309,7 @@ sub terminate {
 sub __handleFIBSInput {
     my ($self, $line) = @_;
     
-    if (time - $self->{__last_board} > 120) {
+    if (time - $self->{__last_board} > 300) {
         $self->{__last_board} = time;
         $self->queueServerOutput ("leave");
         return $self;
