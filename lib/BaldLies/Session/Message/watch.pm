@@ -117,7 +117,17 @@ sub __handleMove {
     $session->reply ($msg);
     
     if ($match->gameOver) {
-        die;
+        my $value = $match->getLastWin;
+        my $points = $value == 1 ? "1 point" : "$value points";
+        
+        if ($color > 0) {
+            my $winner = $match->player1;
+            $msg = "$winner wins the game and gets $points.\n";
+        } else {
+            my $winner = $match->player2;
+            $msg = "$winner wins the game and gets $points.\n";
+        }
+        return $self->__endOfGame ($match, $msg);
     }
     
     return $self;
