@@ -489,28 +489,30 @@ sub __graphicalBoard {
     my $lower = $x ? 'X' : 'O';
     my ($player1, $player2) = $x ? ($self->{__player2}, $self->{__player1})
                                  : ($self->{__player1}, $self->{__player2});
+    my ($score1, $score2) = $x ? ($self->{__score2}, $self->{__score1})
+                                 : ($self->{__score1}, $self->{__score2});
     
     my $output = "\n";
     if ($extra) {
         if ($x) {
             $output .= <<EOF;
      1  2  3  4  5  6        7  8  9 10 11 12
-   +------------------------------------------+ $upper: $player2
+   +------------------------------------------+ $upper: $player2 - score $score2
 EOF
         } else {
             $output .= <<EOF;
     13 14 15 16 17 18       19 20 21 22 23 24
-   +------------------------------------------+ $upper: $player2
+   +------------------------------------------+ $upper: $player2 - score $score2
 EOF
         }
     } else {
         if ($x) {
             $output .= <<EOF;
-   +-1--2--3--4--5--6--------7--8--9-10-11-12-+ $upper: $player2
+   +-1--2--3--4--5--6--------7--8--9-10-11-12-+ $upper: $player2 - score $score2
 EOF
         } else {
             $output .= <<EOF;
-   +13-14-15-16-17-18-------19-20-21-22-23-24-+ $upper: $player2
+   +13-14-15-16-17-18-------19-20-21-22-23-24-+ $upper: $player2 - score $score2
 EOF
         }
     }
@@ -678,23 +680,23 @@ EOF
     if ($extra) {
         if ($x) {
             $output .= <<EOF;
-   +------------------------------------------+ $lower: $player1
+   +------------------------------------------+ $lower: $player1 - score $score1
     24 23 22 21 20 19       18 17 16 15 14 13
 EOF
         } else {
             $output .= <<EOF;
-   +------------------------------------------+ $lower: $player1
+   +------------------------------------------+ $lower: $player1 - score $score1
     12 11 10  9  8  7        6  5  4  3  2  1
 EOF
         }
     } else {
         if ($x) {
             $output .= <<EOF;
-   +24-23-22-21-20-19-------18-17-16-15-14-13-+ $lower: $player1
+   +24-23-22-21-20-19-------18-17-16-15-14-13-+ $lower: $player1 - score $score1
 EOF
         } else {
             $output .= <<EOF;
-   +12-11-10--9--8--7--------6--5--4--3--2--1-+ $lower: $player1
+   +12-11-10--9--8--7--------6--5--4--3--2--1-+ $lower: $player1 - score $score1
 EOF
         }
     }
