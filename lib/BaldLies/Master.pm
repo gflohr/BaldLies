@@ -151,6 +151,10 @@ sub checkInput {
         }
 
         while ($rec->{in_queue} =~ s/(.*?)\n//) {
+            if (empty $1) {
+                $logger->error ("Got empty command from $ident");
+                next;
+            }
             my $line = $1;
             my ($command, $payload) = split / /, $line, 2;
             
