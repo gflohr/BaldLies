@@ -573,7 +573,22 @@ sub clipReply {
 
 sub sendMaster {
     my ($self, $code, @args) = @_;
-    
+
+    my $msg = join ' ', $code, @args;
+    if (empty $msg) {
+        my ($package, $filename, $line) = caller;
+        my $logger = $self->{__logger};
+        $logger->error ("$package: $filename:$line: empty command");
+        return $self;
+    } elsif (0 <= index $msg, "\n") {
+        my ($package, $filename, $line) = caller;
+        my $logger = $self->{__logger};
+        my %map = ('\\' => '\\\\', "\n" => '\\\n');
+        $msg =~ s/([\\\n])/$map{$1}/g;
+        $logger->error ("$package: $filename:$line: message with newlines: $msg");
+        return $self;
+    }
+        
     $self->{__master_out} .= (join ' ', $code, @args) . "\n";
     
     return $self;
