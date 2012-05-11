@@ -71,12 +71,10 @@ sub execute {
     }
     
     # TODO! Check whether we have gagged recipient or recipient has gagged us.
-
-    $message .= "\n";
-
+    
     my $user = $session->getUser;
     if ($recipient eq $user->{name}) {
-        $session->reply ("You say to yourself: $message");
+        $session->reply ("You say to yourself: $message\n");
         return $self;
     }
     
