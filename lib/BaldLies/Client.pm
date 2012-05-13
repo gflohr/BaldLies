@@ -476,14 +476,21 @@ sub __handleClipBoard {
     my $was_doubled = $board[40];
     
     if ($was_doubled) {
+        $logger->debug ("Ask backend for reply to double.");
         # We have to respond.
     } elsif (!$board[38] && !$board[39]) {
         # We have doubled ourselves.
+        $logger->debug ("Waiting for reply to our double.");
         return;
-    } else {
-        return if $color != $turn;
+    } elsif ($color != $turn) {
+        $logger->debug ("Not our turn.");
+        return;
+    } elsif (!$board[33] && !$board[34] && !$board[35] && !$board[36]
+             && !$board[38] && $board[39]) {
+        $logger->debug ("Opponent owns the cube server will roll.");
+        return;
     }
-    
+        
     $self->{__backend}->handleBoard ($line);
      
     return $self;
