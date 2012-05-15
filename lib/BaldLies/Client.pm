@@ -190,8 +190,9 @@ sub __runSession {
                 if ('login' eq $state) {
                     while ($self->{__server_in} =~ s/.*\015?\012//) {};
                     if ($self->{__server_in} =~ s/^login: +//s) {
+                        my $ident = "BaldLies_v$BaldLies::Server::VERSION";
                         $self->queueServerOutput ('login',
-                                                  $BaldLies::Server::VERSION,
+                                                  $ident,
                                                   1008,
                                                   $config->{user},
                                                   $config->{pass});
