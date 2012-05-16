@@ -339,7 +339,7 @@ EOF
 SELECT u1.name, u2.name, m.match_length, m.points1, m.points2,
        m.crawford, m.post_crawford, m.autodouble, m.redoubles,
        m.r1, m.r2, m.e1, m.e2, swap
-    FROM matches m, USERS u1, USERS u2 
+    FROM matches m, users u1, users u2 
     WHERE m.player1 == ? AND m.player2 == ?
       AND u1.id = m.player1 AND u2.id = m.player2
 EOF
@@ -454,6 +454,21 @@ UPDATE matches SET active = ?
 EOF
     $sths->{ACTIVATE_MATCH} = 
         $dbh->prepare ($statements->{ACTIVATE_MATCH});
+
+    $statements->{SELECT_ACTIVE_MATCHES} = <<EOF;
+SELECT u1.name, u2.name, match_length, points1, points2 
+    FROM matches, users u1, users u2 
+   WHERE u1.id = matches.player1 AND u2.id = matches.player2 AND active
+EOF
+    $sths->{SELECT_ACTIVE_MATCHES} = 
+        $dbh->prepare ($statements->{SELECT_ACTIVE_MATCHES});
+
+    $statements->{SELECT_SAVED_MATCHES} = <<EOF;
+SELECT COUNT(*) FROM matches
+   WHERE player1 = ? OR player2 = ?
+EOF
+    $sths->{SELECT_SAVED_MATCHES} = 
+        $dbh->prepare ($statements->{SELECT_ACTIVE_MATCHES});
 
     return $self;
 }
@@ -1274,8 +1289,7 @@ sub activateMatch {
     
     $active = $active ? 1 : 0;
     
-    return if !$self->_doStatement (ACTIVATE_MATCH_MATCH => $active, 
-                                    $id1, $id2);
+    return if !$self->_doStatement (ACTIVATE_MATCH => $active, $id1, $id2);
                                     
     return if !$self->_commit;
     
@@ -1322,6 +1336,16 @@ sub getRatings {
     return if !$self->_commit;
     
     return \@rows;
+}
+
+sub getActiveMatches {
+    my ($self) = @_;
+    
+    my $rows = $self->_doStatement ('SELECT_ACTIVE_MATCHES');
+    return if !$self->_commit;
+    return unless $rows;
+    
+    return $rows;
 }
 
 1;
