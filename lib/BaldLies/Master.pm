@@ -301,6 +301,9 @@ sub dropConnection {
         my $opponent = $self->getUser ($dropper->{playing});
         if ($opponent && $name eq $opponent->{playing}) {
             delete $opponent->{playing};
+            $opponent->{playing}->activateMatch ($dropper->{id},
+                                                 $opponent->{id}, 0);
+            $self->{__database}->
             $self->broadcastUserStatus ($opponent->{name});
         }
         if (exists $self->{__watched}->{$name}) {

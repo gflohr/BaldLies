@@ -111,6 +111,8 @@ sub execute {
         $logger->error ("Freshly created match vanished!");
     }
     
+    $database->activateMatch ($inviter->{id}, $invitee->{id}, 1);
+    
     my $old_moves = $database->loadMoves ($inviter->{id}, $invitee->{id});
     $options->{old_moves} = $old_moves;
 

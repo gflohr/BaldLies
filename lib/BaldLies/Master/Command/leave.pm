@@ -42,7 +42,8 @@ sub execute {
         return $self;
     }
     delete $opponent->{playing};
-    
+    $master->getDatabase->deactivateMatch ($user->{id}, $opponent->{id}, 0);
+        
     my $user_info = $user->rawwho;
     my $opponent_info = $opponent->rawwho;
     

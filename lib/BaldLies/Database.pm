@@ -311,7 +311,8 @@ EOF
 
     $statements->{CREATE_MATCH} = <<EOF;
 INSERT INTO matches (player1, player2, match_length, last_action,
-                     crawford, autodouble, redoubles, r1, r2, e1, e2, swap)
+                     crawford, autodouble, redoubles, r1, r2, e1, e2, swap,
+                     active)
     VALUES (?, ?, ?, ?,
             (SELECT MAX (
                 (SELECT (CASE WHEN crawford THEN 1 ELSE 0 END) 
@@ -329,7 +330,7 @@ INSERT INTO matches (player1, player2, match_length, last_action,
             (SELECT rating FROM users WHERE id = ?),
             (SELECT rating FROM users WHERE id = ?),
             (SELECT experience FROM users WHERE id = ?),
-            (SELECT experience FROM users WHERE id = ?), ?)
+            (SELECT experience FROM users WHERE id = ?), ?, ?)
 EOF
     $sths->{CREATE_MATCH} = 
         $dbh->prepare ($statements->{CREATE_MATCH});
@@ -1127,7 +1128,7 @@ sub createMatch {
                                     $id1, $id2,
                                     $id1, $id2,
                                     $id1, $id2,
-                                    $swap);
+                                    $swap, 1);
                                     
     return if !$self->_commit;
     

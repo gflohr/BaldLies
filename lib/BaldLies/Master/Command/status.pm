@@ -39,6 +39,8 @@ sub execute {
     
     if ('-' ne $playing) {
         $user->{playing} = $playing;
+        my $opponent = $master->getUser ($playing);
+        $master->getDatabase->activateMatch ($user->{id}, $opponent->{id}, 1);
     } else {
         delete $user->{playing};
     }
