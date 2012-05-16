@@ -69,6 +69,7 @@ sub new {
     
     $self->{__database} = $server->getDatabase;
     $self->{__database}->prepareStatements;
+    $self->{__database}->deactivateAllMatches;
     
     $self->__loadDispatcher;
     

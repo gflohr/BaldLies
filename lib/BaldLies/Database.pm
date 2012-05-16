@@ -27,7 +27,7 @@ use BaldLies::Util qw (empty);
 
 my $versions = [qw (
     users matches redoubles rating_change rating_change2
-    moves board_state
+    moves board_state active_matches
 )];
 
 my $schema_version = $#$versions;
@@ -394,7 +394,7 @@ EOF
         $dbh->prepare ($statements->{DELETE_MATCH});
 
     $statements->{UPDATE_RATING} = <<EOF;
-UPDATE USERS SET rating = rating + ?, experience = experience + ?
+UPDATE users SET rating = rating + ?, experience = experience + ?
     WHERE id = ?
 EOF
     $sths->{UPDATE_RATING} = 
@@ -440,6 +440,19 @@ SELECT board FROM moves
 EOF
     $sths->{SELECT_CURRENT_POSITION} = 
         $dbh->prepare ($statements->{SELECT_CURRENT_POSITION});
+
+    $statements->{DEACTIVATE_ALL_MATCHES} = <<EOF;
+UPDATE matches SET active = 0
+EOF
+    $sths->{DEACTIVATE_ALL_MATCHES} = 
+        $dbh->prepare ($statements->{DEACTIVATE_ALL_MATCHES});
+
+    $statements->{ACTIVATE_MATCH} = <<EOF;
+UPDATE matches SET active = ?
+    WHERE player1 = ? AND player2 = ?
+EOF
+    $sths->{ACTIVATE_MATCH} = 
+        $dbh->prepare ($statements->{ACTIVATE_MATCH});
 
     return $self;
 }
@@ -734,6 +747,20 @@ CREATE TABLE moves (
     arguments TEXT NOT NULL,
     board TEXT NOT NULL
 )
+EOF
+
+    $self->{_dbh}->do (<<EOF, {}, $version);
+UPDATE version SET schema_version = ?
+EOF
+
+    return $self;
+}
+
+sub _upgradeStepActiveMatches {
+    my ($self, $version) = @_;
+    
+    $self->{_dbh}->do (<<EOF);
+ALTER TABLE matches ADD COLUMN active BOOLEAN DEFAULT 0
 EOF
 
     $self->{_dbh}->do (<<EOF, {}, $version);
@@ -1234,6 +1261,32 @@ sub endOfMatch {
                                     
     return if !$self->_commit;
     
+    return $self;
+}
+
+sub activateMatch {
+    my ($self, $id1, $id2, $active) = @_;
+    
+    if ($id2 < $id1) {
+        ($id1, $id2) = ($id2, $id1);
+    }
+    
+    $active = $active ? 1 : 0;
+    
+    return if !$self->_doStatement (ACTIVATE_MATCH_MATCH => $active, 
+                                    $id1, $id2);
+                                    
+    return if !$self->_commit;
+    
+    return $self;
+}
+
+sub deactivateAllMatches {
+    my ($self) = @_;
+    
+    return if !$self->_doStatement ('DEACTIVATE_ALL_MATCHES');
+    return if !$self->_commit;
+
     return $self;
 }
 
