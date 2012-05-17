@@ -374,8 +374,8 @@ EOF
 
     $statements->{NEXT_GAME} = <<EOF;
 UPDATE matches 
-    SET swap = NOT swap AND points1 = ? AND points2 = ?
-        AND post_crawford = ? AND last_action = ?
+    SET swap = NOT swap, points1 = ?, points2 = ?, 
+        post_crawford = ?, last_action = ?
     WHERE player1 = ? AND player2 = ?
 EOF
     $sths->{NEXT_GAME} = 
