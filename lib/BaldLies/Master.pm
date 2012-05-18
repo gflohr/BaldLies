@@ -46,6 +46,7 @@ sub new {
         __inviters    => {},
         __invitees    => {},
         __watched     => {},
+        __pending     => {},
     };
 
     bless $self, $class;
@@ -300,6 +301,8 @@ sub dropConnection {
         my $name = $dropper->{name};
         my $opponent = $self->getUser ($dropper->{playing});
         if ($opponent && $name eq $opponent->{playing}) {
+            delete $self->{__pending}->{$opponent->{name}};
+            delete $self->{__pending}->{$name};
             delete $opponent->{playing};
             $self->{__database}->activateMatch ($dropper->{id},
                                                 $opponent->{id}, 0);
@@ -417,6 +420,29 @@ sub getWatchers {
     return unless exists $self->{__watched}->{$who};
     
     return keys %{$self->{__watched}->{$who}};
+}
+
+sub addPending {
+    my ($self, $player1, $player2) = @_;
+    
+    $self->{__pending}->{$player1} = $player2;
+    $self->{__pending}->{$player2} = $player1;
+    
+    return $self;
+}
+
+sub removePending {
+    my ($self, $player1) = @_;
+    
+    delete $self->{__pending}->{$player1};
+    
+    return $self;
+}
+
+sub isPending {
+    my ($self, $player1) = @_;
+    
+    return $self->{__pending}->{$player1};
 }
 
 1;

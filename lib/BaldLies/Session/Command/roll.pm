@@ -36,6 +36,11 @@ sub execute {
         return $self;
     }
 
+    if (!$user->{match}->getTurn) {
+        $session->reply ("** It's not your turn to roll the dice.\n");
+        return $self;
+    }
+
     my $die1 = 1 + int rand 6;
     my $die2 = 1 + int rand 6;
     

@@ -37,6 +37,11 @@ sub execute {
     }
     
     my $match = $user->{match};
+    if (!$match->getTurn) {
+        $session->reply ("** $user->{playing} didn't double or resign.\n");
+        return $self;
+    }
+
     my $color;
     if ($user->{name} eq $match->player2) {
         $color = BLACK;

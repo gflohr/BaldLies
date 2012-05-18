@@ -40,7 +40,6 @@ sub new {
     $self->{__score2} ||= 0;
     $self->{__redoubles} ||= 0;
     $self->{__old_games} ||= [];
-    $self->{__pending} = {};
         
     if ($self->{__length} > 0) {
         if ($self->{__score1} >= $self->{__length}) {
@@ -95,31 +94,6 @@ sub do {
     
     delete $self->{__fresh_game};
 
-    if (keys %{$self->{__pending}}) {
-        if ('roll' eq $action) {
-            die "It's not your turn to roll the dice.\n";
-        } elsif ('move' eq $action) {
-            die "It's not your turn to move.\n";
-        } elsif ('beaver' eq $action || 'redouble' eq $action) {
-            die "You are not allowed to redouble.\n";
-        } elsif ('resign' eq $action) {
-            die "The game is already over.\n";
-        }
-        
-        my $color = $payload[0];
-        my $opponent;
-        if ($color == BLACK) {
-            $opponent = $self->{__player1};
-        } else {
-            $opponent = $self->{__player2};
-        }
-        if ('accept' eq $action || 'reject' eq $action) {
-            die "$opponent didn't double or resign.\n";
-        }     
-       
-        die "The match is paused.\n";
-    }
-    
     my $game = $self->{__game};
     $game->$action (@payload);
 
@@ -348,30 +322,6 @@ sub setCrawfordGame {
     return $self;
 }
 
-sub setPending {
-    my ($self, $name, $value) = @_;
-    
-    if ($value) {
-        $self->{__pending}->{$name} = 1;
-    } else {
-        delete $self->{__pending}->{$name};
-    }
-    
-    return;
-}
-
-sub getPending {
-    my ($self, $name) = @_;
-    
-    if (exists $self->{__pending}->{$name}) {
-        return $self->{__pending}->{$name};    
-    }
-    
-    return;
-}
-
-# Board between games:
-#board:You:GibbonTestD:9999:7:9:0:-2:0:0:0:0:5:0:3:0:0:0:-5:5:0:0:0:-3:0:-5:0:0:0:0:2:0:0:0:0:0:0:1:1:1:0:1:-1:0:25:0:0:0:0:2:0:0:0
 sub __clipBoard {
     my ($self, $x, $watching) = @_;
     

@@ -37,6 +37,11 @@ sub execute {
     }
     
     my $match = $user->{match};
+    if (!$match->getTurn) {
+        $session->reply ("** Please wait until $user->{playing} has moved.\n");
+        return $self;
+    }
+    
     my $color;
     if ($user->{name} eq $match->player2) {
         $color = BLACK;

@@ -35,16 +35,6 @@ sub execute {
 
     $logger->debug ("Checking invitation from `$who'.");
     
-    if ($who =~ /^You (.*)/) {
-        # In-between game join.
-        $who = $1;
-        my $inviter = $master->getUserFromDescriptor ($fd);
-        $logger->debug ("report rejoined $inviter->{name}");
-        $master->queueResponseForUser ($who, report =>
-                                       'rejoined', $inviter->{name});
-        return $self;
-    }
-    
     my $inviter = $master->getUser ($who);
     if (!$inviter) {
         $master->queueResponse ($fd, reply => 

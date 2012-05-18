@@ -43,21 +43,9 @@ sub execute {
     my $user = $session->getUser;
     my $match = $user->{match};
 
-    if ($match && !$match->getTurn) {
-        $session->getLogger->debug ("Unset pending in match for"
-                                    . " ourselves ($user->{name}).");
-        $match->setPending ($user->{name}, 0);
-        if ($match->getPending ($user->{playing})) {
-            $session->reply ("** Please wait for $user->{playing} to join"
-                             . " too.\n");
-            $session->sendMaster (join => 'You', $user->{playing});
-            return $self;
-        } else {
-            my $msg_dispatcher = $session->getMessageDispatcher;
-            $msg_dispatcher->execute ($session,
-                                      report => "rejoined $user->{playing}");
-            return $self;
-        }
+    if ($match) {
+        $session->sendMaster ('rejoin');
+        return $self;
     }
     
     $payload = '' if !defined $payload;

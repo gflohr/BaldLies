@@ -37,6 +37,12 @@ sub execute {
     }
     
     my $match = $user->{match};
+
+    if (!$match->getTurn) {
+        $session->reply ("It's not your turn to move.\n");
+        return $self;
+    }
+
     my $color;
     if ($user->{name} eq $match->player2) {
         $color = BLACK;

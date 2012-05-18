@@ -36,6 +36,11 @@ sub execute {
         return $self;
     }
     
+    if (!$user->{match}->getTurn) {
+        $session->reply ("** The game is already over.\n");
+        return $self;
+    }
+    
     my %values = (
         n => 1,
         g => 2,

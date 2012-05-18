@@ -42,8 +42,11 @@ sub execute {
         return $self;
     }
     delete $opponent->{playing};
+    $master->removePending ($user->{name});
+    $master->removePending ($user->{playing});
+    
     $master->getDatabase->activateMatch ($user->{id}, $opponent->{id}, 0);
-        
+    
     my $user_info = $user->rawwho;
     my $opponent_info = $opponent->rawwho;
     

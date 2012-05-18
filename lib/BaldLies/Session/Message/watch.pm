@@ -303,8 +303,6 @@ sub __endOfGame {
     if ($user->{name} eq $match->player1) {
         my $opp = $match->player2;
         $score = "$user->{name}-$score1 $opp-$score2";
-        my $post_crawford = $match->getPostCrawford ? 1 : 0;
-        $session->sendMaster (end_of_game => $score1, $score2, $post_crawford);
     } else {
         my $opp = $match->player1;
         $score = "$user->{name}-$score2 $opp-$score1";

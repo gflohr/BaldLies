@@ -53,7 +53,8 @@ sub execute {
     }
     
     $logger->debug ("End of game $player1-$player2, score: $score1-$score2.");
-
+    $master->addPending ($player1, $player2);
+    
     my $database = $master->getDatabase;
     my $id1 = $white_user->{id};
     my $id2 = $black_user->{id};

@@ -26,17 +26,37 @@ use MIME::Base64 qw (encode_base64);
 use Storable qw (nfreeze);
 
 use BaldLies::Backgammon::Match;
+use BaldLies::Util qw (empty);
 
 sub execute {
-    my ($self, $fd, $payload) = @_;
+    my ($self, $fd) = @_;
     
     my $master = $self->{_master};
-    
+        
     my $logger = $master->getLogger;
-
-    my @players = split / /, $payload;
+    my $user1 = $master->getUserFromDescriptor ($fd);
     
-    $logger->debug ("$players[0] and $players[1] continue their match.");
+    $logger->debug ("(re-)join from $user1->{name}.");
+    
+    if (empty $user1->{playing}) {
+        $logger->error ("(re-)join from $user1->{name} but not playing.");
+        return $self;
+    }
+    
+    my @players = ($user1->{name}, $user1->{playing});
+    my $user2 = $master->getUser ($user1->{playing});
+    if (!$user2) {
+        $logger->error ("(re-)join from $user1->{name} but opponent"
+                        . "`$user1->{playing} has vanished.\n'");
+        return $self;
+    }
+
+    $master->removePending ($user1->{name});
+    if ($master->isPending ($user2->{name})) {
+        $master->queueResponse ($fd, reply =>
+                                "** Please wait for $user1->{name} to join too.");
+        return $self;
+    }
     
     $logger->debug ("report continue $players[0]");
     $master->queueResponseForUser ($players[0], report =>
@@ -44,9 +64,6 @@ sub execute {
     $logger->debug ("report continue $players[1]");
     $master->queueResponseForUser ($players[1], report =>
                                    'continue', @players);
-    
-    my $user1 = $master->getUser ($players[0]);
-    my $user2 = $master->getUser ($players[1]);
     
     my @watchers;
     push @watchers, $master->getWatchers ($user1->{name});
