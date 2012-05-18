@@ -57,6 +57,17 @@ sub init {
     bless [@initial], $proto;
 }
 
+sub clear {
+    my ($proto) = @_;
+
+    if (ref $proto) {
+        @$proto = (0) x 26;
+        return $proto;
+    }
+
+    bless [(0) x 26], $proto;
+}
+
 sub set {
     my ($self, $set) = @_;
 

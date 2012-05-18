@@ -34,9 +34,9 @@ sub new {
         $self->{'__' . $key} = $value;
     }
     $self->{__length} ||= -1;
-    $self->{__player1} = 'Black' if empty $self->{__player1};
+    $self->{__player1} = 'White' if empty $self->{__player1};
     $self->{__score1} ||= 0;
-    $self->{__player2} = 'White' if empty $self->{__player2};
+    $self->{__player2} = 'Black' if empty $self->{__player2};
     $self->{__score2} ||= 0;
     $self->{__redoubles} ||= 0;
     $self->{__old_games} ||= [];
@@ -223,8 +223,32 @@ sub getTurn {
     shift->{__game}->getTurn;
 }
 
+sub setTurn {
+    my ($self, $color) = @_;
+    
+    $self->{__game}->setTurn ($color);
+}
+
+sub getBoard {
+    shift->{__game}->getBoard;
+}
+
+sub setBoard {
+    my ($self, $board) = @_;
+    
+    $self->{__game}->setBoard ($board);
+}
+
 sub getLength {
     shift->{__length};
+}
+
+sub setLength {
+    my ($self, $length) = @_;
+    
+    $self->{__length} = $length;
+    
+    return $self;
 }
 
 sub getResignation {
@@ -305,6 +329,14 @@ sub resetGame {
 }
 
 sub setCrawford {
+    my ($self, $value) = @_;
+    
+    $self->{__crawford} = $value;
+    
+    return $self;
+}
+
+sub setCrawfordGame {
     my ($self, $value) = @_;
     
     if ($self->{__crawford} && $value) {
@@ -669,6 +701,12 @@ EOF
             $turn = "Opening roll";
         }
         $turn .= " $roll->[0] $roll->[1]";
+    } elsif ($game->cubeTurned) {
+        if ($game->cubeTurned < 0) {
+            $turn = "$self->{__player2} doubled.";
+        } else {
+            $turn = "$self->{__player1} doubled.";
+        }
     } elsif ($game->getTurn) {
         if ($game->getTurn < 0) {
             $turn = "turn: $self->{__player2}";

@@ -106,6 +106,14 @@ sub getBoard {
     shift->{__board};
 }
 
+sub setBoard {
+    my ($self, $board) = @_;
+    
+    $self->{__board} = $board;
+    
+    return $self;
+}
+
 sub cube {
     shift->{__cube};
 }
@@ -132,6 +140,19 @@ sub getRoll {
 
 sub getTurn {
     shift->{__turn};
+}
+
+sub setTurn {
+    my ($self, $turn) = @_;
+    
+    $self->{__turn} = $turn;
+    if (@{$self->{__roll}}) {
+        $self->{__state} = MOVE;
+    } else {
+        $self->{__state} = ROLL_OR_DOUBLE;
+    }
+    
+    return $self;
 }
 
 sub getResignation {
