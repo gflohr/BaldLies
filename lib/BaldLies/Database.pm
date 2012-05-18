@@ -1367,6 +1367,23 @@ sub getSavedMatches {
     return $rows;
 }
 
+sub getSavedCount {
+    my ($self, $who) = @_;
+
+    my $rows = $self->_doStatement (SELECT_EXISTS_USER => $who);
+    unless ($rows && $rows->[0]) {
+        $self->_commit;
+        return;
+    }
+    
+    my $id = $rows->[0]->[0];
+    $rows = $self->_doStatement (SELECT_SAVEDCOUNT => $id, $id);
+    return if !$self->_commit;
+    return 0 unless $rows && $rows->[0];
+    
+    return $rows->[0]->[0];
+}
+
 1;
 
 =head1 NAME

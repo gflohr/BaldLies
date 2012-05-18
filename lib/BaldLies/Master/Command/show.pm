@@ -21,7 +21,7 @@ package BaldLies::Master::Command::show;
 use strict;
 
 use base qw (BaldLies::Master::Command);
-use BaldLies::Util qw (equals);
+use BaldLies::Util qw (empty equals);
 
 sub execute {
     my ($self, $fd, $payload) = @_;
@@ -35,6 +35,8 @@ sub execute {
         $self->__showGames ($fd);
     } elsif ('saved' eq $what) {
         $self->__showSaved ($fd);
+    } elsif ('savedcount' eq $what) {
+        $self->__showSavedCount ($fd, $argument);
     } else {
         $master->queueResponse ($fd, 
                                 reply => "** Don't know how to show $what");
@@ -115,6 +117,32 @@ sub __showSaved {
     }
     
     $master->queueResponse ($fd, echo_e => $msg);
+    return $self;
+}
+
+sub __showSavedCount {
+    my ($self, $fd, $who) = @_;
+    
+    my $master = $self->{_master};
+    my $database = $master->getDatabase;
+    
+    if (empty $who) {
+        my $user = $master->getUserFromDescriptor ($fd);
+        $who = $user->{name};
+    }
+    
+    my $count = $database->getSavedCount ($who);
+    if (0 == $count) {
+        $master->queueResponse ($fd,
+                                reply => "$who has no saved games.");
+    } elsif (1 == $count) {
+        $master->queueResponse ($fd,
+                                reply => "$who has 1 saved game.");
+    } else {
+        $master->queueResponse ($fd,
+                                reply => "$who has $count saved games.");
+    }
+
     return $self;
 }
 
