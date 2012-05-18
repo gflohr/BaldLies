@@ -31,7 +31,8 @@ sub execute {
     my $user = $session->getUser;
     
     if (!empty $user->{watching}) {
-        $session->getMaster->sendMaster ('board');
+        $session->sendMaster ('board');
+        return $self;
     } elsif (empty $user->{playing}) {
         $session->reply ("You are not playing.\n");
         return $self;
