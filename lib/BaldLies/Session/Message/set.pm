@@ -37,7 +37,7 @@ sub execute {
         $value = 'unlimited' if $value eq '-1';
     }
     
-    $session->reply ("Value of $variable set to $value.\n");
+    $session->reply ("Value of '$variable' set to $value.\n");
         
     return $self;
 }
