@@ -547,7 +547,7 @@ my @non_clip_handlers = (
     },
     # 17 (you shout) recipient message
     sub {
-        $_[0] =~ s/([^ ]+)/** You shout $1:/;
+        $_[0] =~ s/([^ ]+)/** You shout: $1/;
     },
     # 18 (you whisper) recipient message
     sub {
