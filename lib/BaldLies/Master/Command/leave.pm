@@ -22,6 +22,8 @@ use strict;
 
 use base qw (BaldLies::Master::Command);
 
+use BaldLies::Util qw (empty);
+
 sub execute {
     my ($self, $fd, $payload) = @_;
     
@@ -36,7 +38,8 @@ sub execute {
     }
     $logger->debug ("Leave message from `$user->{name}'.");
     
-    my $opponent = $master->getUser (delete $user->{playing});
+    my $playing = delete $user->{playing};
+    my $opponent = $master->getUser ($playing) if !empty $playing;
     if (!$opponent) {
         $logger->info ("Opponent `$user->{playing}' has vanished before leave.");
         return $self;
