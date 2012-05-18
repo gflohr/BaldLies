@@ -22,6 +22,8 @@ use strict;
 
 use base qw (BaldLies::Master::Command);
 
+use BaldLies::Util qw (empty);
+
 sub execute {
     my ($self, $fd, $payload) = @_;
     
@@ -35,7 +37,13 @@ sub execute {
         $logger->warning ("Got invite update for non-existing user `$who'.");
         return $self;
     }
-    
+
+    if (!empty $invitee->{playing}) {
+        $master->queueResponse ($fd, reply =>
+                                "$who is already playing with someone else.");
+        return $self;
+    }
+
     my $inviter = $master->getUserFromDescriptor ($fd);
     if (!$inviter) {
         $logger->warning ("Inviter has vanished.");

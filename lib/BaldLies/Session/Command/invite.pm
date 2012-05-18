@@ -53,6 +53,11 @@ sub execute {
         $session->reply ("** $who is refusing games.\n");
         return $self;        
     }
+
+    if (!empty $invitee->{playing}) {
+        $session->reply ("** $who is already playing with someone else.\n");
+        return $self;
+    }
  
     if (!empty $length) {
         if ('unlimited' eq $length) {
