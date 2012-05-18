@@ -463,12 +463,21 @@ EOF
     $sths->{SELECT_ACTIVE_MATCHES} = 
         $dbh->prepare ($statements->{SELECT_ACTIVE_MATCHES});
 
-    $statements->{SELECT_SAVED_MATCHES} = <<EOF;
+    $statements->{SELECT_SAVEDCOUNT} = <<EOF;
 SELECT COUNT(*) FROM matches
-   WHERE player1 = ? OR player2 = ?
+   WHERE player1 = ? OR player2 = ? AND NOT active
 EOF
-    $sths->{SELECT_SAVED_MATCHES} = 
-        $dbh->prepare ($statements->{SELECT_ACTIVE_MATCHES});
+    $sths->{SELECT_SAVEDCOUNT} = 
+        $dbh->prepare ($statements->{SELECT_SAVEDCOUNT});
+
+    $statements->{SELECT_ALL_MATCHES} = <<EOF;
+SELECT u1.name, u2.name, match_length, points1, points2, active
+    FROM matches, users u1, users u2 
+   WHERE (matches.player1 = ? OR matches.player2 = ?)
+     AND u1.id = matches.player1 AND u2.id = matches.player2
+EOF
+    $sths->{SELECT_ALL_MATCHES} = 
+        $dbh->prepare ($statements->{SELECT_ALL_MATCHES});
 
     return $self;
 }
@@ -1342,6 +1351,16 @@ sub getActiveMatches {
     my ($self) = @_;
     
     my $rows = $self->_doStatement ('SELECT_ACTIVE_MATCHES');
+    return if !$self->_commit;
+    return unless $rows;
+    
+    return $rows;
+}
+
+sub getSavedMatches {
+    my ($self, $id) = @_;
+    
+    my $rows = $self->_doStatement (SELECT_ALL_MATCHES => $id, $id);
     return if !$self->_commit;
     return unless $rows;
     
