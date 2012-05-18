@@ -34,7 +34,8 @@ sub execute {
         return $self;
     }
  
-    $session->clipBroadcast ("13 $user->{name} $payload");
+    $session->clipBroadcast ($user->{name}, 13, $user->{name}, $payload);
+    $session->clipReply (17, "$payload\n");
  
     return $self;
 }
