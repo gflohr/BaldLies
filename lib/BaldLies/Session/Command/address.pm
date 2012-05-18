@@ -49,7 +49,7 @@ sub execute {
         return $self;
     }
     
-    $session->sendMaster ("address $address\n");
+    $session->sendMaster ("address $address");
     
     return $self;
 }
