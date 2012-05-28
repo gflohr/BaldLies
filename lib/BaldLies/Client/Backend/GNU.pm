@@ -160,7 +160,9 @@ sub __processLine {
     } elsif ($line eq 'take') {
         $self->{__client}->queueServerOutput ('accept');
     } elsif ($line eq 'beaver') {
-        $self->{__client}->queueServerOutput ('redouble');
+        # FIXME! This should be beaver once this is implemented in the
+        # server.
+        $self->{__client}->queueServerOutput ('accept');
     } elsif ($line =~ $move_re) {
         $self->__processMove ($line);
     } else {
