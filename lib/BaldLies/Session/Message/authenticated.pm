@@ -70,11 +70,13 @@ sub execute {
             use BaldLies::Util qw (empty);
             die "Undefined key $key" if empty $user->{$key};
         }
-        my $own_info = join ' ', @{$user}{
+        my @own_info = @{$user}{
             qw (name allowpip autoboard autodouble automove away bell crawford 
                 double experience greedy moreboards moves notify rating ratings 
                 ready redoubles report silent timezone)
         };
+        $own_info[14] = sprintf '%.2f', $own_info[14];
+        my $own_info = join ' ', @own_info;
         $session->reply ("2 $own_info\n");
         $session->motd;
         my $dispatcher = $session->getCommandDispatcher;
