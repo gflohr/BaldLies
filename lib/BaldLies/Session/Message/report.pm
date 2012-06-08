@@ -68,7 +68,7 @@ sub __handleJoined {
         $session->reply ("$opponent has joined you."
                          . " Your running match was loaded.\n", 1);
     } elsif ($length > 0) {
-        $session->reply ("\n** $opponent has joined you for a $length"
+        $session->reply ("\n** Player $opponent has joined you for a $length"
                          . " point match.\n", 1);
     } else {
         $session->reply ("\nPlayer $opponent has joined you for an unlimited"
