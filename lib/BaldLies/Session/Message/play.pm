@@ -282,7 +282,7 @@ sub __handleRoll {
                         . " roll $color $die1 $die2");
         $match->do (roll => $color, $die1, $die2);
         my $who = $color == BLACK ? $match->player2 : $match->player1;
-        $msg .= "\n$who rolled $die1 and $die2.\n";
+        $msg .= "\n$who rolls $die1 and $die2.\n";
     }
     
     if ($color == $self->{__color}) {
