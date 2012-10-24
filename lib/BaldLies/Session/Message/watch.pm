@@ -110,10 +110,18 @@ sub __handleMove {
     my $user = $session->getUser;
     
     my $who = $color == BLACK ? $match->player2 : $match->player1;
-    my $formatted = $self->__formatMove ($color, @points);
 
-    my $msg = "\n$who moves$formatted .\n";
-    $msg .= $match->board ($user->{boardstyle}, $self->{__reverse});
+    my $msg = '';
+    if (@points) {
+        my $formatted = $self->__formatMove ($color, @points);
+        $msg .= "\n$who moves$formatted .\n";
+    } else {
+        $msg .= "\n$who can't move.\n";
+    }
+    if ($user->{autoboard}) {
+        # FIME! Is the autoboard toggle respected while watching others?
+        $msg .= $match->board ($user->{boardstyle}, $self->{__reverse});
+    }
     $session->reply ($msg);
     
     if ($match->gameOver) {
