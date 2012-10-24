@@ -224,8 +224,12 @@ sub __handleMove {
                         . " move $color @points");
         $match->do (move => $color, @points);
         my $who = $color == BLACK ? $match->player2 : $match->player1;
-        my $formatted = $self->__formatMove ($color, @points);
-        $msg .= "\n$who moves$formatted .\n";
+        if (@points) {
+            my $formatted = $self->__formatMove ($color, @points);
+            $msg .= "\n$who moves$formatted .\n";
+        } else {
+            $msg .= "\n$who can't move.\n";
+        }
     }
     
     if ($match->gameOver) {
