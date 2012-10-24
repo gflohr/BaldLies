@@ -242,16 +242,31 @@ sub __handleMove {
         return $self->__endOfGame ($msg);
     }
     
-    $msg .= $user->{match}->board ($user->{boardstyle}, 
-                                   $self->{__color} == BLACK);
     
     my $cube_owner = $match->getCubeOwner;
     if ($color != $self->{__color}) {
+        # Send feedback to opponent.
+        my $users = $session->getUsers;
+        my $other = $users->{$self->{__other}};
+
+        if ($other->{autoboard}) {
+            $msg .= $user->{match}->board ($user->{boardstyle}, 
+                                           $self->{__color} == BLACK);
+        }
         if ($cube_owner && $cube_owner != $self->{__color}) {
             $no_prompt = 1;
         } else {
             $msg .= "It's your turn. Please roll or double.\n";
         }
+    } else {
+        # Send feedback to player.
+        if ($user->{autoboard}) {
+            $msg .= $user->{match}->board ($user->{boardstyle}, 
+                                           $self->{__color} == BLACK);
+        } elsif (@points) {
+            # Only, when we can actually move.
+            $msg .= "Done.\n";
+        } 
     }
     
     $session->reply ($msg, $no_prompt);
