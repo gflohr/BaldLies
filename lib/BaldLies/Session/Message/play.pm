@@ -246,10 +246,7 @@ sub __handleMove {
     my $cube_owner = $match->getCubeOwner;
     if ($color != $self->{__color}) {
         # Send feedback to opponent.
-        my $users = $session->getUsers;
-        my $other = $users->{$self->{__other}};
-
-        if ($other->{autoboard}) {
+        if ($user->{autoboard}) {
             $msg .= $user->{match}->board ($user->{boardstyle}, 
                                            $self->{__color} == BLACK);
         }
