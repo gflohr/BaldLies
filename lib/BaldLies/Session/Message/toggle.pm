@@ -67,7 +67,7 @@ sub __showToggleAllowpip {
 sub __showToggleAutoboard {
     my ($self, $value) = @_;
 
-    my $wont = $value ? " will be" : " won't";
+    my $wont = $value ? " will" : " won't";
     
     return "The board$wont be refreshed after every move.";
 }
