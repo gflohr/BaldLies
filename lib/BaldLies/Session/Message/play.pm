@@ -254,7 +254,10 @@ sub __handleMove {
             $msg .= $user->{match}->board ($user->{boardstyle}, 
                                            $self->{__color} == BLACK);
         }
-        if ($cube_owner && $cube_owner != $self->{__color}) {
+        my $game = $match->getCurrentGame;
+        my $is_crawford = $game->isCrawford;
+        if ($is_crawford
+            || ($cube_owner && $cube_owner != $self->{__color})) {
             $no_prompt = 1;
         } else {
             $msg .= "It's your turn. Please roll or double.\n";
