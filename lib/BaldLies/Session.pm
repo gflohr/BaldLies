@@ -557,6 +557,10 @@ my @non_clip_handlers = (
     sub {
         $_[0] =~ s/([^ ]+)/** You kibitz $1:/;
     },
+    # 20 (you kibitz) recipient message
+    sub {
+        $_[0] =~ s/([^ ]+)/$1 alerts you:/;
+    },
 );
 
 sub clipReply {
