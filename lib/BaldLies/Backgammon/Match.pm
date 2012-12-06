@@ -419,7 +419,7 @@ sub __clipBoard {
     ($bar1, $bar2) = ($bar2, $bar1) if $x;
     $output .= ":$bar1:$bar2";
 
-    # This field is completely bogs on FIBS.  It is initially 0, and has
+    # This field is completely bogus on FIBS.  It is initially 0, and has
     # then a value with no real meaning because it is not reset, when it
     # should be.
     # We implement it correctly here.
@@ -741,7 +741,7 @@ sub __newGame {
     if ($self->{__over}) {
         return $self;
     }
-    
+   
     my %options = (
         crawford => $is_crawford,
         player1 => $self->{__player1},
