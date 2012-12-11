@@ -95,7 +95,7 @@ sub __handleOpening {
         $msg .= "The number on the doubling cube is now $cube\n";
     }
     
-    $msg .= $match->board ($user->{boardstyle}, 1, $self->{__reverse})
+    $msg .= $match->board ($user->{boardstyle}, $self->{__reverse}, 1)
         if $die1 != $die2;
     $session->reply ($msg);
     
@@ -120,7 +120,7 @@ sub __handleMove {
     }
     if ($user->{autoboard}) {
         # FIME! Is the autoboard toggle respected while watching others?
-        $msg .= $match->board ($user->{boardstyle}, $self->{__reverse});
+        $msg .= $match->board ($user->{boardstyle}, $self->{__reverse}, 1);
     }
     $session->reply ($msg);
     
