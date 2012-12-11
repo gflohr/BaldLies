@@ -75,7 +75,7 @@ sub execute {
     
     my $match = BaldLies::Backgammon::Match->newFromDump ($dump);
     my $reverse = $who ne $match->player1;
-    my $reply = $match->board ($user->{boardstyle}, $reverse);
+    my $reply = $match->board ($user->{boardstyle}, $reverse, 1);
     $reply =~ s/^[ \t\r\n]+//;
     $reply =~ s/[ \t\r\n]+$//;
     $reply =~ s/\n/\\n/g;
