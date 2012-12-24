@@ -237,11 +237,11 @@ sub __handleMove {
 
         if ($self->{__color} == $color) {
             my $points = $value == 1 ? "1 point" : "$value points";
-            $msg = "You win the game and get $points. Congratulations!\n";
+            $msg .= "You win the game and get $points. Congratulations!\n";
         } else {
             my $points = $value == 1 ? "1 point" : "$value points";
             my $opp = $self->{__color} == BLACK ? $match->player1 : $match->player2;
-            $msg = "$opp wins the game and gets $points. Sorry.\n";
+            $msg .= "$opp wins the game and gets $points. Sorry.\n";
         }
         return $self->__endOfGame ($msg);
     }
