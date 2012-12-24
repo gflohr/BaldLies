@@ -321,6 +321,10 @@ sub __handleRoll {
                 my $board = $match->dump;
                 $session->sendMaster (play => $board, move => $color, @points);
             } else {
+		        if ($user->{autoboard}) {
+		            $msg .= $user->{match}->board ($user->{boardstyle}, 
+		                                           $self->{__color} == BLACK);
+		        }
                 my $num_pieces = @{$moves->[0]} >> 1;
                 $msg .= "Please move $num_pieces pieces.\n";
             }
