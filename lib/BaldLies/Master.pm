@@ -299,6 +299,7 @@ sub dropConnection {
     my $dropper = $rec->{user};
     if ($dropper) {
         my $name = $dropper->{name};
+        $logger->debug ("Master handling dropped connection with $name.");
         my $opponent = $self->getUser ($dropper->{playing});
         if ($opponent && $name eq $opponent->{playing}) {
             delete $self->{__pending}->{$opponent->{name}};
@@ -321,6 +322,8 @@ sub dropConnection {
         delete $self->{__invitees}->{$name};
         delete $self->{__watched}->{$name};
         $self->broadcast (logout => $name, $name);    
+    } else {
+        $logger->error ("Master handling dropped connection with unknown.");
     }
         
     $self->{__rsel}->remove ($fd);
