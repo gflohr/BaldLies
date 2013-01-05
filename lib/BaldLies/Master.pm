@@ -316,6 +316,11 @@ sub dropConnection {
                 $self->removeWatching ($watcher, $name);
             }
         }
+        foreach my $watchee (keys %{$self->{__watched}}) {
+            if ($self->{__watched}->{$watchee}->{$name}) {
+                $self->removeWatching ($dropper, $watchee);
+            }
+        }
         
         delete $self->{__users}->{$name};
         delete $self->{__inviters}->{$name};
