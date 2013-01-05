@@ -391,7 +391,7 @@ sub addWatching {
     
     $self->{__watched}->{$who}->{$name} = 1;
     
-    $self->{__logger}->debug ("$who starts watching $name.");
+    $self->{__logger}->debug ("$name starts watching $who.");
     
     $self->broadcastUserStatus ($user->{name});
 
@@ -407,7 +407,7 @@ sub removeWatching {
     
     delete $self->{__watched}->{$who}->{$name};
     
-    $self->{__logger}->debug ("$who stops watching $name.");
+    $self->{__logger}->debug ("$name stops watching $who.");
     
     $self->broadcastUserStatus ($user->{name});
 
