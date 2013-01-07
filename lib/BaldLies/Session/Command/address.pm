@@ -48,7 +48,10 @@ sub execute {
         $session->reply ("** '$address' is not an email address.\n");
         return $self;
     }
-    
+   
+    my $user = $session->getUser;
+    $user->{address} = $address;
+
     $session->sendMaster ("address $address");
     
     return $self;
